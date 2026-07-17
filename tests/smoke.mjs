@@ -335,6 +335,25 @@ await check("barres épaisses dans la grille, conservées après enregistrement"
   if (after !== 2) throw new Error("barres perdues au rechargement : " + after);
 });
 
+await check("les chiffres entrent dans la grille, une case chacun", async () => {
+  const r = await page.evaluate(() => ({
+    age: window.__vcSanitize("13th Age"),
+    d20: window.__vcSanitize("d20"),
+    mer: window.__vcSanitize("7e Mer")
+  }));
+  if (r.age.clean !== "13THAGE" || r.age.breaks.join(",") !== "4") throw new Error("13th Age : " + JSON.stringify(r.age));
+  if (r.d20.clean !== "D20") throw new Error("d20 : " + JSON.stringify(r.d20));
+  if (r.mer.clean !== "7EMER" || r.mer.breaks.join(",") !== "2") throw new Error("7e Mer : " + JSON.stringify(r.mer));
+  // placement réel : D20 croise DRAGON sur le D
+  await page.click("#newList");
+  await page.fill("#wIn", "d20 ; dragon");
+  await page.click("#addBtn");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const txt = await page.locator("#placedStat").innerText();
+  if (!/2 mots/.test(txt)) throw new Error("placement avec chiffres raté : " + txt);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
