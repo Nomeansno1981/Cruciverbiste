@@ -269,7 +269,7 @@
         <div class="gcontrols">
           <button class="btn-primary" id="genBtn">Générer la grille</button>
           <button class="btn-out" id="regenBtn">Régénérer</button>
-          <div class="grow" style="max-width:150px">
+          <div class="grow" style="max-width:150px" title="Nombre de mots tirés au hasard dans la liste à chaque génération. Régénérer refait un tirage.">
             <label class="f" for="maxWords">Mots à utiliser</label>
             <input type="number" id="maxWords" min="2" step="1" />
           </div>
@@ -977,7 +977,10 @@ function renderEntries(){
   const mw = $("maxWords");
   const n = l.entries.length;
   mw.max = String(Math.max(2,n));
-  if(!mw.value || +mw.value > n) mw.value = String(Math.max(2,n));
+  // Défaut : 15 mots au plus par grille, suivi de la taille de la liste tant
+  // que la valeur n'a pas été fixée à la main (les grands dictionnaires
+  // thématiques donnent des grilles par tirage, pas des grilles de 300 mots).
+  if(!mw.value || +mw.value > n || mw.dataset.auto){ mw.value = String(Math.max(2, Math.min(n, 15))); mw.dataset.auto = "1"; }
   // suggest grid dimensions when the fields are empty (user values are kept)
   const words = prep(l.entries.map(toGenEntry)).out;
   if(words.length){
@@ -1061,7 +1064,9 @@ function renderGrid(animate){
 
   // stats
   $("gstats").hidden = false;
-  $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`;
+  const samp = currentModel.sampled;
+  $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
+    + (samp ? `<span class="fillinfo"> · tirage aléatoire de ${samp.drawn} mots parmi ${samp.total}</span>` : "");
   const up = currentModel.unplaced || [];
   $("unplacedStat").textContent = up.length
     ? `· ${up.length} non ${up.length>1?"placés":"placé"} : ${up.map(e=>e.display.join("")).join(", ")}`
@@ -1222,13 +1227,16 @@ function doGenerate(){
   if(!W || W < 2){ W = suggest; $("maxW").value = String(W); }
   if(!H || H < 2){ H = suggest; $("maxH").value = String(H); }
   const tooLong = pool.filter(e => e.letters.length > Math.max(W, H));
-  const attempts = Math.max(150, Math.min(600, Math.round(6500 / pool.length)));
+  // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
+  const attempts = Math.max(pool.length > 60 ? 30 : 150, Math.min(600, Math.round(6500 / pool.length)));
 
   $("genBtn").disabled = true; $("regenBtn").disabled = true;
-  $("board").className = "board empty"; $("board").textContent = "Génération…";
+  $("board").className = "board empty";
+  $("board").textContent = pool.length > 60 ? "Génération… (beaucoup de mots, cela peut prendre quelques secondes)" : "Génération…";
   setTimeout(() => {
     const best = generate(pool, W, H, attempts);
     currentModel = buildModel(best);
+    currentModel.sampled = pool.length < out.length ? { drawn: pool.length, total: out.length } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
     renderGrid(true);
     const notes = [];
@@ -1454,6 +1462,7 @@ function bind(){
   };
   $("delList").onclick = armDelete;
 
+  $("maxWords").oninput = () => { delete $("maxWords").dataset.auto; };
   $("genBtn").onclick = doGenerate;
   $("regenBtn").onclick = doGenerate;
   $("saveGrid").onclick = saveCurrentGrid;

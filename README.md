@@ -10,6 +10,10 @@ Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de m
 2. Réglez le nombre de mots à utiliser et les dimensions maximales (largeur, hauteur), puis générez. Régénérez autant de fois que souhaité : l'algorithme maximise les croisements dans la boîte demandée.
 3. Enregistrez les grilles réussies, exportez la grille vide ou le corrigé en SVG, imprimez en PDF via le bouton dédié.
 
+## Grands dictionnaires thématiques
+
+Une liste peut contenir plusieurs centaines de mots sur un thème. Réglez « Mots à utiliser » (15 par défaut) : chaque génération tire ce nombre de mots au hasard dans la liste et compose une grille resserrée; « Régénérer » refait un tirage, donc une autre grille du même thème. La mention « tirage aléatoire de N mots parmi M » sous la grille rappelle ce fonctionnement. Enregistrez les grilles réussies au fil des tirages.
+
 ## Définitions différées et multiples
 
 - Un mot peut vivre sans définition : le dictionnaire affiche son compteur (« 0 définition ») et le signale discrètement. La génération et l'impression restent possibles, la mention « définition à compléter » prenant la place du texte manquant.
