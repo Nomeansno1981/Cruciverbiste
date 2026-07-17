@@ -126,6 +126,28 @@ await check("le modèle migré porte bien des tableaux clues[]", async () => {
   if (!banquet || banquet.clues.length !== 0) throw new Error("le mot sans définition devrait avoir clues = []");
 });
 
+await check("doublons refusés à l'ajout, définitions fusionnées", async () => {
+  // même mot aux accents et à la casse près : EPEE == épée, rien n'est ajouté
+  await page.fill("#wIn", "EPEE");
+  await page.click("#addBtn");
+  let n = await count("#entries .entry");
+  if (n !== 13) throw new Error("le doublon EPEE/épée a été ajouté (" + n + " entrées)");
+  // une définition nouvelle sur un mot existant rejoint ce mot
+  await page.fill("#wIn", "épée");
+  await page.fill("#cIn", "Elle se croise aussi en duel");
+  await page.click("#addBtn");
+  n = await count("#entries .entry");
+  if (n !== 13) throw new Error("doublon ajouté au lieu de fusionner (" + n + " entrées)");
+  const badge = await page.locator("#entries .entry").filter({ hasText: "épée" }).locator(".cluecount").innerText();
+  if (badge !== "2 définitions") throw new Error("définition non fusionnée : " + badge);
+  // collage : seuls les mots nouveaux entrent
+  await page.click("#toggleImport");
+  await page.fill("#pasteArea", "pont ; dragon ; REINE");
+  await page.click("#parseBtn");
+  n = await count("#entries .entry");
+  if (n !== 14) throw new Error("attendu 14 entrées après collage (seul dragon est nouveau), obtenu " + n);
+});
+
 /* ---- J2 : définitions différées et multiples ---- */
 
 await check("création d'une liste et ajout de mots sans définition", async () => {

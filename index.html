@@ -254,7 +254,7 @@
             <button class="btn-primary" id="parseBtn">Ajouter à la liste</button>
             <button class="btn-ghost" id="cancelImport">Fermer</button>
           </div>
-          <p class="fineprint">Points-virgules ou retours à la ligne, au choix. Les mots sans définition sont acceptés : vous les définirez plus tard, à la génération.</p>
+          <p class="fineprint">Points-virgules ou retours à la ligne, au choix. Les mots sans définition sont acceptés : vous les définirez plus tard, à la génération. Les doublons sont ignorés; une définition nouvelle d'un mot déjà présent rejoint ce mot.</p>
         </div>
       </div>
     </section>
@@ -668,6 +668,14 @@ function newEntry(word, clueText){
   const text = (clueText || "").trim();
   return { id: uid(), word, clues: text ? [{ id: uid(), text }] : [] };
 }
+// Clé de comparaison d'un mot : ses lettres de placement (casse, accents,
+// ligatures et signes neutralisés). Sert à refuser les doublons dans une liste.
+function letterKey(word){ return sanitize(word).clean; }
+function findDuplicate(list, word, exceptId){
+  const key = letterKey(word);
+  if(!key) return null;
+  return list.entries.find(e => e.id !== exceptId && letterKey(e.word) === key) || null;
+}
 
 /* Migration ascendante : { word, clue } devient { word, clues: Clue[] } */
 function migrateEntry(e){
@@ -1004,7 +1012,13 @@ function startEdit(row, e){
 
   const rows = [];   // { id: id de la définition existante ou null, input }
   function commit(){
-    e.word = winp.value.trim();
+    const word = winp.value.trim();
+    if(word && findDuplicate(l, word, e.id)){
+      flash(`« ${word} » est déjà dans cette liste.`, true);
+      winp.focus(); winp.select();
+      return;
+    }
+    e.word = word;
     const clues = [];
     for(const r of rows){
       const txt = r.input.value.trim();
@@ -1330,7 +1344,21 @@ function renderSaved(){
    ========================================================= */
 function parsePaste(){
   const l = currentList();
-  let added = 0;
+  let added = 0, dups = 0, merged = 0;
+  const byKey = new Map();
+  for(const e of l.entries){ const k = letterKey(e.word); if(k && !byKey.has(k)) byKey.set(k, e); }
+  const push = (word, clue) => {
+    const k = letterKey(word);
+    const dup = k ? byKey.get(k) : null;
+    if(dup){
+      if(clue && !dup.clues.some(c => c.text === clue)){ dup.clues.push({ id: uid(), text: clue }); merged++; }
+      else dups++;
+      return;
+    }
+    const e = newEntry(word, clue);
+    l.entries.push(e); added++;
+    if(k) byKey.set(k, e);
+  };
   const lines = $("pasteArea").value.split(/\r?\n/);
   for(const raw of lines){
     const line = raw.trim();
@@ -1342,18 +1370,21 @@ function parsePaste(){
       const sep = (tab >= 0 && (col < 0 || tab < col)) ? tab : col;
       const word = line.slice(0, sep).trim();
       const clue = line.slice(sep + 1).trim();
-      if(word){ l.entries.push(newEntry(word, clue)); added++; }
+      if(word) push(word, clue);
     } else {
       // bare word(s): one or several separated by ";"
       for(const part of line.split(";")){
         const word = part.trim();
-        if(word){ l.entries.push(newEntry(word, "")); added++; }
+        if(word) push(word, "");
       }
     }
   }
   $("pasteArea").value = "";
   $("importBox").hidden = true;
-  flash(`${added} mot(s) ajouté(s).`);
+  const bits = [`${added} mot(s) ajouté(s)`];
+  if(merged) bits.push(`${merged} définition(s) ajoutée(s) à des mots existants`);
+  if(dups) bits.push(`${dups} doublon(s) ignoré(s)`);
+  flash(bits.join(" · ") + ".");
   afterMutate();
 }
 function download(filename, text, type){
@@ -1448,14 +1479,39 @@ function bind(){
   $("addBtn").onclick = () => {
     const raw = $("wIn").value.trim();
     if(!raw){ $("wIn").focus(); return; }
+    const l = currentList();
     if(raw.includes(";")){
-      let n = 0;
-      for(const part of raw.split(";")){ const w = part.trim(); if(w){ currentList().entries.push(newEntry(w, "")); n++; } }
+      const keys = new Set(l.entries.map(e => letterKey(e.word)).filter(Boolean));
+      let n = 0, dups = 0;
+      for(const part of raw.split(";")){
+        const w = part.trim();
+        if(!w) continue;
+        const k = letterKey(w);
+        if(k && keys.has(k)){ dups++; continue; }
+        if(k) keys.add(k);
+        l.entries.push(newEntry(w, ""));
+        n++;
+      }
       $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
-      flash(`${n} mots ajoutés.`); afterMutate();
+      flash(`${n} mots ajoutés` + (dups ? ` · ${dups} doublon${dups>1?"s":""} ignoré${dups>1?"s":""}` : "") + ".");
+      afterMutate();
       return;
     }
-    currentList().entries.push(newEntry(raw, $("cIn").value.trim()));
+    const clueTxt = $("cIn").value.trim();
+    const dup = findDuplicate(l, raw);
+    if(dup){
+      if(clueTxt && !dup.clues.some(c => c.text === clueTxt)){
+        dup.clues.push({ id: uid(), text: clueTxt });
+        flash(`« ${raw} » existait déjà : définition ajoutée à ce mot.`);
+        $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
+        afterMutate();
+      } else {
+        flash(`« ${raw} » est déjà dans cette liste.`, true);
+        $("wIn").focus(); $("wIn").select();
+      }
+      return;
+    }
+    l.entries.push(newEntry(raw, clueTxt));
     $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
     afterMutate();
   };
