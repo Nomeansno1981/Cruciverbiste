@@ -212,6 +212,24 @@ await check("persistance des définitions multiples après rechargement", async 
   if (saved !== 2) throw new Error("attendu 2 grilles enregistrées, obtenu " + saved);
 });
 
+await check("grand dictionnaire : tirage aléatoire d'un sous-ensemble", async () => {
+  await page.click("#newList");
+  await page.click("#toggleImport");
+  await page.fill("#pasteArea",
+    "loutre ; blaireau ; renard ; sanglier ; chevreuil ; écureuil ; hérisson ; belette ; fouine ; martre\n" +
+    "campagnol ; mulot ; musaraigne ; taupe ; lièvre ; lapin ; cerf ; biche ; faon ; loup\n" +
+    "lynx ; chamois ; bouquetin ; marmotte ; castor ; loir ; genette ; putois ; hermine ; vison");
+  await page.click("#parseBtn");
+  const n = await count("#entries .entry");
+  if (n !== 30) throw new Error("attendu 30 entrées, obtenu " + n);
+  const mw = await page.inputValue("#maxWords");
+  if (mw !== "15") throw new Error("« Mots à utiliser » devrait valoir 15 par défaut, obtenu " + mw);
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const stats = await page.locator("#placedStat").innerText();
+  if (!/tirage aléatoire de 15 mots parmi 30/.test(stats)) throw new Error("mention de tirage absente : " + stats);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
