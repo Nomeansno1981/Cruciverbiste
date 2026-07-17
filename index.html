@@ -741,6 +741,13 @@ function sanitize(raw){
   let clean = "";
   const display = [];
   for(const ch of up){
+    // Ligatures : un caractère, deux cases (CŒUR s'écrit C, O, E, U, R dans la grille).
+    if(ch === "Œ" || ch === "Æ"){
+      const pair = ch === "Œ" ? "OE" : "AE";
+      clean += pair;
+      display.push(pair[0], pair[1]);
+      continue;
+    }
     const stripped = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if(/^[A-Z]$/.test(stripped)){ clean += stripped; display.push(ch.normalize("NFC")); }
   }
@@ -1066,7 +1073,7 @@ function renderGrid(animate){
   $("gstats").hidden = false;
   const samp = currentModel.sampled;
   $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
-    + (samp ? `<span class="fillinfo"> · tirage aléatoire de ${samp.drawn} mots parmi ${samp.total}</span>` : "");
+    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? `tirage de ${samp.drawn} mots parmi ${samp.total} avec rotation (les moins utilisés dans vos grilles d'abord)` : `tirage aléatoire de ${samp.drawn} mots parmi ${samp.total}`}</span>` : "");
   const up = currentModel.unplaced || [];
   $("unplacedStat").textContent = up.length
     ? `· ${up.length} non ${up.length>1?"placés":"placé"} : ${up.map(e=>e.display.join("")).join(", ")}`
@@ -1205,6 +1212,17 @@ function renderClueBody(body, it, mode){
 /* =========================================================
    Generation flow
    ========================================================= */
+// Nombre d'apparitions de chaque mot du dictionnaire dans les grilles enregistrées.
+function savedGridUsage(){
+  const byId = new Map(), byWord = new Map();
+  for(const g of state.savedGrids || []){
+    for(const it of [].concat(g.across || [], g.down || [])){
+      if(it.entryId) byId.set(it.entryId, (byId.get(it.entryId) || 0) + 1);
+      else if(it.word) byWord.set(it.word, (byWord.get(it.word) || 0) + 1);
+    }
+  }
+  return ge => (byId.get(ge.entryId) || 0) + (byWord.get(ge.display.join("")) || 0);
+}
 function doGenerate(){
   const l = currentList();
   const { out, skipped } = prep(l.entries.map(toGenEntry));
@@ -1213,11 +1231,16 @@ function doGenerate(){
     currentModel = null; renderGrid(false); return;
   }
   let pool = out;
+  let rotated = false;
   const mw = Math.max(2, Math.min(out.length, parseInt($("maxWords").value || out.length, 10)));
   if(mw < out.length){
-    pool = out.slice();
-    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-    pool = pool.slice(0, mw);
+    // rotation : les mots les moins présents dans les grilles enregistrées sont
+    // tirés d'abord (hasard à égalité), pour couvrir tout le dictionnaire au fil des grilles
+    const usage = savedGridUsage();
+    const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
+    scored.sort((a,b) => a.u - b.u || a.r - b.r);
+    rotated = scored.some(x => x.u > 0);
+    pool = scored.slice(0, mw).map(x => x.e);
   }
   // dimensions (bounding box). Empty or too-small fields fall back to a suggestion.
   const longest = pool.reduce((m,e)=>Math.max(m,e.letters.length),0);
@@ -1236,7 +1259,7 @@ function doGenerate(){
   setTimeout(() => {
     const best = generate(pool, W, H, attempts);
     currentModel = buildModel(best);
-    currentModel.sampled = pool.length < out.length ? { drawn: pool.length, total: out.length } : null;
+    currentModel.sampled = pool.length < out.length ? { drawn: pool.length, total: out.length, rotated } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
     renderGrid(true);
     const notes = [];
@@ -1484,6 +1507,7 @@ function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g
 
 // Petit accès en lecture seule pour les tests automatisés.
 window.__vcState = () => JSON.parse(JSON.stringify(state));
+window.__vcSanitize = w => { const s = sanitize(w); return { clean: s.clean, display: s.display.join("") }; };
 
 /* =========================================================
    Boot
