@@ -10,6 +10,13 @@ Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de m
 2. Réglez le nombre de mots à utiliser et les dimensions maximales (largeur, hauteur), puis générez. Régénérez autant de fois que souhaité : l'algorithme maximise les croisements dans la boîte demandée.
 3. Enregistrez les grilles réussies, exportez la grille vide ou le corrigé en SVG, imprimez en PDF via le bouton dédié.
 
+## Définitions différées et multiples
+
+- Un mot peut vivre sans définition : le dictionnaire affiche son compteur (« 0 définition ») et le signale discrètement. La génération et l'impression restent possibles, la mention « définition à compléter » prenant la place du texte manquant.
+- À l'affichage d'une grille, chaque mot sans définition propose un champ « Définir... ». Le texte validé est enregistré dans le dictionnaire, donc mémorisé pour toutes les grilles suivantes.
+- Un mot peut porter plusieurs définitions. L'éditeur dépliable du dictionnaire (crayon sur la ligne du mot) permet d'en ajouter, modifier ou supprimer. Dans une grille, un sélecteur choisit celle qui s'applique; le défaut est la dernière définition utilisée, sinon la première. Le crayon sur la ligne d'une définition la modifie, et la modification est répercutée au dictionnaire.
+- Les grilles enregistrées conservent, pour chaque mot, l'identifiant de la définition choisie et son texte au moment de l'enregistrement : elles restent fidèles même si le dictionnaire évolue ensuite.
+
 ## Sauvegarde et synchronisation entre deux Macs
 
 Les données vivent dans le navigateur (IndexedDB), par machine et par navigateur. Pour passer d'un Mac à l'autre :
