@@ -555,6 +555,7 @@ async function bootCloud(){
       if(code === "auth/popup-blocked") status.textContent = "La fenêtre de connexion a été bloquée. Autorisez les fenêtres surgissantes pour ce site, puis réessayez.";
       else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") status.textContent = "Fenêtre refermée avant la fin de la connexion. Réessayez.";
       else if(code === "auth/configuration-not-found") status.textContent = "La connexion Google n'est pas activée dans la console Firebase : menu Authentication, onglet Sign-in method, fournisseur Google.";
+      else if(code === "auth/operation-not-allowed") status.textContent = "Le fournisseur Google n'est pas activé dans la console Firebase : Authentication, onglet Sign-in method, Google, interrupteur Activer, puis Enregistrer.";
       else if(code === "auth/unauthorized-domain") status.textContent = "Ce domaine n'est pas autorisé dans la console Firebase : Authentication, Settings, Domaines autorisés.";
       else status.textContent = "Connexion impossible : " + (e && e.message ? e.message : e);
     }
