@@ -698,7 +698,7 @@ function migrateSavedGrid(g){
   return {
     id: g.id || uid(), name: g.name || "Grille", listName: g.listName || "",
     date: g.date || "", rows: g.rows, cols: g.cols,
-    cells: g.cells || {}, number: g.number || {},
+    cells: g.cells || {}, number: g.number || {}, bars: g.bars || {},
     across: (g.across || []).map(item), down: (g.down || []).map(item),
     crossings: g.crossings || 0
   };
@@ -744,18 +744,28 @@ function sanitize(raw){
   const up = (raw || "").toUpperCase();
   let clean = "";
   const display = [];
+  const breaks = [];        // indices de lettres précédées d'une frontière de mot
+  let pendingBreak = false; // un espace ou un trait d'union vient d'être vu
   for(const ch of up){
+    if(ch === " " || ch === "\u00A0" || ch === "-"){
+      if(clean) pendingBreak = true;
+      continue;
+    }
     // Ligatures : un caractère, deux cases (CŒUR s'écrit C, O, E, U, R dans la grille).
     if(ch === "Œ" || ch === "Æ"){
+      if(pendingBreak){ breaks.push(clean.length); pendingBreak = false; }
       const pair = ch === "Œ" ? "OE" : "AE";
       clean += pair;
       display.push(pair[0], pair[1]);
       continue;
     }
     const stripped = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if(/^[A-Z]$/.test(stripped)){ clean += stripped; display.push(ch.normalize("NFC")); }
+    if(/^[A-Z]$/.test(stripped)){
+      if(pendingBreak){ breaks.push(clean.length); pendingBreak = false; }
+      clean += stripped; display.push(ch.normalize("NFC"));
+    }
   }
-  return { clean, display };
+  return { clean, display, breaks };
 }
 
 // Adaptateur : une entrée du dictionnaire vers le générateur, avec sa définition par défaut.
@@ -767,8 +777,8 @@ function toGenEntry(e){
 function prep(entries){
   const out = [], skipped = [];
   for(const e of entries){
-    const { clean, display } = sanitize(e.word);
-    if(clean.length >= 2) out.push({ letters: clean, display, clue: e.clue, raw: e.word, entryId: e.entryId || null, clueId: e.clueId || null });
+    const { clean, display, breaks } = sanitize(e.word);
+    if(clean.length >= 2) out.push({ letters: clean, display, breaks, clue: e.clue, raw: e.word, entryId: e.entryId || null, clueId: e.clueId || null });
     else if((e.word||"").trim()) skipped.push(e.word);
   }
   return { out, skipped };
@@ -891,13 +901,22 @@ function buildModel(res){
     if(sA||sD){ n++; number[keyOf(r,c)] = n; }
   }
   const across=[], down=[];
+  // barres épaisses : frontières de mots des réponses composées (espaces, traits d'union)
+  const bars = {};
+  for(const p of placed){
+    for(const k of (p.breaks || [])){
+      const kk = keyOf(p.r - minR + (p.dir===DOWN ? k : 0), p.c - minC + (p.dir===ACROSS ? k : 0));
+      const b = bars[kk] || (bars[kk] = {});
+      if(p.dir === ACROSS) b.left = true; else b.top = true;
+    }
+  }
   for(const p of placed){
     const num = number[keyOf(p.r-minR, p.c-minC)];
     const item = { num, clue:p.clue, word:p.display.join(""), entryId:p.entryId || null, clueId:p.clueId || null };
     (p.dir===ACROSS?across:down).push(item);
   }
   across.sort((a,b)=>a.num-b.num); down.sort((a,b)=>a.num-b.num);
-  return { cells, number, filled, rows, cols, across, down, unplaced:res.unplaced, crossings:res.crossings||0 };
+  return { cells, number, filled, rows, cols, across, down, bars, unplaced:res.unplaced, crossings:res.crossings||0 };
 }
 // Rebuild the filled() lookup for a grid model restored from storage.
 function ensureFilled(model){
@@ -913,6 +932,7 @@ function ensureFilled(model){
 const CELL = 38;
 function svgString(model, solution, animate){
   const { rows, cols, filled, cells, number } = model;
+  const bars = model.bars || {};
   const W = cols*CELL, H = rows*CELL;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" shape-rendering="crispEdges">`;
   let i = 0;
@@ -923,6 +943,11 @@ function svgString(model, solution, animate){
     const delay = animate ? ` style="animation-delay:${(i*10)}ms"` : "";
     s += `<g class="cell"${delay}>`;
     s += `<rect x="${x+0.75}" y="${y+0.75}" width="${CELL-1.5}" height="${CELL-1.5}" fill="#ffffff" stroke="#211E17" stroke-width="1.5"/>`;
+    const bar = bars[keyOf(r,c)];
+    if(bar){
+      if(bar.left) s += `<line x1="${x+0.75}" y1="${y+0.75}" x2="${x+0.75}" y2="${y+CELL-0.75}" stroke="#211E17" stroke-width="4.5"/>`;
+      if(bar.top) s += `<line x1="${x+0.75}" y1="${y+0.75}" x2="${x+CELL-0.75}" y2="${y+0.75}" stroke="#211E17" stroke-width="4.5"/>`;
+    }
     if(num) s += `<text x="${x+3.5}" y="${y+11}" font-family="${'SF Mono,Menlo,monospace'}" font-size="9" fill="#5B574F">${num}</text>`;
     if(solution){
       const ch = cells[keyOf(r,c)].display;
@@ -1289,6 +1314,7 @@ function saveCurrentGrid(){
     date: new Date().toISOString(),
     rows: currentModel.rows, cols: currentModel.cols,
     cells: currentModel.cells, number: currentModel.number,
+    bars: currentModel.bars || {},
     // copie des lignes : la grille enregistrée fige l'instantané (clueId + texte)
     across: currentModel.across.map(it => Object.assign({}, it)),
     down: currentModel.down.map(it => Object.assign({}, it)),
@@ -1305,6 +1331,7 @@ function loadSavedGrid(id){
   if(!g) return;
   currentModel = ensureFilled({
     rows: g.rows, cols: g.cols, cells: g.cells, number: g.number,
+    bars: g.bars || {},
     // copie des lignes : les interactions sur la grille affichée ne modifient pas l'instantané
     across: g.across.map(it => Object.assign({}, it)),
     down: g.down.map(it => Object.assign({}, it)),
@@ -1556,7 +1583,7 @@ function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g
 
 // Petit accès en lecture seule pour les tests automatisés.
 window.__vcState = () => JSON.parse(JSON.stringify(state));
-window.__vcSanitize = w => { const s = sanitize(w); return { clean: s.clean, display: s.display.join("") }; };
+window.__vcSanitize = w => { const s = sanitize(w); return { clean: s.clean, display: s.display.join(""), breaks: s.breaks }; };
 window.__vcPoolWords = (W, H) => {
   const { out } = prep(currentList().entries.map(toGenEntry));
   return selectPool(out, W, H).pool.map(e => e.display.join(""));
