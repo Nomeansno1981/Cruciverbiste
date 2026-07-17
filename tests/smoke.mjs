@@ -1,5 +1,6 @@
-// Test de fumée : l'application se charge, une grille se génère réellement,
-// l'état persiste dans IndexedDB et les grilles enregistrées se rechargent.
+// Test de fumée en mode #local : l'application se charge, une grille se génère
+// réellement, l'état persiste dans IndexedDB et les grilles enregistrées se
+// rechargent. La synchronisation en ligne a son propre test (tests/sync.mjs).
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { readdirSync, existsSync } from "node:fs";
@@ -21,7 +22,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
-const url = `http://127.0.0.1:${server.address().port}/`;
+const url = `http://127.0.0.1:${server.address().port}/#local`;
 
 async function launchBrowser(){
   const opts = { chromiumSandbox: false };
