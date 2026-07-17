@@ -146,6 +146,19 @@
   .board svg g.cell{animation:pop .28s ease both}
   @media (prefers-reduced-motion:reduce){ .board svg g.cell{animation:none} }
 
+  /* ---- compte & écran de connexion ---- */
+  .account{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted)}
+  .account[hidden]{display:none}
+  .account .btn-ghost{padding:4px 8px; font-size:12px}
+  #authGate{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:24px}
+  #authGate[hidden]{display:none}
+  .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); padding:36px 40px; max-width:440px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px}
+  .gate-card .mark{width:44px; height:44px}
+  .gate-card h2{margin:0; font-size:20px; letter-spacing:-.02em}
+  .gate-text{margin:0; font-family:var(--serif); font-size:14.5px; color:#3a3833; line-height:1.55}
+  .gate-status{margin:0; font-size:12.5px; color:var(--muted); min-height:1.2em}
+  .gate-status.warn{color:var(--accent)}
+
   /* ---- print ---- */
   @media print{
     body{background:#fff}
@@ -159,12 +172,29 @@
     .clues{page-break-inside:avoid}
     .definebox, .ctools, .clue-select{display:none !important}
     .print-fallback{display:inline !important}
+    #authGate, .account{display:none !important}
     h1{font-size:18px}
   }
   .print-title{display:none; font-family:var(--serif); font-size:18px; font-weight:700; margin:0 0 14px}
 </style>
 </head>
 <body>
+<div id="authGate" hidden>
+  <div class="gate-card">
+    <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+      <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
+      <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="19.6" y1="1" x2="19.6" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="10.3" x2="29" y2="10.3" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
+      <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
+    </svg>
+    <h2>verbicruciste</h2>
+    <p class="gate-text">Vos listes, vos définitions et vos grilles sont enregistrées en ligne et synchronisées entre vos machines. Connectez-vous pour ouvrir votre atelier.</p>
+    <button class="btn-primary" id="loginBtn" hidden>Se connecter avec Google</button>
+    <p class="gate-status" id="gateStatus">Vérification de la session…</p>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <div class="brand">
@@ -180,6 +210,7 @@
     </div>
     <span class="sub">atelier de grilles &nbsp;·&nbsp; dictionnaire personnel &amp; générateur de mots croisés</span>
     <span class="hstatus" id="hstatus"></span>
+    <span class="account" id="accountBar" hidden><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
 
   <div class="cols">
@@ -287,8 +318,29 @@
   </div>
 </div>
 
-<script>
+<script type="module">
 "use strict";
+
+/* =========================================================
+   Modes : en ligne (par défaut), #local (stockage navigateur seul),
+   #emu (émulateurs Firebase, pour les tests automatisés)
+   ========================================================= */
+const LOCAL_MODE = location.hash.includes("local");
+const EMU_MODE = location.hash.includes("emu");
+const CLOUD = !LOCAL_MODE;
+
+// En mode #emu (tests), le SDK est servi localement par le serveur de test.
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+// Ce bloc identifie le projet Firebase; il n'est pas secret, la protection
+// vient des règles Firestore (chaque compte ne lit et n'écrit que ses données).
+const firebaseConfig = {
+  apiKey: "AIzaSyC0MOc2BpRRs5IEDx1aF9bB6ezuHaZttL4",
+  authDomain: "verbicruciste-562f9.firebaseapp.com",
+  projectId: "verbicruciste-562f9",
+  storageBucket: "verbicruciste-562f9.firebasestorage.app",
+  messagingSenderId: "843269598276",
+  appId: "1:843269598276:web:cc2d6aed6221df1ce4a011"
+};
 
 /* =========================================================
    Persistance locale (IndexedDB)
@@ -343,11 +395,252 @@ function scheduleSave(){
 }
 async function doSave(){
   if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  if(CLOUD){
+    try{ localStorage.setItem("vc-current", state.currentId || ""); }catch(e){}
+    await cloudSaveDict();
+    return;
+  }
   if(!HAS_IDB) return;
   try{ await idbSet(STATE_KEY, JSON.stringify(state)); }
   catch(e){ flash("Sauvegarde impossible. Exportez vos listes.", true); }
 }
 window.addEventListener("pagehide", () => { if(saveTimer) doSave(); });
+
+/* =========================================================
+   Synchronisation en ligne (Firebase Auth + Firestore)
+   Le dictionnaire vit dans un document, chaque grille enregistrée
+   dans le sien; les deux machines écoutent les mêmes documents.
+   ========================================================= */
+let cloud = null;              // références Firebase une fois la session ouverte
+let opened = false;            // premier chargement terminé, interface affichée
+let pendingRemoteLists = null; // mise à jour distante différée (édition ou sauvegarde en cours)
+let savingDict = false;        // écriture du dictionnaire en vol
+
+const plain = x => JSON.parse(JSON.stringify(x));
+
+async function cloudSaveDict(){
+  if(!cloud) return;
+  savingDict = true;
+  try{ await cloud.setDoc(cloud.dictRef, { lists: plain(state.lists), updatedAt: cloud.serverTimestamp() }); }
+  catch(e){ flash("Écriture en ligne impossible pour l'instant.", true); }
+  finally{ savingDict = false; }
+}
+async function cloudSaveGrid(g){
+  if(!cloud) return;
+  try{ await cloud.setDoc(cloud.doc(cloud.db, "users", cloud.uid, "grids", g.id), plain(g)); }
+  catch(e){ flash("Grille non synchronisée pour l'instant.", true); }
+}
+async function cloudDeleteGrid(id){
+  if(!cloud) return;
+  try{ await cloud.deleteDoc(cloud.doc(cloud.db, "users", cloud.uid, "grids", id)); }catch(e){}
+}
+// Écrit tout l'état courant en ligne; retire les grilles qui n'existent plus.
+async function cloudReplaceAll(prevGridIds){
+  if(!cloud) return;
+  const ops = [["set", cloud.dictRef, { lists: plain(state.lists), updatedAt: cloud.serverTimestamp() }]];
+  for(const g of state.savedGrids) ops.push(["set", cloud.doc(cloud.db, "users", cloud.uid, "grids", g.id), plain(g)]);
+  const keep = new Set(state.savedGrids.map(g => g.id));
+  for(const id of prevGridIds || []) if(!keep.has(id)) ops.push(["del", cloud.doc(cloud.db, "users", cloud.uid, "grids", id)]);
+  while(ops.length){
+    const chunk = ops.splice(0, 400);
+    const b = cloud.writeBatch(cloud.db);
+    for(const [kind, ref, data] of chunk){ if(kind === "set") b.set(ref, data); else b.delete(ref); }
+    await b.commit();
+  }
+}
+
+const SEED_WORDS = "Lancelot|Guenièvre|charrette|Chrétien|Troyes|reine|Gauvain|épée|pont|amour|Méléagant|quête";
+function isPristineSeed(st){
+  if(!st || !Array.isArray(st.lists) || st.lists.length !== 1) return false;
+  if((st.savedGrids || []).length) return false;
+  const l = st.lists[0];
+  if(l.name !== "Le Chevalier de la charrette") return false;
+  return l.entries.map(e => e.word).join("|") === SEED_WORDS;
+}
+
+function sortGrids(){
+  state.savedGrids.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+}
+function pickCurrent(){
+  let want = state.currentId;
+  if(CLOUD){ try{ want = localStorage.getItem("vc-current") || want; }catch(e){} }
+  state.currentId = want && state.lists.some(l => l.id === want) ? want : (state.lists[0] ? state.lists[0].id : null);
+}
+// Une mise à jour distante n'est pas appliquée pendant une saisie en cours.
+function uiBusy(){
+  const a = document.activeElement;
+  if(!a || !a.closest) return false;
+  return !!(a.closest(".entry-editor") || a.closest(".definebox") || a.classList.contains("clue-select") || a.id === "listName");
+}
+function applyRemoteLists(lists){
+  // tout instantané plus récent remplace celui éventuellement en attente
+  pendingRemoteLists = null;
+  const norm = (lists || []).map(l => ({
+    id: l.id || uid(), name: l.name || "",
+    entries: (l.entries || []).map(migrateEntry).filter(e => e.word)
+  }));
+  if(JSON.stringify(norm) === JSON.stringify(state.lists)) return;
+  if(!opened){ state.lists = norm; return; }
+  // jamais pendant qu'une sauvegarde locale attend ou part : elle ferait perdre
+  // la modification locale; l'instantané est réappliqué juste après
+  if(saveTimer || savingDict || uiBusy()){ pendingRemoteLists = norm; setTimeout(retryPendingRemote, 700); return; }
+  state.lists = norm;
+  pickCurrent();
+  renderLists(); renderEntries();
+}
+function retryPendingRemote(){
+  if(pendingRemoteLists === null) return;
+  if(saveTimer || savingDict || uiBusy()){ setTimeout(retryPendingRemote, 700); return; }
+  const l = pendingRemoteLists; pendingRemoteLists = null;
+  applyRemoteLists(l);
+}
+function applyRemoteGrids(arr){
+  const sorted = arr.slice().sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+  if(JSON.stringify(sorted) === JSON.stringify(state.savedGrids)) return;
+  state.savedGrids = sorted;
+  if(opened) renderSaved();
+}
+function finishOpen(){
+  if(opened) return;
+  opened = true;
+  if(!state.lists.length) state.lists = [{ id: uid(), name: "Nouvelle liste", entries: [] }];
+  pickCurrent();
+  sortGrids();
+  $("authGate").hidden = true;
+  renderAll();
+  // Auto-generate a first grid so the workspace opens on a real crossword.
+  if(prep(currentList().entries.map(toGenEntry)).out.length >= 2) doGenerate();
+}
+
+async function bootCloud(){
+  const gate = $("authGate"), status = $("gateStatus"), loginBtn = $("loginBtn");
+  gate.hidden = false;
+  bind();
+  let m;
+  try{
+    const [appM, authM, fsM] = await Promise.all([
+      import(FIREBASE_SDK + "/firebase-app.js"),
+      import(FIREBASE_SDK + "/firebase-auth.js"),
+      import(FIREBASE_SDK + "/firebase-firestore.js")
+    ]);
+    m = Object.assign({}, appM, authM, fsM);
+  }catch(e){
+    status.textContent = "Impossible de charger le module de synchronisation. Vérifiez votre connexion, puis rechargez la page.";
+    status.classList.add("warn");
+    return;
+  }
+  const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-verbicruciste" }) : firebaseConfig;
+  const app = m.initializeApp(cfg);
+  const auth = m.getAuth(app);
+  let db;
+  try{ db = m.initializeFirestore(app, { localCache: m.persistentLocalCache({ tabManager: m.persistentMultipleTabManager() }) }); }
+  catch(e){ db = m.initializeFirestore(app, {}); }
+  if(EMU_MODE){
+    m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  }
+
+  loginBtn.onclick = async () => {
+    status.textContent = "Connexion…"; status.classList.remove("warn");
+    try{
+      if(EMU_MODE){
+        const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "autrice-test", email: "autrice@example.com", email_verified: true }));
+        await m.signInWithCredential(auth, cred);
+      } else {
+        await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+      }
+    }catch(e){
+      status.classList.add("warn");
+      const code = (e && e.code) || "";
+      if(code === "auth/popup-blocked") status.textContent = "La fenêtre de connexion a été bloquée. Autorisez les fenêtres surgissantes pour ce site, puis réessayez.";
+      else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") status.textContent = "Fenêtre refermée avant la fin de la connexion. Réessayez.";
+      else if(code === "auth/configuration-not-found") status.textContent = "La connexion Google n'est pas activée dans la console Firebase : menu Authentication, onglet Sign-in method, fournisseur Google.";
+      else if(code === "auth/unauthorized-domain") status.textContent = "Ce domaine n'est pas autorisé dans la console Firebase : Authentication, Settings, Domaines autorisés.";
+      else status.textContent = "Connexion impossible : " + (e && e.message ? e.message : e);
+    }
+  };
+
+  let started = false;
+  m.onAuthStateChanged(auth, user => {
+    if(!user){
+      gate.hidden = false;
+      loginBtn.hidden = false;
+      status.textContent = started ? "Session terminée. Reconnectez-vous." : "";
+      $("accountBar").hidden = true;
+      return;
+    }
+    if(started) return;
+    started = true;
+    cloud = { db, uid: user.uid,
+              doc: m.doc, setDoc: m.setDoc, deleteDoc: m.deleteDoc,
+              writeBatch: m.writeBatch, serverTimestamp: m.serverTimestamp,
+              dictRef: m.doc(db, "users", user.uid, "data", "dict") };
+    $("accountMail").textContent = user.email || "";
+    $("accountBar").hidden = false;
+    $("signOutBtn").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+    status.textContent = "Ouverture de votre atelier…";
+    startSession(m);
+  });
+}
+
+async function startSession(m){
+  // ancien stockage local de ce navigateur, repris une seule fois
+  const legacy = migrateState(await loadState());
+  const migratedFlag = "vc-migrated-" + cloud.uid;
+  let alreadyMigrated = false;
+  try{ alreadyMigrated = !!localStorage.getItem(migratedFlag); }catch(e){}
+  const markMigrated = () => { try{ localStorage.setItem(migratedFlag, "1"); }catch(e){} };
+
+  state = { lists: [], currentId: null, savedGrids: [] };
+  let dictSeen = false, gridsSeen = false, uploading = false;
+  const maybeOpen = () => {
+    if(opened || uploading || !dictSeen || !gridsSeen) return;
+    // fusion unique : données locales significatives inconnues du nuage
+    if(!alreadyMigrated){
+      alreadyMigrated = true; markMigrated();
+      if(legacy && legacy.lists.length && !isPristineSeed(legacy)){
+        const known = new Set(state.lists.map(l => l.id));
+        const extraL = legacy.lists.filter(l => !known.has(l.id));
+        if(extraL.length){ state.lists = state.lists.concat(plain(extraL)); cloudSaveDict(); }
+        const knownG = new Set(state.savedGrids.map(g => g.id));
+        for(const g of (legacy.savedGrids || []).filter(g => !knownG.has(g.id))){
+          state.savedGrids.push(plain(g)); cloudSaveGrid(g);
+        }
+      }
+    }
+    finishOpen();
+  };
+
+  m.onSnapshot(cloud.dictRef, async snap => {
+    if(!dictSeen){
+      dictSeen = true;
+      if(!snap.exists() && !snap.metadata.fromCache){
+        // tout premier passage : le nuage est vide, on y verse l'état local (ou la graine)
+        uploading = true;
+        if(legacy && legacy.lists.length){ state.lists = plain(legacy.lists); state.savedGrids = plain(legacy.savedGrids || []); }
+        else { seed(); }
+        alreadyMigrated = true; markMigrated();
+        try{ await cloudReplaceAll([]); }
+        catch(e){ flash("Écriture en ligne impossible : " + (e && e.code ? e.code : e), true); }
+        uploading = false; gridsSeen = true;
+        finishOpen();
+        return;
+      }
+      applyRemoteLists(snap.exists() ? (snap.data().lists || []) : []);
+      maybeOpen();
+      return;
+    }
+    applyRemoteLists(snap.exists() ? (snap.data().lists || []) : []);
+  }, err => {
+    $("gateStatus").textContent = "Lecture en ligne refusée (" + err.code + "). Vérifiez les règles Firestore dans la console.";
+    $("gateStatus").classList.add("warn");
+  });
+
+  m.onSnapshot(m.collection(cloud.db, "users", cloud.uid, "grids"), snap => {
+    applyRemoteGrids(snap.docs.map(d => d.data()));
+    if(!gridsSeen){ gridsSeen = true; maybeOpen(); }
+  });
+}
 
 /* =========================================================
    State
@@ -950,7 +1243,7 @@ function doGenerate(){
 function saveCurrentGrid(){
   if(!currentModel) return;
   state.savedGrids = state.savedGrids || [];
-  state.savedGrids.unshift({
+  const g = {
     id: uid(),
     name: currentList().name || "Grille",
     listName: currentList().name || "",
@@ -961,8 +1254,11 @@ function saveCurrentGrid(){
     across: currentModel.across.map(it => Object.assign({}, it)),
     down: currentModel.down.map(it => Object.assign({}, it)),
     crossings: currentModel.crossings
-  });
-  renderSaved(); scheduleSave();
+  };
+  state.savedGrids.unshift(g);
+  renderSaved();
+  // en ligne, les grilles ont leurs propres documents : le dictionnaire n'est pas réécrit
+  if(CLOUD) cloudSaveGrid(g); else scheduleSave();
   flash("Grille enregistrée.");
 }
 function loadSavedGrid(id){
@@ -997,7 +1293,7 @@ function renderSaved(){
     const acts = document.createElement("div");
     acts.className = "saved-acts";
     const load = document.createElement("button"); load.className="btn-out"; load.textContent="Charger"; load.onclick=()=>loadSavedGrid(g.id);
-    const del = document.createElement("button"); del.className="icon-btn del"; del.textContent="✕"; del.title="Supprimer"; del.onclick=()=>{ state.savedGrids = state.savedGrids.filter(x=>x.id!==g.id); renderSaved(); scheduleSave(); flash("Grille supprimée."); };
+    const del = document.createElement("button"); del.className="icon-btn del"; del.textContent="✕"; del.title="Supprimer"; del.onclick=()=>{ state.savedGrids = state.savedGrids.filter(x=>x.id!==g.id); renderSaved(); if(CLOUD) cloudDeleteGrid(g.id); else scheduleSave(); flash("Grille supprimée."); };
     acts.append(load, del);
     row.append(meta, acts);
     list.appendChild(row);
@@ -1060,10 +1356,17 @@ function importJsonFile(file){
       const data = JSON.parse(reader.result);
       const st = migrateState(data);
       if(!st) throw new Error("format");
+      const prevIds = state.savedGrids.map(g => g.id);
       state = st;
       currentModel = null;
       flash("Sauvegarde importée.");
-      renderAll(); doSave();
+      renderAll();
+      if(CLOUD){
+        try{ localStorage.setItem("vc-current", state.currentId || ""); }catch(err){}
+        cloudReplaceAll(prevIds);
+      } else {
+        doSave();
+      }
     }catch(e){ flash("Fichier illisible : sauvegarde non importée.", true); }
   };
   reader.readAsText(file);
@@ -1078,7 +1381,7 @@ function flash(msg, warn){
   el.textContent = msg;
   el.classList.toggle("warn", !!warn);
   if(flashTimer) clearTimeout(flashTimer);
-  flashTimer = setTimeout(()=>{ el.textContent = HAS_IDB ? "" : "Stockage local indisponible, pensez à exporter vos données."; el.classList.toggle("warn", !HAS_IDB); }, 3800);
+  flashTimer = setTimeout(()=>{ const fallback = (!CLOUD && !HAS_IDB) ? "Stockage local indisponible, pensez à exporter vos données." : ""; el.textContent = fallback; el.classList.toggle("warn", !!fallback); }, 3800);
 }
 function afterMutate(){
   renderEntries();
@@ -1176,6 +1479,8 @@ window.__vcState = () => JSON.parse(JSON.stringify(state));
    Boot
    ========================================================= */
 (async function init(){
+  if(CLOUD){ bootCloud(); return; }
+  // mode local (#local) : comportement d'origine, stockage IndexedDB seul
   const migrated = migrateState(await loadState());
   if(migrated){
     state = migrated;
