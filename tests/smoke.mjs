@@ -288,6 +288,36 @@ await check("rotation : les mots d'une grille enregistrée cèdent la place aux 
   if (!/rotation/.test(stats)) throw new Error("mention de rotation absente : " + stats);
 });
 
+await check("frontières de mots : espaces et traits d'union barrés, pas l'apostrophe", async () => {
+  const r = await page.evaluate(() => ({
+    dnd: window.__vcSanitize("donjons et dragons"),
+    appel: window.__vcSanitize("L'Appel de Cthulhu"),
+    pm: window.__vcSanitize("porte-monnaie")
+  }));
+  if (r.dnd.clean !== "DONJONSETDRAGONS" || r.dnd.breaks.join(",") !== "7,9") throw new Error("donjons et dragons : " + JSON.stringify(r.dnd));
+  if (r.appel.clean !== "LAPPELDECTHULHU" || r.appel.breaks.join(",") !== "6,8") throw new Error("L'Appel de Cthulhu : " + JSON.stringify(r.appel));
+  if (r.pm.clean !== "PORTEMONNAIE" || r.pm.breaks.join(",") !== "5") throw new Error("porte-monnaie : " + JSON.stringify(r.pm));
+});
+
+await check("barres épaisses dans la grille, conservées après enregistrement", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "donjons et dragons");
+  await page.click("#addBtn");
+  await page.fill("#wIn", "griffon");
+  await page.click("#addBtn");
+  await page.fill("#maxW", "17");
+  await page.fill("#maxH", "17");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const bars = await count('#board svg line[stroke-width="4.5"]');
+  if (bars !== 2) throw new Error("attendu 2 barres épaisses, obtenu " + bars);
+  await page.click("#saveGrid");
+  await page.click("#savedList .saved-row .btn-out");
+  await page.waitForFunction(() => /chargée/i.test(document.getElementById("hstatus").textContent));
+  const after = await count('#board svg line[stroke-width="4.5"]');
+  if (after !== 2) throw new Error("barres perdues au rechargement : " + after);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
