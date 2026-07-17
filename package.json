@@ -1,0 +1,12 @@
+{
+  "name": "verbicruciste",
+  "private": true,
+  "type": "module",
+  "description": "Atelier de mots croisés pédagogiques : dictionnaire personnel et générateur de grilles",
+  "scripts": {
+    "test": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
