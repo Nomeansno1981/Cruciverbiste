@@ -12,7 +12,9 @@ Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de m
 
 ## Grands dictionnaires thématiques
 
-Une liste peut contenir plusieurs centaines de mots sur un thème. Réglez « Mots à utiliser » (15 par défaut) : chaque génération tire ce nombre de mots au hasard dans la liste et compose une grille resserrée; « Régénérer » refait un tirage, donc une autre grille du même thème. La mention « tirage aléatoire de N mots parmi M » sous la grille rappelle ce fonctionnement. Enregistrez les grilles réussies au fil des tirages.
+Une liste peut contenir plusieurs centaines de mots sur un thème. Réglez « Mots à utiliser » (15 par défaut) : chaque génération tire ce nombre de mots dans la liste et compose une grille resserrée; « Régénérer » refait un tirage, donc une autre grille du même thème. Le tirage applique une rotation : les mots les moins présents dans vos grilles enregistrées sortent d'abord (hasard à égalité), si bien que les grilles successives couvrent tout le dictionnaire sans redites inutiles. La mention sous la grille rappelle le mode de tirage. Enregistrez les grilles réussies au fil des tirages.
+
+Côté lettres : les accents se croisent avec leurs lettres nues (É avec E, Ç avec C) et réapparaissent au corrigé; les ligatures sont décomposées (CŒUR s'écrit C, O, E, U, R); espaces, apostrophes, esperluettes et chiffres sont ignorés, ce qui permet les réponses en plusieurs mots (DONJONSETDRAGONS).
 
 ## Définitions différées et multiples
 

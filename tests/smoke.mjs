@@ -230,6 +230,38 @@ await check("grand dictionnaire : tirage aléatoire d'un sous-ensemble", async (
   if (!/tirage aléatoire de 15 mots parmi 30/.test(stats)) throw new Error("mention de tirage absente : " + stats);
 });
 
+await check("ligatures décomposées : cœur se place comme COEUR", async () => {
+  const r = await page.evaluate(() => ({
+    coeur: window.__vcSanitize("cœur"),
+    oeil: window.__vcSanitize("œil"),
+    naevus: window.__vcSanitize("nævus")
+  }));
+  if (r.coeur.clean !== "COEUR" || r.coeur.display !== "COEUR") throw new Error("cœur : " + JSON.stringify(r.coeur));
+  if (r.oeil.clean !== "OEIL") throw new Error("œil : " + JSON.stringify(r.oeil));
+  if (r.naevus.clean !== "NAEVUS") throw new Error("nævus : " + JSON.stringify(r.naevus));
+});
+
+await check("rotation : la seconde grille tire les mots pas encore enregistrés", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "rame ; mare ; aile ; elan");
+  await page.click("#addBtn");
+  await page.fill("#maxWords", "2");
+  const drawn = async () => {
+    await page.click("#genBtn");
+    await page.waitForSelector("#board svg g.cell");
+    return new Set(await page.locator(".clues .definebox input").evaluateAll(
+      els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1])));
+  };
+  const s1 = await drawn();
+  if (s1.size !== 2) throw new Error("premier tirage inattendu : " + [...s1].join(", "));
+  await page.click("#saveGrid");
+  const s2 = await drawn();
+  if (s2.size !== 2) throw new Error("second tirage inattendu : " + [...s2].join(", "));
+  for (const w of s2) if (s1.has(w)) throw new Error("mot répété malgré la rotation : " + w + " (grille 1 : " + [...s1].join("+") + " ; grille 2 : " + [...s2].join("+") + ")");
+  const stats = await page.locator("#placedStat").innerText();
+  if (!/rotation/.test(stats)) throw new Error("mention de rotation absente : " + stats);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
