@@ -148,6 +148,23 @@ await check("doublons refusés à l'ajout, définitions fusionnées", async () =
   if (n !== 14) throw new Error("attendu 14 entrées après collage (seul dragon est nouveau), obtenu " + n);
 });
 
+await check("suppression d'un mot : uniquement depuis l'éditeur, en deux touches", async () => {
+  const dels = await count("#entries .entry .del");
+  if (dels !== 0) throw new Error("les lignes ne devraient plus porter de croix de suppression (" + dels + ")");
+  const seedCount = () => page.evaluate(() => window.__vcState().lists[0].entries.length);
+  const row = page.locator("#entries .entry").filter({ hasText: "dragon" });
+  await row.click();
+  await page.waitForSelector(".entry-editor");
+  await page.click(".entry-editor .btn-danger");
+  if (await seedCount() !== 14) throw new Error("la première touche ne doit pas supprimer");
+  const label = await page.locator(".entry-editor .btn-danger").innerText();
+  if (!/Confirmer/.test(label)) throw new Error("bouton non armé : " + label);
+  await page.click(".entry-editor .btn-danger");
+  if (await seedCount() !== 13) throw new Error("le mot n'a pas été supprimé");
+  const gone = await page.locator("#entries .entry").filter({ hasText: "dragon" }).count();
+  if (gone !== 0) throw new Error("dragon encore présent dans l'affichage");
+});
+
 /* ---- J2 : définitions différées et multiples ---- */
 
 await check("création d'une liste et ajout de mots sans définition", async () => {
