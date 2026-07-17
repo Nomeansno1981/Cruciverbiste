@@ -120,6 +120,97 @@ await check("le modèle migré porte bien des tableaux clues[]", async () => {
   if (!banquet || banquet.clues.length !== 0) throw new Error("le mot sans définition devrait avoir clues = []");
 });
 
+/* ---- J2 : définitions différées et multiples ---- */
+
+await check("création d'une liste et ajout de mots sans définition", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "lac ; cave");
+  await page.click("#addBtn");
+  const n = await count("#entries .entry");
+  if (n !== 2) throw new Error("attendu 2 entrées, obtenu " + n);
+  const zeros = await count("#entries .cluecount.zero");
+  if (zeros !== 2) throw new Error("attendu 2 compteurs « 0 définition », obtenu " + zeros);
+  const badge = await page.locator("#entries .cluecount").first().innerText();
+  if (badge !== "0 définition") throw new Error("libellé de compteur inattendu : " + badge);
+});
+
+await check("génération : les mots sans définition proposent un champ « définir »", async () => {
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const boxes = await count(".clues .definebox input");
+  if (boxes !== 2) throw new Error("attendu 2 champs de saisie, obtenu " + boxes);
+});
+
+await check("définition rédigée depuis la grille et mémorisée au dictionnaire", async () => {
+  const inp = page.locator('.clues .definebox input[placeholder*="LAC"]');
+  await inp.fill("Étendue d'eau douce");
+  await inp.press("Enter");
+  const shown = await page.locator(".clues li").filter({ hasText: "Étendue d'eau douce" }).count();
+  if (shown !== 1) throw new Error("la définition ne s'affiche pas dans la grille");
+  const badge = await page.locator("#entries .entry").filter({ hasText: "lac" }).locator(".cluecount").innerText();
+  if (badge !== "1 définition") throw new Error("compteur du dictionnaire inattendu : " + badge);
+  const st = await page.evaluate(() => window.__vcState());
+  const lac = st.lists.find(l => l.id === st.currentId).entries.find(e => e.word === "lac");
+  if (!lac || lac.clues.length !== 1 || lac.clues[0].text !== "Étendue d'eau douce") throw new Error("définition absente du dictionnaire");
+  if (lac.lastClueId !== lac.clues[0].id) throw new Error("lastClueId non mémorisé");
+});
+
+await check("éditeur du dictionnaire : ajout d'une seconde définition", async () => {
+  const row = page.locator("#entries .entry").filter({ hasText: "lac" });
+  await row.hover();
+  await row.locator(".edit").click();
+  await page.click(".entry-editor .btn-out");
+  await page.locator(".entry-editor .cluerow input").last().fill("Le Bourget par exemple");
+  await page.click(".entry-editor .btn-primary");
+  const badge = await page.locator("#entries .entry").filter({ hasText: "lac" }).locator(".cluecount").innerText();
+  if (badge !== "2 définitions") throw new Error("compteur inattendu après ajout : " + badge);
+});
+
+await check("choix de la définition par grille via le sélecteur", async () => {
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const li = page.locator(".clues li").filter({ hasText: "Étendue d'eau douce" });
+  if (await li.count() !== 1) throw new Error("la définition par défaut (dernière utilisée) n'est pas affichée");
+  await li.hover();
+  await li.locator('[title^="Choisir la définition"]').click();
+  await page.locator(".clues select.clue-select").selectOption({ index: 1 });
+  const chosen = await page.locator(".clues li").filter({ hasText: "Le Bourget par exemple" }).count();
+  if (chosen !== 1) throw new Error("le changement de définition ne s'applique pas");
+  const st = await page.evaluate(() => window.__vcState());
+  const lac = st.lists.find(l => l.id === st.currentId).entries.find(e => e.word === "lac");
+  if (lac.lastClueId !== lac.clues[1].id) throw new Error("lastClueId non mis à jour après le choix");
+});
+
+await check("la dernière définition utilisée devient le défaut de la grille suivante", async () => {
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const shown = await page.locator(".clues li").filter({ hasText: "Le Bourget par exemple" }).count();
+  if (shown !== 1) throw new Error("le défaut n'est pas la dernière définition utilisée");
+});
+
+await check("grille enregistrée : instantané identifiant + texte de la définition", async () => {
+  await page.click("#saveGrid");
+  const st = await page.evaluate(() => window.__vcState());
+  const g = st.savedGrids[0];
+  const items = [].concat(g.across, g.down);
+  const lacItem = items.find(it => it.word === "LAC");
+  const lac = st.lists.find(l => l.id === st.currentId).entries.find(e => e.word === "lac");
+  if (!lacItem) throw new Error("LAC absent de la grille enregistrée");
+  if (lacItem.clueId !== lac.clues[1].id) throw new Error("clueId absent de l'instantané");
+  if (lacItem.clue !== "Le Bourget par exemple") throw new Error("texte absent de l'instantané");
+});
+
+await page.waitForTimeout(800);
+
+await check("persistance des définitions multiples après rechargement", async () => {
+  await page.reload();
+  await page.waitForSelector("#board svg g.cell");
+  const badge = await page.locator("#entries .entry").filter({ hasText: "lac" }).locator(".cluecount").innerText();
+  if (badge !== "2 définitions") throw new Error("définitions perdues après rechargement : " + badge);
+  const saved = await count("#savedList .saved-row");
+  if (saved !== 2) throw new Error("attendu 2 grilles enregistrées, obtenu " + saved);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });

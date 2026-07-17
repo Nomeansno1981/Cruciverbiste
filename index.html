@@ -83,9 +83,15 @@
   .entry .word{font-family:var(--mono); font-weight:600; font-size:13px; letter-spacing:.03em; color:var(--ink); white-space:nowrap; text-transform:uppercase}
   .entry .clue{flex:1; font-family:var(--serif); font-size:14px; color:#3a3833; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .entry .clue.none{color:var(--muted); font-style:italic}
+  .entry .cluecount{font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; flex:0 0 auto}
+  .entry .cluecount.zero{color:var(--accent)}
   .entry .acts{display:flex; gap:2px; opacity:0; transition:opacity .12s}
   .entry:hover .acts, .entry:focus-within .acts{opacity:1}
-  .entry.editing{display:grid; grid-template-columns:1fr 1.7fr auto; gap:8px}
+  .entry-editor{padding:10px 12px; border-bottom:1px solid var(--line-2); background:#fbfaf7; display:flex; flex-direction:column; gap:8px}
+  .entry-editor label.f{margin:0}
+  .entry-editor .cluerow{display:flex; gap:6px; align-items:center}
+  .entry-editor .cluerow input{flex:1; font-family:var(--serif)}
+  .entry-editor .ed-acts{display:flex; gap:8px; align-items:center; margin-top:2px}
   .empty-hint{padding:22px 14px; text-align:center; color:var(--muted); font-family:var(--serif); font-style:italic; font-size:14px}
 
   .tools{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
@@ -114,6 +120,15 @@
   .clues li{margin-bottom:8px; display:flex; gap:8px}
   .clues .n{font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--accent); min-width:20px; text-align:right; padding-top:1px}
   .clues .miss{color:var(--muted); font-style:italic}
+  .clues .cluebody{flex:1; min-width:0}
+  .clues .ctools{display:inline-flex; gap:2px; margin-left:6px; opacity:0; transition:opacity .12s; vertical-align:baseline}
+  .clues li:hover .ctools, .clues li:focus-within .ctools{opacity:1}
+  .clues .ctools .icon-btn{padding:1px 5px; font-size:13px}
+  .definebox{display:flex; gap:6px}
+  .definebox input{flex:1; font-family:var(--serif); font-size:14px; padding:5px 8px}
+  .definebox .btn-primary{padding:5px 11px; font-size:12.5px}
+  .clue-select{font-family:var(--serif); font-size:13.5px; padding:5px 8px}
+  .print-fallback{display:none}
 
   /* ---- saved grids ---- */
   .saved{margin-top:24px; border-top:1px solid var(--line-2); padding-top:16px}
@@ -142,6 +157,8 @@
     .board{border:none; padding:0; justify-content:flex-start}
     .print-title{display:block !important}
     .clues{page-break-inside:avoid}
+    .definebox, .ctools, .clue-select{display:none !important}
+    .print-fallback{display:inline !important}
     h1{font-size:18px}
   }
   .print-title{display:none; font-family:var(--serif); font-size:18px; font-weight:700; margin:0 0 14px}
@@ -648,14 +665,17 @@ function renderEntries(){
       const def = defaultClueOf(e);
       const clue = document.createElement("span");
       clue.className = "clue" + (def ? "" : " none");
-      clue.textContent = def ? def.text : "(sans définition)";
+      clue.textContent = def ? def.text : "encore sans définition";
       clue.title = def ? def.text : "";
+      const cnt = document.createElement("span");
+      cnt.className = "cluecount" + (e.clues.length ? "" : " zero");
+      cnt.textContent = e.clues.length + (e.clues.length > 1 ? " définitions" : " définition");
       const acts = document.createElement("span");
       acts.className = "acts";
       acts.innerHTML = `<button class="icon-btn edit" title="Modifier">✎</button><button class="icon-btn del" title="Supprimer">✕</button>`;
       acts.querySelector(".edit").onclick = () => startEdit(row, e);
       acts.querySelector(".del").onclick = () => { l.entries = l.entries.filter(x=>x.id!==e.id); afterMutate(); };
-      row.append(word, clue, acts);
+      row.append(word, clue, cnt, acts);
       box.appendChild(row);
     }
   }
@@ -675,31 +695,63 @@ function renderEntries(){
   }
 }
 
+// Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
 function startEdit(row, e){
-  row.classList.add("editing");
-  row.innerHTML = "";
-  const def = defaultClueOf(e);
-  const w = document.createElement("input"); w.type="text"; w.value=e.word; w.spellcheck=false;
-  const c = document.createElement("input"); c.type="text"; c.value=def?def.text:"";
-  const save = document.createElement("button"); save.className="btn-primary"; save.textContent="OK"; save.style.padding="8px 12px";
-  const commit = () => {
-    e.word = w.value.trim();
-    const txt = c.value.trim();
-    const cur = defaultClueOf(e);
-    if(txt){
-      if(cur) cur.text = txt;
-      else e.clues.push({ id: uid(), text: txt });
-    } else if(cur){
-      e.clues = e.clues.filter(x => x.id !== cur.id);
-      if(e.lastClueId === cur.id) delete e.lastClueId;
+  const l = currentList();
+  const ed = document.createElement("div");
+  ed.className = "entry-editor";
+
+  const wlab = document.createElement("label"); wlab.className = "f"; wlab.textContent = "Mot";
+  const winp = document.createElement("input"); winp.type = "text"; winp.value = e.word; winp.spellcheck = false;
+  const dlab = document.createElement("label"); dlab.className = "f"; dlab.textContent = "Définitions";
+  const list = document.createElement("div");
+  list.style.display = "flex"; list.style.flexDirection = "column"; list.style.gap = "6px";
+
+  const rows = [];   // { id: id de la définition existante ou null, input }
+  function commit(){
+    e.word = winp.value.trim();
+    const clues = [];
+    for(const r of rows){
+      const txt = r.input.value.trim();
+      if(txt) clues.push({ id: r.id || uid(), text: txt });
     }
-    if(!e.word){ currentList().entries = currentList().entries.filter(x=>x.id!==e.id); }
+    e.clues = clues;
+    if(e.lastClueId && !clues.some(c => c.id === e.lastClueId)) delete e.lastClueId;
+    if(!e.word){ l.entries = l.entries.filter(x => x.id !== e.id); }
     afterMutate();
-  };
-  save.onclick = commit;
-  w.onkeydown = c.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
-  row.append(w, c, save);
-  w.focus(); w.select();
+  }
+  function addRow(clue){
+    const r = document.createElement("div"); r.className = "cluerow";
+    const inp = document.createElement("input"); inp.type = "text";
+    inp.value = clue ? clue.text : "";
+    inp.placeholder = "Nouvelle définition";
+    const rec = { id: clue ? clue.id : null, input: inp };
+    const del = document.createElement("button");
+    del.className = "icon-btn del"; del.textContent = "✕"; del.title = "Supprimer cette définition";
+    del.onclick = () => { rows.splice(rows.indexOf(rec), 1); r.remove(); };
+    inp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
+    rows.push(rec);
+    r.append(inp, del);
+    list.appendChild(r);
+    return rec;
+  }
+  for(const c of e.clues) addRow(c);
+  if(!e.clues.length) addRow(null);
+
+  const acts = document.createElement("div"); acts.className = "ed-acts";
+  const add = document.createElement("button");
+  add.className = "btn-out"; add.textContent = "＋ Ajouter une définition";
+  add.onclick = () => { addRow(null).input.focus(); };
+  const ok = document.createElement("button");
+  ok.className = "btn-primary"; ok.textContent = "OK"; ok.onclick = commit;
+  const cancel = document.createElement("button");
+  cancel.className = "btn-ghost"; cancel.textContent = "Annuler"; cancel.onclick = () => renderEntries();
+  acts.append(ok, add, cancel);
+
+  winp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
+  ed.append(wlab, winp, dlab, list, acts);
+  row.replaceWith(ed);
+  winp.focus(); winp.select();
 }
 
 function renderGrid(animate){
@@ -725,12 +777,7 @@ function renderGrid(animate){
   $("clues").hidden = false;
   const fill = (ol, items) => {
     ol.innerHTML = "";
-    for(const it of items){
-      const li = document.createElement("li");
-      const clueTxt = it.clue ? escapeHtml(it.clue) : `<span class="miss">(définition à compléter : ${escapeHtml(it.word)})</span>`;
-      li.innerHTML = `<span class="n">${it.num}</span><span>${clueTxt}</span>`;
-      ol.appendChild(li);
-    }
+    for(const it of items) ol.appendChild(clueLine(it));
     if(!items.length) ol.innerHTML = `<li style="color:var(--muted);font-style:italic">·</li>`;
   };
   fill($("acrossList"), currentModel.across);
@@ -740,6 +787,121 @@ function renderGrid(animate){
   $("printTitle").textContent = currentModel.listName || currentList().name || "Mots croisés";
 }
 function escapeHtml(s){ return (s||"").replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m])); }
+
+/* =========================================================
+   Lignes de définitions interactives (définitions différées)
+   ========================================================= */
+function iconBtn(sym, title, fn){
+  const b = document.createElement("button");
+  b.className = "icon-btn"; b.textContent = sym; b.title = title; b.onclick = fn;
+  return b;
+}
+function clueLine(it){
+  const li = document.createElement("li");
+  const n = document.createElement("span");
+  n.className = "n"; n.textContent = it.num;
+  const body = document.createElement("span");
+  body.className = "cluebody";
+  li.append(n, body);
+  renderClueBody(body, it);
+  return li;
+}
+// mode : undefined (texte), "edit" (modifier le texte), "choose" (sélecteur), "new" (nouvelle définition)
+function renderClueBody(body, it, mode){
+  body.innerHTML = "";
+  const entry = findEntry(it.entryId);
+
+  // Champ de saisie : mot encore sans définition, nouvelle définition, ou modification du texte.
+  if(mode === "edit" || mode === "new" || (!mode && !it.clue && entry)){
+    const isEdit = mode === "edit";
+    const box = document.createElement("span");
+    box.className = "definebox";
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.placeholder = isEdit ? "" : "Définir « " + it.word + " »…";
+    if(isEdit) inp.value = it.clue;
+    const ok = document.createElement("button");
+    ok.className = "btn-primary"; ok.textContent = "OK";
+    const commit = () => {
+      const txt = inp.value.trim();
+      if(!txt){ renderClueBody(body, it); return; }
+      const existing = isEdit && it.clueId ? entry.clues.find(x => x.id === it.clueId) : null;
+      if(existing){
+        existing.text = txt;
+        it.clue = txt;
+        flash("Définition mise à jour au dictionnaire.");
+      } else {
+        const c = { id: uid(), text: txt };
+        entry.clues.push(c);
+        entry.lastClueId = c.id;
+        it.clueId = c.id; it.clue = txt;
+        flash("Définition enregistrée au dictionnaire.");
+      }
+      renderEntries(); scheduleSave();
+      renderClueBody(body, it);
+    };
+    ok.onclick = commit;
+    inp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderClueBody(body, it); };
+    box.append(inp, ok);
+    body.appendChild(box);
+    if(!isEdit){
+      const miss = document.createElement("span");
+      miss.className = "miss print-fallback";
+      miss.textContent = "(définition à compléter : " + it.word + ")";
+      body.appendChild(miss);
+    }
+    if(mode) inp.focus();
+    return;
+  }
+
+  // Sélecteur : choisir, pour cette grille, parmi les définitions du mot.
+  if(mode === "choose" && entry && entry.clues.length){
+    const sel = document.createElement("select");
+    sel.className = "clue-select";
+    for(const c of entry.clues){
+      const o = document.createElement("option");
+      o.value = c.id; o.textContent = c.text;
+      if(c.id === it.clueId) o.selected = true;
+      sel.appendChild(o);
+    }
+    const oNew = document.createElement("option");
+    oNew.value = "__new__"; oNew.textContent = "Nouvelle définition…";
+    sel.appendChild(oNew);
+    sel.onchange = () => {
+      if(sel.value === "__new__"){ renderClueBody(body, it, "new"); return; }
+      const c = entry.clues.find(x => x.id === sel.value);
+      if(c){
+        it.clueId = c.id; it.clue = c.text;
+        entry.lastClueId = c.id;
+        renderEntries(); scheduleSave();
+        flash("Définition choisie pour cette grille.");
+      }
+      renderClueBody(body, it);
+    };
+    sel.onkeydown = ev => { if(ev.key==="Escape") renderClueBody(body, it); };
+    body.appendChild(sel);
+    sel.focus();
+    return;
+  }
+
+  // Affichage simple du texte (ou mention à compléter si le mot a quitté le dictionnaire).
+  const txt = document.createElement("span");
+  if(it.clue){ txt.textContent = it.clue; }
+  else { txt.className = "miss"; txt.textContent = "(définition à compléter : " + it.word + ")"; }
+  body.appendChild(txt);
+
+  if(entry){
+    const tools = document.createElement("span");
+    tools.className = "ctools";
+    if(it.clue && it.clueId){
+      tools.appendChild(iconBtn("✎", "Modifier cette définition", () => renderClueBody(body, it, "edit")));
+    }
+    if(entry.clues.length > 1){
+      tools.appendChild(iconBtn("⇅", "Choisir la définition (" + entry.clues.length + ")", () => renderClueBody(body, it, "choose")));
+    }
+    if(tools.children.length) body.appendChild(tools);
+  }
+}
 
 /* =========================================================
    Generation flow
@@ -795,7 +957,9 @@ function saveCurrentGrid(){
     date: new Date().toISOString(),
     rows: currentModel.rows, cols: currentModel.cols,
     cells: currentModel.cells, number: currentModel.number,
-    across: currentModel.across, down: currentModel.down,
+    // copie des lignes : la grille enregistrée fige l'instantané (clueId + texte)
+    across: currentModel.across.map(it => Object.assign({}, it)),
+    down: currentModel.down.map(it => Object.assign({}, it)),
     crossings: currentModel.crossings
   });
   renderSaved(); scheduleSave();
@@ -806,7 +970,10 @@ function loadSavedGrid(id){
   if(!g) return;
   currentModel = ensureFilled({
     rows: g.rows, cols: g.cols, cells: g.cells, number: g.number,
-    across: g.across, down: g.down, crossings: g.crossings || 0,
+    // copie des lignes : les interactions sur la grille affichée ne modifient pas l'instantané
+    across: g.across.map(it => Object.assign({}, it)),
+    down: g.down.map(it => Object.assign({}, it)),
+    crossings: g.crossings || 0,
     unplaced: [], listName: g.listName
   });
   renderGrid(true);
