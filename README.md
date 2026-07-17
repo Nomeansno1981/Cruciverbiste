@@ -7,12 +7,12 @@ Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de m
 ## Utilisation rapide
 
 1. Créez une liste (une par séquence), ajoutez vos mots : un par un, séparés par des points-virgules (« lancelot ; guenièvre ; charrette »), ou en collant une liste entière. Les définitions sont optionnelles : vous pouvez les rédiger plus tard, au moment où le mot sort dans une grille.
-2. Réglez le nombre de mots à utiliser et les dimensions maximales (largeur, hauteur), puis générez. Régénérez autant de fois que souhaité : l'algorithme maximise les croisements dans la boîte demandée.
+2. Réglez les dimensions maximales (largeur, hauteur), puis générez : l'application case autant de mots que possible dans la boîte en maximisant les croisements. Régénérez autant de fois que souhaité.
 3. Enregistrez les grilles réussies, exportez la grille vide ou le corrigé en SVG, imprimez en PDF via le bouton dédié.
 
 ## Grands dictionnaires thématiques
 
-Une liste peut contenir plusieurs centaines de mots sur un thème. Réglez « Mots à utiliser » (15 par défaut) : chaque génération tire ce nombre de mots dans la liste et compose une grille resserrée; « Régénérer » refait un tirage, donc une autre grille du même thème. Le tirage applique une rotation : les mots les moins présents dans vos grilles enregistrées sortent d'abord (hasard à égalité), si bien que les grilles successives couvrent tout le dictionnaire sans redites inutiles. La mention sous la grille rappelle le mode de tirage. Enregistrez les grilles réussies au fil des tirages.
+Une liste peut contenir plusieurs centaines de mots sur un thème. La taille de la boîte détermine le nombre de mots d'une grille : l'application y case autant de mots que possible. Quand le dictionnaire dépasse la capacité de la boîte, le tirage des candidats applique une rotation : les mots les moins présents dans vos grilles enregistrées passent d'abord (hasard à égalité), si bien que les grilles successives couvrent tout le dictionnaire; le surplus est signalé « en réserve » sous la grille. Enregistrez les grilles réussies au fil des tirages, et régénérez pour obtenir une autre grille du même thème.
 
 Côté lettres : les accents se croisent avec leurs lettres nues (É avec E, Ç avec C) et réapparaissent au corrigé; les ligatures sont décomposées (CŒUR s'écrit C, O, E, U, R); espaces, apostrophes, esperluettes et chiffres sont ignorés, ce qui permet les réponses en plusieurs mots (DONJONSETDRAGONS).
 

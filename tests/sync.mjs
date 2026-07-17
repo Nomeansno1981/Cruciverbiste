@@ -137,7 +137,6 @@ await check("suppression de la grille sur l'autre navigateur, répercutée en re
 await check("définition rédigée depuis une grille synchronisée entre navigateurs", async () => {
   await pageA.fill("#wIn", "sérac");
   await pageA.click("#addBtn");
-  await pageA.fill("#maxWords", "15");
   await pageA.click("#genBtn");
   await pageA.waitForSelector("#board svg g.cell");
   const inp = pageA.locator('.clues .definebox input[placeholder*="SÉRAC"]');
