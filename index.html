@@ -77,7 +77,7 @@
 
   /* ---- entries ---- */
   .entries{border:1px solid var(--line-2); border-radius:5px; max-height:360px; overflow:auto; background:#fff}
-  .entry{display:flex; align-items:center; gap:10px; padding:8px 10px; border-bottom:1px solid var(--line-2)}
+  .entry{display:flex; align-items:center; gap:10px; padding:8px 10px; border-bottom:1px solid var(--line-2); cursor:pointer}
   .entry:last-child{border-bottom:none}
   .entry:hover{background:#fbfaf7}
   .entry .word{font-family:var(--mono); font-weight:600; font-size:13px; letter-spacing:.03em; color:var(--ink); white-space:nowrap; text-transform:uppercase}
@@ -87,11 +87,13 @@
   .entry .cluecount.zero{color:var(--accent)}
   .entry .acts{display:flex; gap:2px; opacity:0; transition:opacity .12s}
   .entry:hover .acts, .entry:focus-within .acts{opacity:1}
+  @media (hover: none){ .entry .acts{opacity:.55} }
   .entry-editor{padding:10px 12px; border-bottom:1px solid var(--line-2); background:#fbfaf7; display:flex; flex-direction:column; gap:8px}
   .entry-editor label.f{margin:0}
   .entry-editor .cluerow{display:flex; gap:6px; align-items:center}
   .entry-editor .cluerow input{flex:1; font-family:var(--serif)}
-  .entry-editor .ed-acts{display:flex; gap:8px; align-items:center; margin-top:2px}
+  .entry-editor .ed-acts{display:flex; gap:8px; align-items:center; margin-top:2px; flex-wrap:wrap}
+  .entry-editor .ed-acts .btn-danger{margin-left:auto}
   .empty-hint{padding:22px 14px; text-align:center; color:var(--muted); font-family:var(--serif); font-style:italic; font-size:14px}
 
   .tools{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
@@ -1004,9 +1006,11 @@ function renderEntries(){
       cnt.textContent = e.clues.length + (e.clues.length > 1 ? " définitions" : " définition");
       const acts = document.createElement("span");
       acts.className = "acts";
-      acts.innerHTML = `<button class="icon-btn edit" title="Modifier">✎</button><button class="icon-btn del" title="Supprimer">✕</button>`;
-      acts.querySelector(".edit").onclick = () => startEdit(row, e);
-      acts.querySelector(".del").onclick = () => { l.entries = l.entries.filter(x=>x.id!==e.id); afterMutate(); };
+      // pas de suppression directe depuis la ligne : trop facile à toucher par
+      // erreur sur mobile; elle vit dans l'éditeur, avec confirmation
+      acts.innerHTML = `<button class="icon-btn edit" title="Modifier">✎</button>`;
+      acts.querySelector(".edit").onclick = ev => { ev.stopPropagation(); startEdit(row, e); };
+      row.onclick = () => startEdit(row, e);
       row.append(word, clue, cnt, acts);
       box.appendChild(row);
     }
@@ -1080,7 +1084,22 @@ function startEdit(row, e){
   ok.className = "btn-primary"; ok.textContent = "OK"; ok.onclick = commit;
   const cancel = document.createElement("button");
   cancel.className = "btn-ghost"; cancel.textContent = "Annuler"; cancel.onclick = () => renderEntries();
-  acts.append(ok, add, cancel);
+  // suppression du mot : uniquement ici, en deux touches
+  const del = document.createElement("button");
+  del.className = "btn-out btn-danger"; del.textContent = "Supprimer le mot";
+  let delArmedW = false, delTimerW = null;
+  del.onclick = () => {
+    if(!delArmedW){
+      delArmedW = true; del.classList.add("armed"); del.textContent = "Confirmer la suppression ?";
+      delTimerW = setTimeout(() => { delArmedW = false; del.classList.remove("armed"); del.textContent = "Supprimer le mot"; }, 3000);
+      return;
+    }
+    if(delTimerW) clearTimeout(delTimerW);
+    l.entries = l.entries.filter(x => x.id !== e.id);
+    flash("Mot supprimé.");
+    afterMutate();
+  };
+  acts.append(ok, add, cancel, del);
 
   winp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
   ed.append(wlab, winp, dlab, list, acts);
