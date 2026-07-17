@@ -269,10 +269,6 @@
         <div class="gcontrols">
           <button class="btn-primary" id="genBtn">Générer la grille</button>
           <button class="btn-out" id="regenBtn">Régénérer</button>
-          <div class="grow" style="max-width:150px" title="Nombre de mots tirés au hasard dans la liste à chaque génération. Régénérer refait un tirage.">
-            <label class="f" for="maxWords">Mots à utiliser</label>
-            <input type="number" id="maxWords" min="2" step="1" />
-          </div>
           <div class="grow" style="max-width:110px">
             <label class="f" for="maxW">Largeur max</label>
             <input type="number" id="maxW" min="2" step="1" />
@@ -957,7 +953,9 @@ function renderEntries(){
   if(!l.entries.length){
     box.innerHTML = `<div class="empty-hint">Aucun mot pour l'instant. Ajoutez-en un ci-dessus, ou collez une liste.</div>`;
   } else {
-    for(const e of l.entries){
+    // affichage par ordre alphabétique (l'ordre de saisie est conservé dans les données)
+    const sorted = l.entries.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
+    for(const e of sorted){
       const row = document.createElement("div");
       row.className = "entry";
       row.dataset.id = e.id;
@@ -981,13 +979,6 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  const mw = $("maxWords");
-  const n = l.entries.length;
-  mw.max = String(Math.max(2,n));
-  // Défaut : 15 mots au plus par grille, suivi de la taille de la liste tant
-  // que la valeur n'a pas été fixée à la main (les grands dictionnaires
-  // thématiques donnent des grilles par tirage, pas des grilles de 300 mots).
-  if(!mw.value || +mw.value > n || mw.dataset.auto){ mw.value = String(Math.max(2, Math.min(n, 15))); mw.dataset.auto = "1"; }
   // suggest grid dimensions when the fields are empty (user values are kept)
   const words = prep(l.entries.map(toGenEntry)).out;
   if(words.length){
@@ -1073,10 +1064,12 @@ function renderGrid(animate){
   $("gstats").hidden = false;
   const samp = currentModel.sampled;
   $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
-    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? `tirage de ${samp.drawn} mots parmi ${samp.total} avec rotation (les moins utilisés dans vos grilles d'abord)` : `tirage aléatoire de ${samp.drawn} mots parmi ${samp.total}`}</span>` : "");
+    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? "rotation : les mots les moins utilisés dans vos grilles d'abord" : "tirage dans le dictionnaire"} (${samp.total} mots au total)</span>` : "");
   const up = currentModel.unplaced || [];
   $("unplacedStat").textContent = up.length
-    ? `· ${up.length} non ${up.length>1?"placés":"placé"} : ${up.map(e=>e.display.join("")).join(", ")}`
+    ? (up.length > 6
+        ? `· ${up.length} mots en réserve pour de prochaines grilles`
+        : `· ${up.length} non ${up.length>1?"placés":"placé"} : ${up.map(e=>e.display.join("")).join(", ")}`)
     : "";
 
   // clues
@@ -1223,6 +1216,17 @@ function savedGridUsage(){
   }
   return ge => (byId.get(ge.entryId) || 0) + (byWord.get(ge.display.join("")) || 0);
 }
+// Candidats d'une grille : autant de mots que la boîte peut en accueillir.
+// Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
+// les grilles enregistrées passent d'abord (hasard à égalité).
+function selectPool(out, W, H){
+  const cap = Math.max(20, Math.round((W * H) / 8));
+  if(out.length <= cap) return { pool: out, rotated: false };
+  const usage = savedGridUsage();
+  const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
+  scored.sort((a,b) => a.u - b.u || a.r - b.r);
+  return { pool: scored.slice(0, cap).map(x => x.e), rotated: scored.some(x => x.u > 0) };
+}
 function doGenerate(){
   const l = currentList();
   const { out, skipped } = prep(l.entries.map(toGenEntry));
@@ -1230,25 +1234,14 @@ function doGenerate(){
     flash("Il faut au moins deux mots valides pour générer une grille.", true);
     currentModel = null; renderGrid(false); return;
   }
-  let pool = out;
-  let rotated = false;
-  const mw = Math.max(2, Math.min(out.length, parseInt($("maxWords").value || out.length, 10)));
-  if(mw < out.length){
-    // rotation : les mots les moins présents dans les grilles enregistrées sont
-    // tirés d'abord (hasard à égalité), pour couvrir tout le dictionnaire au fil des grilles
-    const usage = savedGridUsage();
-    const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
-    scored.sort((a,b) => a.u - b.u || a.r - b.r);
-    rotated = scored.some(x => x.u > 0);
-    pool = scored.slice(0, mw).map(x => x.e);
-  }
   // dimensions (bounding box). Empty or too-small fields fall back to a suggestion.
-  const longest = pool.reduce((m,e)=>Math.max(m,e.letters.length),0);
-  const sumLen = pool.reduce((s,e)=>s+e.letters.length,0);
+  const longest = out.reduce((m,e)=>Math.max(m,e.letters.length),0);
+  const sumLen = out.reduce((s,e)=>s+e.letters.length,0);
   const suggest = Math.max(longest, Math.min(25, Math.round(Math.sqrt(sumLen)*1.7)));
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
   if(!W || W < 2){ W = suggest; $("maxW").value = String(W); }
   if(!H || H < 2){ H = suggest; $("maxH").value = String(H); }
+  const { pool, rotated } = selectPool(out, W, H);
   const tooLong = pool.filter(e => e.letters.length > Math.max(W, H));
   // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
   const attempts = Math.max(pool.length > 60 ? 30 : 150, Math.min(600, Math.round(6500 / pool.length)));
@@ -1259,7 +1252,7 @@ function doGenerate(){
   setTimeout(() => {
     const best = generate(pool, W, H, attempts);
     currentModel = buildModel(best);
-    currentModel.sampled = pool.length < out.length ? { drawn: pool.length, total: out.length, rotated } : null;
+    currentModel.sampled = pool.length < out.length ? { total: out.length, rotated } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
     renderGrid(true);
     const notes = [];
@@ -1376,7 +1369,8 @@ function exportJson(){
 }
 function exportTsv(){
   const l = currentList();
-  const tsv = l.entries.map(e => [e.word].concat(e.clues.map(c => c.text)).join("\t")).join("\n");
+  const sorted = l.entries.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
+  const tsv = sorted.map(e => [e.word].concat(e.clues.map(c => c.text)).join("\t")).join("\n");
   const safe = (l.name||"liste").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "liste";
   download(safe + ".tsv", tsv, "text/tab-separated-values;charset=utf-8");
   flash("Liste exportée en .tsv");
@@ -1485,7 +1479,6 @@ function bind(){
   };
   $("delList").onclick = armDelete;
 
-  $("maxWords").oninput = () => { delete $("maxWords").dataset.auto; };
   $("genBtn").onclick = doGenerate;
   $("regenBtn").onclick = doGenerate;
   $("saveGrid").onclick = saveCurrentGrid;
@@ -1508,6 +1501,10 @@ function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g
 // Petit accès en lecture seule pour les tests automatisés.
 window.__vcState = () => JSON.parse(JSON.stringify(state));
 window.__vcSanitize = w => { const s = sanitize(w); return { clean: s.clean, display: s.display.join("") }; };
+window.__vcPoolWords = (W, H) => {
+  const { out } = prep(currentList().entries.map(toGenEntry));
+  return selectPool(out, W, H).pool.map(e => e.display.join(""));
+};
 
 /* =========================================================
    Boot

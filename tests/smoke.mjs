@@ -93,6 +93,11 @@ await check("ajout d'un mot sans définition", async () => {
   if (n !== 13) throw new Error("attendu 13, obtenu " + n);
 });
 
+await check("dictionnaire affiché par ordre alphabétique", async () => {
+  const first = await page.locator("#entries .entry .word").first().innerText();
+  if (first.toLowerCase() !== "amour") throw new Error("premier mot attendu « amour », obtenu : " + first);
+});
+
 // Laisse la sauvegarde différée (350 ms) s'écrire avant de recharger.
 await page.waitForTimeout(800);
 
@@ -212,7 +217,7 @@ await check("persistance des définitions multiples après rechargement", async 
   if (saved !== 2) throw new Error("attendu 2 grilles enregistrées, obtenu " + saved);
 });
 
-await check("grand dictionnaire : tirage aléatoire d'un sous-ensemble", async () => {
+await check("grand dictionnaire : la boîte se remplit, le surplus reste en réserve", async () => {
   await page.click("#newList");
   await page.click("#toggleImport");
   await page.fill("#pasteArea",
@@ -222,12 +227,12 @@ await check("grand dictionnaire : tirage aléatoire d'un sous-ensemble", async (
   await page.click("#parseBtn");
   const n = await count("#entries .entry");
   if (n !== 30) throw new Error("attendu 30 entrées, obtenu " + n);
-  const mw = await page.inputValue("#maxWords");
-  if (mw !== "15") throw new Error("« Mots à utiliser » devrait valoir 15 par défaut, obtenu " + mw);
+  await page.fill("#maxW", "12");
+  await page.fill("#maxH", "12");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const stats = await page.locator("#placedStat").innerText();
-  if (!/tirage aléatoire de 15 mots parmi 30/.test(stats)) throw new Error("mention de tirage absente : " + stats);
+  if (!/30 mots au total/.test(stats)) throw new Error("mention du dictionnaire absente : " + stats);
 });
 
 await check("ligatures décomposées : cœur se place comme COEUR", async () => {
@@ -241,23 +246,22 @@ await check("ligatures décomposées : cœur se place comme COEUR", async () => 
   if (r.naevus.clean !== "NAEVUS") throw new Error("nævus : " + JSON.stringify(r.naevus));
 });
 
-await check("rotation : la seconde grille tire les mots pas encore enregistrés", async () => {
-  await page.click("#newList");
-  await page.fill("#wIn", "rame ; mare ; aile ; elan");
-  await page.click("#addBtn");
-  await page.fill("#maxWords", "2");
-  const drawn = async () => {
-    await page.click("#genBtn");
-    await page.waitForSelector("#board svg g.cell");
-    return new Set(await page.locator(".clues .definebox input").evaluateAll(
-      els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1])));
-  };
-  const s1 = await drawn();
-  if (s1.size !== 2) throw new Error("premier tirage inattendu : " + [...s1].join(", "));
+await check("rotation : les mots d'une grille enregistrée cèdent la place aux autres", async () => {
+  // sur la liste de 30 animaux : petite boîte, grille enregistrée, puis
+  // les candidats suivants doivent exclure les mots déjà enregistrés
+  await page.fill("#maxW", "8");
+  await page.fill("#maxH", "8");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
   await page.click("#saveGrid");
-  const s2 = await drawn();
-  if (s2.size !== 2) throw new Error("second tirage inattendu : " + [...s2].join(", "));
-  for (const w of s2) if (s1.has(w)) throw new Error("mot répété malgré la rotation : " + w + " (grille 1 : " + [...s1].join("+") + " ; grille 2 : " + [...s2].join("+") + ")");
+  const st = await page.evaluate(() => window.__vcState());
+  const used = [].concat(st.savedGrids[0].across, st.savedGrids[0].down).map(it => it.word);
+  if (used.length < 2 || used.length > 10) throw new Error("grille 8×8 inattendue : " + used.length + " mots placés");
+  const pool = await page.evaluate(() => window.__vcPoolWords(8, 8));
+  if (pool.length !== 20) throw new Error("taille de tirage inattendue : " + pool.length);
+  for (const w of used) if (pool.includes(w)) throw new Error("mot déjà enregistré encore prioritaire : " + w);
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
   const stats = await page.locator("#placedStat").innerText();
   if (!/rotation/.test(stats)) throw new Error("mention de rotation absente : " + stats);
 });
