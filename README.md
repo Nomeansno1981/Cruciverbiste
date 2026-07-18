@@ -19,6 +19,7 @@ Côté lettres : les accents se croisent avec leurs lettres nues (É avec E, Ç 
 ## Définitions différées et multiples
 
 - Un mot peut vivre sans définition : le dictionnaire affiche son compteur (« 0 définition ») et le signale discrètement. La génération et l'impression restent possibles, la mention « définition à compléter » prenant la place du texte manquant.
+- Dans le texte d'une définition, `*titre*` s'affiche en italique et `**texte**` en gras, façon Markdown, partout où la définition se lit (grille, impression, dictionnaire). Les champs d'édition et les exports conservent le texte brut avec ses astérisques.
 - À l'affichage d'une grille, chaque mot sans définition propose un champ « Définir... ». Le texte validé est enregistré dans le dictionnaire, donc mémorisé pour toutes les grilles suivantes.
 - Un mot peut porter plusieurs définitions. L'éditeur dépliable du dictionnaire (crayon sur la ligne du mot) permet d'en ajouter, modifier ou supprimer. Dans une grille, un sélecteur choisit celle qui s'applique; le défaut est la dernière définition utilisée, sinon la première. Le crayon sur la ligne d'une définition la modifie, et la modification est répercutée au dictionnaire.
 - Les grilles enregistrées conservent, pour chaque mot, l'identifiant de la définition choisie et son texte au moment de l'enregistrement : elles restent fidèles même si le dictionnaire évolue ensuite.
