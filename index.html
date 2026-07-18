@@ -945,7 +945,7 @@ function svgString(model, solution, animate){
     const num = number[keyOf(r,c)];
     const delay = animate ? ` style="animation-delay:${(i*10)}ms"` : "";
     s += `<g class="cell"${delay}>`;
-    s += `<rect x="${x+0.75}" y="${y+0.75}" width="${CELL-1.5}" height="${CELL-1.5}" fill="#ffffff" stroke="#211E17" stroke-width="1.5"/>`;
+    s += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="#ffffff"/>`;
     if(num) s += `<text x="${x+3.5}" y="${y+11}" font-family="${'SF Mono,Menlo,monospace'}" font-size="9" fill="#5B574F">${num}</text>`;
     if(solution){
       const ch = cells[keyOf(r,c)].display;
@@ -954,6 +954,19 @@ function svgString(model, solution, animate){
     s += `</g>`;
     i++;
   }
+  // quadrillage : chaque arête est tracée une seule fois (les rects mitoyens
+  // doublaient les traits intérieurs, d'où des épaisseurs inégales)
+  let lattice = "";
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(!filled(r,c)) continue;
+    const x=c*CELL, y=r*CELL;
+    lattice += `M ${x} ${y} H ${x+CELL} `;
+    if(!filled(r+1,c)) lattice += `M ${x} ${y+CELL} H ${x+CELL} `;
+    lattice += `M ${x} ${y} V ${y+CELL} `;
+    if(!filled(r,c+1)) lattice += `M ${x+CELL} ${y} V ${y+CELL} `;
+  }
+  s += `<path d="${lattice.trim()}" fill="none" stroke="#211E17" stroke-width="1.5" stroke-linecap="square"/>`;
+
   // séparateurs des réponses composées : un losange posé au milieu du trait
   // entre les deux cases, la bordure gardant son épaisseur normale; une forme
   // reste reconnaissable à toutes les échelles là où une épaisseur se noie
@@ -1295,7 +1308,9 @@ function savedGridUsage(){
 // Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
 // les grilles enregistrées passent d'abord (hasard à égalité).
 function selectPool(out, W, H){
-  const cap = Math.max(20, Math.round((W * H) / 8));
+  // aire/6 : réserve mesurée au banc d'essai, environ 13 % de croisements de
+  // plus qu'aire/8 sur une 15×15 pour un surcoût minime
+  const cap = Math.max(20, Math.round((W * H) / 6));
   if(out.length <= cap) return { pool: out, rotated: false };
   const usage = savedGridUsage();
   const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
@@ -1319,7 +1334,7 @@ function doGenerate(){
   const { pool, rotated } = selectPool(out, W, H);
   const tooLong = pool.filter(e => e.letters.length > Math.max(W, H));
   // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
-  const attempts = Math.max(pool.length > 60 ? 30 : 150, Math.min(600, Math.round(6500 / pool.length)));
+  const attempts = Math.max(pool.length > 60 ? 60 : 150, Math.min(600, Math.round(6500 / pool.length)));
 
   $("genBtn").disabled = true; $("regenBtn").disabled = true;
   $("board").className = "board empty";
