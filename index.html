@@ -954,16 +954,17 @@ function svgString(model, solution, animate){
     s += `</g>`;
     i++;
   }
-  // séparateurs des réponses composées : pavés pleins centrés sur l'arête
-  // commune, dessinés en dernier et en retrait des angles pour rester
-  // nettement distincts des bordures à toutes les échelles
+  // séparateurs des réponses composées : un losange posé au milieu du trait
+  // entre les deux cases, la bordure gardant son épaisseur normale; une forme
+  // reste reconnaissable à toutes les échelles là où une épaisseur se noie
+  const D = 6.5;
+  const diamond = (cx, cy) => `<path class="wordbar" shape-rendering="geometricPrecision" d="M ${cx} ${cy-D} L ${cx+D} ${cy} L ${cx} ${cy+D} L ${cx-D} ${cy} Z" fill="#211E17"/>`;
   for(const kk in bars){
     const ci = kk.indexOf(",");
     const r = +kk.slice(0, ci), c = +kk.slice(ci + 1);
     if(!filled(r, c)) continue;
-    const x = c*CELL, y = r*CELL;
-    if(bars[kk].left) s += `<rect class="wordbar" x="${x-3}" y="${y+2}" width="6" height="${CELL-4}" fill="#211E17"/>`;
-    if(bars[kk].top) s += `<rect class="wordbar" x="${x+2}" y="${y-3}" width="${CELL-4}" height="6" fill="#211E17"/>`;
+    if(bars[kk].left) s += diamond(c*CELL, r*CELL + CELL/2);
+    if(bars[kk].top) s += diamond(c*CELL + CELL/2, r*CELL);
   }
   s += `</svg>`;
   return s;

@@ -316,7 +316,7 @@ await check("frontières de mots : espaces et traits d'union barrés, pas l'apos
   if (r.pm.clean !== "PORTEMONNAIE" || r.pm.breaks.join(",") !== "5") throw new Error("porte-monnaie : " + JSON.stringify(r.pm));
 });
 
-await check("barres épaisses dans la grille, conservées après enregistrement", async () => {
+await check("séparateurs ◆ des mots composés, conservés après enregistrement", async () => {
   await page.click("#newList");
   await page.fill("#wIn", "donjons et dragons");
   await page.click("#addBtn");
@@ -326,12 +326,12 @@ await check("barres épaisses dans la grille, conservées après enregistrement"
   await page.fill("#maxH", "17");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
-  const bars = await count("#board svg rect.wordbar");
+  const bars = await count("#board svg path.wordbar");
   if (bars !== 2) throw new Error("attendu 2 séparateurs, obtenu " + bars);
   await page.click("#saveGrid");
   await page.click("#savedList .saved-row .btn-out");
   await page.waitForFunction(() => /chargée/i.test(document.getElementById("hstatus").textContent));
-  const after = await count("#board svg rect.wordbar");
+  const after = await count("#board svg path.wordbar");
   if (after !== 2) throw new Error("séparateurs perdus au rechargement : " + after);
 });
 
