@@ -50,4 +50,4 @@ npm run test:sync # synchronisation : deux navigateurs sur les émulateurs Fireb
 
 ## Déploiement
 
-À chaque push sur `main`, le workflow GitHub Actions publie `index.html` sur la branche `gh-pages`, servie par GitHub Pages.
+À chaque push sur `main`, le workflow GitHub Actions publie `index.html` sur la branche `gh-pages`, servie par GitHub Pages. Au passage, il inscrit au pied de la page le commit publié et sa date (« version abc1234 publiée le 18/07/2026 »). Si ce tampon manque ou date, votre navigateur affiche une copie périmée : fermez complètement l'onglet et rouvrez l'adresse (ou Cmd+Maj+R sur Mac).

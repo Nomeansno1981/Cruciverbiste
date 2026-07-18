@@ -161,11 +161,14 @@
   .gate-status{margin:0; font-size:12.5px; color:var(--muted); min-height:1.2em}
   .gate-status.warn{color:var(--accent)}
 
+  /* ---- tampon de version (rempli au déploiement) ---- */
+  .stamp{margin:26px 0 4px; text-align:center; font-size:11.5px; color:var(--muted); letter-spacing:.02em}
+
   /* ---- print ---- */
   @media print{
     body{background:#fff}
     .wrap{max-width:none; padding:0}
-    header .sub, .hstatus, .brand .mark, .panel:first-child, .gcontrols, .gexport, .saved, .panel-h, .gstats .fillinfo{display:none !important}
+    header .sub, .hstatus, .brand .mark, .panel:first-child, .gcontrols, .gexport, .saved, .panel-h, .gstats .fillinfo, .stamp{display:none !important}
     .cols{display:block; margin:0}
     .panel{border:none; box-shadow:none}
     .body{padding:0}
@@ -314,6 +317,7 @@
       </div>
     </section>
   </div>
+  <footer class="stamp">version de travail</footer>
 </div>
 
 <script type="module">
