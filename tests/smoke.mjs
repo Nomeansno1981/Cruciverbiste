@@ -326,13 +326,13 @@ await check("barres épaisses dans la grille, conservées après enregistrement"
   await page.fill("#maxH", "17");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
-  const bars = await count('#board svg line[stroke-width="4.5"]');
-  if (bars !== 2) throw new Error("attendu 2 barres épaisses, obtenu " + bars);
+  const bars = await count("#board svg rect.wordbar");
+  if (bars !== 2) throw new Error("attendu 2 séparateurs, obtenu " + bars);
   await page.click("#saveGrid");
   await page.click("#savedList .saved-row .btn-out");
   await page.waitForFunction(() => /chargée/i.test(document.getElementById("hstatus").textContent));
-  const after = await count('#board svg line[stroke-width="4.5"]');
-  if (after !== 2) throw new Error("barres perdues au rechargement : " + after);
+  const after = await count("#board svg rect.wordbar");
+  if (after !== 2) throw new Error("séparateurs perdus au rechargement : " + after);
 });
 
 await check("les chiffres entrent dans la grille, une case chacun", async () => {
