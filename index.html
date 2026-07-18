@@ -1144,7 +1144,7 @@ function renderGrid(animate){
   $("gstats").hidden = false;
   const samp = currentModel.sampled;
   $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
-    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? "rotation : les mots les moins utilisés dans vos grilles d'abord" : "tirage dans le dictionnaire"} (${samp.total} mots au total)</span>` : "");
+    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? "rotation : les mots les moins utilisés dans vos grilles d'abord" : "tirage dans le dictionnaire"} (${samp.total} mots au total)${samp.extended ? ` · extension : +${samp.extended} de la réserve` : ""}</span>` : "");
   const up = currentModel.unplaced || [];
   $("unplacedStat").textContent = up.length
     ? (up.length > 6
@@ -1306,16 +1306,76 @@ function savedGridUsage(){
 }
 // Candidats d'une grille : autant de mots que la boîte peut en accueillir.
 // Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
-// les grilles enregistrées passent d'abord (hasard à égalité).
+// les grilles enregistrées passent d'abord (hasard à égalité). Jamais deux
+// formes d'un même mot (singulier et pluriel) dans une même grille.
+function stemOf(letters){ return letters.length > 2 && letters.endsWith("S") ? letters.slice(0, -1) : letters; }
 function selectPool(out, W, H){
   // aire/6 : réserve mesurée au banc d'essai, environ 13 % de croisements de
   // plus qu'aire/8 sur une 15×15 pour un surcoût minime
   const cap = Math.max(20, Math.round((W * H) / 6));
-  if(out.length <= cap) return { pool: out, rotated: false };
   const usage = savedGridUsage();
   const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
   scored.sort((a,b) => a.u - b.u || a.r - b.r);
-  return { pool: scored.slice(0, cap).map(x => x.e), rotated: scored.some(x => x.u > 0) };
+  const pool = [];
+  const stems = new Set();
+  for(const { e } of scored){
+    const st = stemOf(e.letters);
+    if(stems.has(st)) continue;
+    stems.add(st);
+    pool.push(e);
+    if(pool.length >= cap) break;
+  }
+  return { pool, rotated: out.length > cap && scored.some(x => x.u > 0) };
+}
+
+// Passe d'extension : une fois la meilleure grille retenue, toute la réserve
+// tente de se glisser dans les trous restants (mêmes primitives et même score
+// de placement que le prototype), les mots les moins utilisés d'abord.
+function extendGrid(res, extras, W, H, passes){
+  const grid = res.grid;
+  let bb = bbox(grid);
+  let added = 0;
+  const stems = new Set(res.placed.map(p => stemOf(p.letters)));
+  const tryOne = (e) => {
+    if(stems.has(stemOf(e.letters))) return false;
+    let best = null;
+    for(const [k, cell] of grid){
+      const ci = k.indexOf(","); const cr = +k.slice(0,ci), cc = +k.slice(ci+1);
+      for(let idx=0; idx<e.letters.length; idx++){
+        if(e.letters[idx] !== cell.letter) continue;
+        for(const dir of [ACROSS, DOWN]){
+          const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
+          const r = cr - dr*idx, c = cc - dc*idx;
+          const x = canPlace(grid, e.letters, r, c, dir);
+          if(x <= 0) continue;
+          const eR = r + dr*(e.letters.length-1), eC = c + dc*(e.letters.length-1);
+          const nMinR = Math.min(bb.minR, r, eR), nMaxR = Math.max(bb.maxR, r, eR);
+          const nMinC = Math.min(bb.minC, c, eC), nMaxC = Math.max(bb.maxC, c, eC);
+          if((nMaxC-nMinC+1) > W || (nMaxR-nMinR+1) > H) continue;
+          const growth = ((nMaxR-nMinR+1)*(nMaxC-nMinC+1)) - (bb.rows*bb.cols);
+          const score = x*1000 - growth*3;
+          if(!best || score > best.score) best = { r, c, dir, nMinR, nMaxR, nMinC, nMaxC, score };
+        }
+      }
+    }
+    if(!best) return false;
+    put(grid, e, best.r, best.c, best.dir);
+    res.placed.push(Object.assign({}, e, { r: best.r, c: best.c, dir: best.dir }));
+    stems.add(stemOf(e.letters));
+    bb = { minR:best.nMinR, minC:best.nMinC, maxR:best.nMaxR, maxC:best.nMaxC, rows:best.nMaxR-best.nMinR+1, cols:best.nMaxC-best.nMinC+1 };
+    added++;
+    return true;
+  };
+  let rest = extras.slice();
+  for(let p = 0; p < passes; p++){
+    const still = [];
+    for(const e of rest){ if(!tryOne(e)) still.push(e); }
+    rest = still;
+  }
+  res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
+  let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
+  res.crossings = sumLen - res.filled;
+  return added;
 }
 function doGenerate(){
   const l = currentList();
@@ -1341,8 +1401,19 @@ function doGenerate(){
   $("board").textContent = pool.length > 60 ? "Génération… (beaucoup de mots, cela peut prendre quelques secondes)" : "Génération…";
   setTimeout(() => {
     const best = generate(pool, W, H, attempts);
+    // extension : la réserve entière tente de se glisser dans les trous,
+    // les mots les moins présents dans les grilles enregistrées d'abord
+    const inPool = new Set(pool.map(e => e.letters));
+    let extras = out.filter(e => !inPool.has(e.letters) && e.letters.length <= Math.max(W, H));
+    let extended = 0;
+    if(extras.length){
+      const usage = savedGridUsage();
+      extras = extras.map(e => ({ e, u: usage(e), r: Math.random() }))
+        .sort((a,b) => a.u - b.u || a.r - b.r).map(x => x.e);
+      extended = extendGrid(best, extras, W, H, 2);
+    }
     currentModel = buildModel(best);
-    currentModel.sampled = pool.length < out.length ? { total: out.length, rotated } : null;
+    currentModel.sampled = pool.length < out.length ? { total: out.length, rotated, extended } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
     renderGrid(true);
     const notes = [];

@@ -295,14 +295,51 @@ await check("rotation : les mots d'une grille enregistrée cèdent la place aux 
   await page.click("#saveGrid");
   const st = await page.evaluate(() => window.__vcState());
   const used = [].concat(st.savedGrids[0].across, st.savedGrids[0].down).map(it => it.word);
-  if (used.length < 2 || used.length > 10) throw new Error("grille 8×8 inattendue : " + used.length + " mots placés");
+  if (used.length < 2 || used.length > 18) throw new Error("grille 8×8 inattendue : " + used.length + " mots placés");
   const pool = await page.evaluate(() => window.__vcPoolWords(8, 8));
   if (pool.length !== 20) throw new Error("taille de tirage inattendue : " + pool.length);
-  for (const w of used) if (pool.includes(w)) throw new Error("mot déjà enregistré encore prioritaire : " + w);
+  // les mots enregistrés cèdent la place tant qu'il reste assez de mots frais
+  const usedInPool = used.filter(w => pool.includes(w)).length;
+  const tolerated = Math.max(0, used.length - (30 - 20));
+  if (usedInPool > tolerated) throw new Error("mots déjà enregistrés encore prioritaires : " + usedInPool + " (toléré " + tolerated + ")");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const stats = await page.locator("#placedStat").innerText();
   if (!/rotation/.test(stats)) throw new Error("mention de rotation absente : " + stats);
+});
+
+await check("extension : la réserve vient densifier la grille retenue", async () => {
+  // grand vivier avec mots-colle courts, petite boîte : la réserve doit nourrir la grille
+  await page.click("#newList");
+  await page.click("#toggleImport");
+  await page.fill("#pasteArea",
+    "merle ; grive ; pinson ; mésange ; corbeau ; corneille ; pie ; geai ; buse ; milan ; faucon ; épervier ; chouette ; hibou ; effraie ; martinet ; hirondelle ; cigogne ; héron\n" +
+    "chêne ; hêtre ; frêne ; érable ; bouleau ; charme ; tilleul ; orme ; saule ; peuplier ; mélèze ; sapin ; épicéa ; cèdre ; cyprès ; noyer\n" +
+    "boulanger ; forgeron ; menuisier ; charpentier ; tisserand ; potier ; vannier ; tonnelier ; meunier ; berger ; vacher ; fermier ; jardinier ; apiculteur ; vigneron ; brasseur ; tailleur ; cordonnier ; sellier ; tanneur ; verrier ; maçon ; couvreur ; charron ; barbier ; herboriste\n" +
+    "pic ; épi ; roc ; lac ; clé ; île ; rue ; âne ; oie ; boa ; lys ; ver ; osier ; aulne ; houx ; genêt ; ronce ; mousse ; sève ; nid ; aire ; serre ; bec ; aile ; plume");
+  await page.click("#parseBtn");
+  await page.fill("#maxW", "10");
+  await page.fill("#maxH", "10");
+  let found = false;
+  for (let t = 0; t < 5 && !found; t++) {
+    await page.click("#genBtn");
+    await page.waitForSelector("#board svg g.cell");
+    found = /extension : \+\d+ de la réserve/.test(await page.locator("#placedStat").innerText());
+  }
+  if (!found) throw new Error("mention d'extension jamais apparue en 5 tirages");
+});
+
+await check("jamais deux formes d'un même mot dans une grille", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "donjon ; donjons ; roue");
+  await page.click("#addBtn");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const words = await page.locator(".clues .definebox input").evaluateAll(
+    els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1]));
+  const forms = words.filter(w => /^DONJONS?$/.test(w));
+  if (forms.length !== 1) throw new Error("formes de « donjon » placées : " + forms.join(", "));
+  if (words.length !== 2) throw new Error("attendu 2 mots placés, obtenu : " + words.join(", "));
 });
 
 await check("frontières de mots : espaces et traits d'union barrés, pas l'apostrophe", async () => {
