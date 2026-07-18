@@ -354,6 +354,26 @@ await check("les chiffres entrent dans la grille, une case chacun", async () => 
   if (!/2 mots/.test(txt)) throw new Error("placement avec chiffres raté : " + txt);
 });
 
+await check("italiques à la Markdown dans les définitions", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "cthulhu");
+  await page.fill("#cIn", "Le Grand Ancien de *L'Appel de Cthulhu*");
+  await page.click("#addBtn");
+  await page.fill("#wIn", "rlyeh");
+  await page.fill("#cIn", "La cité engloutie du *Mythe*");
+  await page.click("#addBtn");
+  const em1 = await page.locator("#entries .entry em").first().innerText();
+  if (em1 !== "L'Appel de Cthulhu") throw new Error("italique absent du dictionnaire : " + em1);
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const ems = await count(".clues li em");
+  if (ems < 2) throw new Error("italiques absents des définitions de la grille (" + ems + ")");
+  const st = await page.evaluate(() => window.__vcState());
+  const list = st.lists.find(l => l.id === st.currentId);
+  const raw = list.entries.find(e => e.word === "cthulhu").clues[0].text;
+  if (!raw.includes("*L'Appel de Cthulhu*")) throw new Error("les astérisques devraient rester dans les données : " + raw);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });

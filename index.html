@@ -1007,7 +1007,8 @@ function renderEntries(){
       const def = defaultClueOf(e);
       const clue = document.createElement("span");
       clue.className = "clue" + (def ? "" : " none");
-      clue.textContent = def ? def.text : "encore sans définition";
+      if(def) clue.innerHTML = fmtClue(def.text);
+      else clue.textContent = "encore sans définition";
       clue.title = def ? def.text : "";
       const cnt = document.createElement("span");
       cnt.className = "cluecount" + (e.clues.length ? "" : " zero");
@@ -1152,6 +1153,14 @@ function renderGrid(animate){
   $("printTitle").textContent = currentModel.listName || currentList().name || "Mots croisés";
 }
 function escapeHtml(s){ return (s||"").replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m])); }
+// Mise en forme façon Markdown des définitions : *italique* et **gras**.
+// Le texte brut, astérisques comprises, reste la source (données et exports).
+function fmtClue(s){
+  let h = escapeHtml(s);
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  h = h.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  return h;
+}
 
 /* =========================================================
    Lignes de définitions interactives (définitions différées)
@@ -1251,7 +1260,7 @@ function renderClueBody(body, it, mode){
 
   // Affichage simple du texte (ou mention à compléter si le mot a quitté le dictionnaire).
   const txt = document.createElement("span");
-  if(it.clue){ txt.textContent = it.clue; }
+  if(it.clue){ txt.innerHTML = fmtClue(it.clue); }
   else { txt.className = "miss"; txt.textContent = "(définition à compléter : " + it.word + ")"; }
   body.appendChild(txt);
 
