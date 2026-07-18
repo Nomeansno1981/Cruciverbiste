@@ -946,11 +946,6 @@ function svgString(model, solution, animate){
     const delay = animate ? ` style="animation-delay:${(i*10)}ms"` : "";
     s += `<g class="cell"${delay}>`;
     s += `<rect x="${x+0.75}" y="${y+0.75}" width="${CELL-1.5}" height="${CELL-1.5}" fill="#ffffff" stroke="#211E17" stroke-width="1.5"/>`;
-    const bar = bars[keyOf(r,c)];
-    if(bar){
-      if(bar.left) s += `<line x1="${x+0.75}" y1="${y+0.75}" x2="${x+0.75}" y2="${y+CELL-0.75}" stroke="#211E17" stroke-width="4.5"/>`;
-      if(bar.top) s += `<line x1="${x+0.75}" y1="${y+0.75}" x2="${x+CELL-0.75}" y2="${y+0.75}" stroke="#211E17" stroke-width="4.5"/>`;
-    }
     if(num) s += `<text x="${x+3.5}" y="${y+11}" font-family="${'SF Mono,Menlo,monospace'}" font-size="9" fill="#5B574F">${num}</text>`;
     if(solution){
       const ch = cells[keyOf(r,c)].display;
@@ -958,6 +953,17 @@ function svgString(model, solution, animate){
     }
     s += `</g>`;
     i++;
+  }
+  // séparateurs des réponses composées : pavés pleins centrés sur l'arête
+  // commune, dessinés en dernier et en retrait des angles pour rester
+  // nettement distincts des bordures à toutes les échelles
+  for(const kk in bars){
+    const ci = kk.indexOf(",");
+    const r = +kk.slice(0, ci), c = +kk.slice(ci + 1);
+    if(!filled(r, c)) continue;
+    const x = c*CELL, y = r*CELL;
+    if(bars[kk].left) s += `<rect class="wordbar" x="${x-3}" y="${y+2}" width="6" height="${CELL-4}" fill="#211E17"/>`;
+    if(bars[kk].top) s += `<rect class="wordbar" x="${x+2}" y="${y-3}" width="${CELL-4}" height="6" fill="#211E17"/>`;
   }
   s += `</svg>`;
   return s;
