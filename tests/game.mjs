@@ -112,6 +112,30 @@ await check("resolution : le resultat du joueur est enregistre en ligne", async 
   if (typeof r.seconds !== "number") throw new Error("duree absente du resultat");
 });
 
+await check("la serie passe a 1 apres la premiere reussite", async () => {
+  await page.waitForFunction(() => window.__ddef && window.__ddef.streak === 1);
+  const s = await page.evaluate(() => { const el = document.getElementById("streak"); return { hidden: el.hidden, text: el.textContent.trim() }; });
+  if (s.hidden) throw new Error("badge de serie masque apres reussite");
+  if (!/1/.test(s.text)) throw new Error("serie affichee : " + s.text);
+});
+
+await check("calcul de la serie : jours consecutifs et remise a zero apres un trou", async () => {
+  const r = await page.evaluate(() => {
+    const n = window.__ddef.nextStreakCount, e = window.__ddef.effectiveStreak;
+    return {
+      fresh: n(null, "2026-07-19"),
+      consec: n({ count: 4, lastDate: "2026-07-18" }, "2026-07-19"),
+      sameDay: n({ count: 4, lastDate: "2026-07-19" }, "2026-07-19"),
+      gap: n({ count: 4, lastDate: "2026-07-10" }, "2026-07-19"),
+      aliveToday: e({ count: 5, lastDate: "2026-07-19" }, "2026-07-19"),
+      aliveYesterday: e({ count: 5, lastDate: "2026-07-18" }, "2026-07-19"),
+      broken: e({ count: 5, lastDate: "2026-07-17" }, "2026-07-19")
+    };
+  });
+  const exp = { fresh: 1, consec: 5, sameDay: 4, gap: 1, aliveToday: 5, aliveYesterday: 5, broken: 0 };
+  for (const k in exp) if (r[k] !== exp[k]) throw new Error(`${k} : attendu ${exp[k]}, obtenu ${r[k]}`);
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });
