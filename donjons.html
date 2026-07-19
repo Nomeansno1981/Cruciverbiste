@@ -57,7 +57,7 @@
       <span class="streak" id="streak" hidden></span>
       <span class="mode">Mode detente</span>
       <span class="timer" id="timer">0:00</span>
-      <span class="acct" id="acct" hidden><span class="mail" id="acctMail"></span><button id="signOut">Deconnexion</button></span>
+      <button class="acct-btn" id="profileBtn" hidden><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
     </div>
   </header>
 
@@ -89,6 +89,34 @@
   </div>
 
   <div class="stamp">version de travail</div>
+</div>
+
+<div id="profileModal" hidden>
+  <div class="profile-card">
+    <h2>Votre profil</h2>
+    <div class="profile-top">
+      <span class="avatar" id="pAvatar"></span>
+      <div class="profile-fields">
+        <label for="pseudoInput">Pseudo</label>
+        <input type="text" id="pseudoInput" maxlength="24" placeholder="Votre pseudo" autocomplete="off">
+        <div class="avatar-actions">
+          <button class="linklike" id="pickAvatar" type="button">Changer la photo</button>
+          <button class="linklike" id="removeAvatar" type="button">Retirer</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="avatarInput" accept="image/*" hidden>
+    <p class="pstatus" id="pStatus"></p>
+    <div class="profile-row">
+      <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
+      <button class="gate-btn primary" id="saveProfile" type="button">Enregistrer</button>
+    </div>
+    <div class="hist">
+      <h3>Vos grilles reussies</h3>
+      <ul id="histList"></ul>
+    </div>
+    <div style="text-align:center"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
+  </div>
 </div>
 
 <script type="module">
@@ -231,17 +259,120 @@ function setStreak(n){
 window.__ddef.effectiveStreak = effectiveStreak;
 window.__ddef.nextStreakCount = nextStreakCount;
 
+// ---- profil (avatar, pseudo, historique) ----
+let CU = null;                 // utilisateur courant
+let profile = { pseudo: "", avatar: "" };
+let pendingAvatar = null;      // avatar choisi mais pas encore enregistre
+
+function initial(s){ return ((s || "?").trim().charAt(0) || "?").toUpperCase(); }
+function fillAvatar(el, av, txt){
+  if(av){ el.innerHTML = '<img alt="" src="' + av + '">'; }
+  else { el.textContent = initial(txt); }
+}
+function setHeaderProfile(){
+  const name = profile.pseudo || (CU && CU.email ? CU.email.split("@")[0] : "Joueur");
+  $("hdrPseudo").textContent = name;
+  fillAvatar($("hdrAvatar"), profile.avatar, name);
+}
+async function loadProfile(){
+  try{
+    const snap = await m.getDoc(m.doc(db, "users", CU.uid, "state", "profile"));
+    const d = snap.exists() ? snap.data() : {};
+    profile = { pseudo: d.pseudo || "", avatar: d.avatar || "" };
+  }catch(e){ profile = { pseudo: "", avatar: "" }; }
+  window.__ddef.profile = { pseudo: profile.pseudo, avatar: profile.avatar };
+  setHeaderProfile();
+}
+// redimensionne l'image cote navigateur en un petit carre (data URL), pour la
+// ranger avec le profil sans service de stockage
+function resizeImage(file, size){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      canvas.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
+    img.src = url;
+  });
+}
+async function renderHistory(){
+  const ul = $("histList"); ul.innerHTML = "";
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc"), m.limit(60)));
+    if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
+    snap.forEach(ds => {
+      const d = ds.data();
+      let label = ds.id;
+      try{ const [y, mo, da] = ds.id.split("-").map(Number); label = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }catch(e){}
+      const t = (typeof d.seconds === "number") ? (Math.floor(d.seconds / 60) + ":" + String(d.seconds % 60).padStart(2, "0")) : "";
+      const li = document.createElement("li");
+      li.innerHTML = "<span>" + label + '</span><span class="t">' + t + "</span>";
+      ul.appendChild(li);
+    });
+  }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
+}
+function openProfile(){
+  if(!CU) return;
+  pendingAvatar = null;
+  $("pseudoInput").value = profile.pseudo || "";
+  fillAvatar($("pAvatar"), profile.avatar, profile.pseudo || (CU.email ? CU.email.split("@")[0] : "J"));
+  $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
+  $("profileModal").hidden = false;
+  renderHistory();
+}
+function closeProfile(){ $("profileModal").hidden = true; }
+async function saveProfile(){
+  if(!CU) return;
+  const pseudo = ($("pseudoInput").value || "").trim().slice(0, 24);
+  const avatar = (pendingAvatar !== null) ? pendingAvatar : profile.avatar;
+  $("pStatus").textContent = "Enregistrement..."; $("pStatus").classList.remove("warn");
+  try{
+    await m.setDoc(m.doc(db, "users", CU.uid, "state", "profile"), { pseudo, avatar, updatedAt: m.serverTimestamp() }, { merge: true });
+    profile = { pseudo, avatar };
+    window.__ddef.profile = { pseudo, avatar };
+    setHeaderProfile();
+    closeProfile();
+  }catch(e){ $("pStatus").textContent = "Enregistrement impossible : " + ((e && e.message) || e); $("pStatus").classList.add("warn"); }
+}
+
+window.__ddef.resize = resizeImage;
+window.__ddef.setPendingAvatar = d => { pendingAvatar = d; };
+
+$("profileBtn").onclick = openProfile;
+$("closeProfile").onclick = closeProfile;
+$("saveProfile").onclick = saveProfile;
+$("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+$("profileModal").addEventListener("click", e => { if(e.target === $("profileModal")) closeProfile(); });
+$("pickAvatar").onclick = () => $("avatarInput").click();
+$("removeAvatar").onclick = () => { pendingAvatar = ""; fillAvatar($("pAvatar"), "", $("pseudoInput").value || "J"); };
+$("avatarInput").onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
+  try{ pendingAvatar = await resizeImage(f, 128); fillAvatar($("pAvatar"), pendingAvatar, ""); }
+  catch(err){ $("pStatus").textContent = "Image illisible."; $("pStatus").classList.add("warn"); }
+  e.target.value = "";
+};
+
 let mounted = false;
 m.onAuthStateChanged(auth, async user => {
   if(!user){
     gate.hidden = false;
-    $("acct").hidden = true;
+    $("profileBtn").hidden = true;
+    closeProfile();
     if(!mounted) info("");
     return;
   }
-  $("acctMail").textContent = user.email || "";
-  $("acct").hidden = false;
-  $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+  CU = user;
+  $("profileBtn").hidden = false;
+  loadProfile();
   if(mounted) return;
   mounted = true;
   info("Chargement de la grille du jour...");
