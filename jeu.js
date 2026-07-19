@@ -285,6 +285,16 @@ export function monterJeu(PUZZLE, opts = {}){
   window.addEventListener("resize", () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(layout, 60); });
   if(window.visualViewport) window.visualViewport.addEventListener("resize", () => setTimeout(layout, 60));
 
+  // Safari iOS : meme avec touch-action, un double-appui rapproche declenche
+  // parfois le zoom. On neutralise le second appui s'il suit de trop pres le
+  // precedent (fenetre du double-tap), sans gener les appuis isoles.
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", e => {
+    const now = Date.now();
+    if(now - lastTouchEnd <= 350) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+
   const dateEl = document.getElementById("date");
   if(dateEl){
     try{ dateEl.textContent = opts.dateText || new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }); }

@@ -62,9 +62,9 @@ button.tool{font-family:var(--sans); font-size:13px; padding:7px 12px; border:1p
 button.tool:hover{border-color:#d8cfbe}
 
 /* clavier integre (masque sur ordinateur) */
-.kbd{display:none; flex-direction:column; gap:6px; width:100%; max-width:560px}
+.kbd{display:none; flex-direction:column; gap:6px; width:100%; max-width:560px; touch-action:none}
 .kbd .krow{display:flex; gap:5px; justify-content:center}
-.kbd .key{flex:1 1 0; max-width:44px; height:46px; display:flex; align-items:center; justify-content:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; font-family:var(--sans); font-size:18px; font-weight:600; color:var(--ink); cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:manipulation}
+.kbd .key{flex:1 1 0; max-width:44px; height:46px; display:flex; align-items:center; justify-content:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; font-family:var(--sans); font-size:18px; font-weight:600; color:var(--ink); cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:none}
 .kbd .key:active{background:var(--sun)}
 .kbd .key.wide{flex:1.7 1 0; max-width:72px; font-size:20px; color:var(--accent-ink)}
 

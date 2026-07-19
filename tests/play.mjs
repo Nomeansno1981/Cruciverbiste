@@ -134,13 +134,14 @@ await check("mobile : la grille entiere tient dans la vue (sans defilement)", as
   if (!overflow.board) throw new Error("la grille depasse de la vue");
 });
 
-await check("le double-tap-zoom est neutralise (touch-action manipulation)", async () => {
+await check("le double-tap-zoom est neutralise (touch-action + parade au double-appui)", async () => {
   const vals = await page.evaluate(() => ({
     html: getComputedStyle(document.documentElement).touchAction,
     key: getComputedStyle(document.querySelector("#kbd .key")).touchAction
   }));
-  if (!/manipulation/.test(vals.html)) throw new Error("html touch-action : " + vals.html);
-  if (!/manipulation/.test(vals.key)) throw new Error("touche touch-action : " + vals.key);
+  if (!/manipulation|none/.test(vals.html)) throw new Error("html touch-action : " + vals.html);
+  // les touches desactivent tout geste par defaut (none)
+  if (!/none/.test(vals.key)) throw new Error("touche touch-action : " + vals.key);
 });
 
 await check("ordinateur : clavier integre masque, listes visibles", async () => {
