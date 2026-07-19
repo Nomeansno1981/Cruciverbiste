@@ -46,7 +46,9 @@ async function launchBrowser(){
 }
 
 const browser = await launchBrowser();
-const page = await (await browser.newContext()).newPage();
+const context = await browser.newContext();
+try { await context.grantPermissions(["clipboard-read", "clipboard-write"]); } catch { /* selon le moteur */ }
+const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const pageErrors = [];
 page.on("pageerror", e => pageErrors.push(String(e)));
@@ -442,6 +444,54 @@ await check("italiques à la Markdown dans les définitions", async () => {
   const list = st.lists.find(l => l.id === st.currentId);
   const raw = list.entries.find(e => e.word === "cthulhu").clues[0].text;
   if (!raw.includes("*L'Appel de Cthulhu*")) throw new Error("les astérisques devraient rester dans les données : " + raw);
+});
+
+await check("export des définitions : texte structuré, copié au presse-papiers", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "cthulhu");
+  await page.fill("#cIn", "Le Grand Ancien de *L'Appel de Cthulhu*");
+  await page.click("#addBtn");
+  await page.fill("#wIn", "hastur");
+  await page.fill("#cIn", "Celui qu'on ne nomme pas");
+  await page.click("#addBtn");
+  await page.fill("#wIn", "dagon");
+  await page.fill("#cIn", "Le dieu des profondeurs");
+  await page.click("#addBtn");
+  await page.fill("#maxW", "12"); await page.fill("#maxH", "12");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+
+  const text = await page.evaluate(() => window.__vcCluesText());
+  const lines = text.split("\n");
+  if (!lines[0] || /^\d+\. /.test(lines[0])) throw new Error("titre manquant : " + lines[0]);
+  if (!/HORIZONTALEMENT|VERTICALEMENT/.test(text)) throw new Error("en-têtes de sens absents");
+  const content = lines.slice(1).filter(l => l && l !== "HORIZONTALEMENT" && l !== "VERTICALEMENT");
+  if (!content.length) throw new Error("aucune définition dans le texte");
+  const malformed = content.find(l => !/^\d+\. /.test(l));
+  if (malformed) throw new Error("ligne mal formée : " + malformed);
+  if (!content.some(l => !/\(définition à compléter/.test(l))) throw new Error("aucune définition rédigée exportée");
+
+  // copie réelle : le presse-papiers doit contenir exactement le texte composé
+  await page.click("#copyClues");
+  await page.waitForFunction(() => /copiées/i.test(document.getElementById("hstatus").textContent));
+  const clip = await page.evaluate(() => navigator.clipboard.readText());
+  if (clip !== text) throw new Error("presse-papiers différent du texte composé");
+});
+
+await check("export des définitions : mot sans définition signalé", async () => {
+  await page.click("#newList");
+  for (const w of ["dragon", "gobelin", "sortilege", "arbalete", "taverne"]) {
+    await page.fill("#wIn", w);
+    await page.click("#addBtn");
+  }
+  await page.fill("#maxW", "12"); await page.fill("#maxH", "12");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const text = await page.evaluate(() => window.__vcCluesText());
+  const content = text.split("\n").filter(l => /^\d+\. /.test(l));
+  if (!content.length) throw new Error("aucune ligne de définition");
+  const redigee = content.find(l => !/\(définition à compléter : /.test(l));
+  if (redigee) throw new Error("mention « à compléter » attendue : " + redigee);
 });
 
 await check("aucune erreur JavaScript sur la page", async () => {
