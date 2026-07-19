@@ -397,6 +397,14 @@ await check("séparateurs ◆ des mots composés, conservés après enregistreme
   if (after !== 2) throw new Error("séparateurs perdus au rechargement : " + after);
 });
 
+await check("numéros de cases : bordeaux, demi-gras, taille lisible", async () => {
+  const nums = await page.locator('#board svg g.cell text[font-size="10.5"]').evaluateAll(
+    els => els.map(e => ({ fill: e.getAttribute("fill"), weight: e.getAttribute("font-weight") })));
+  if (!nums.length) throw new Error("aucun numéro à la taille attendue");
+  const wrong = nums.find(n => n.fill !== "#7C1D2E" || n.weight !== "600");
+  if (wrong) throw new Error("numéro mal stylé : " + JSON.stringify(wrong));
+});
+
 await check("les chiffres entrent dans la grille, une case chacun", async () => {
   const r = await page.evaluate(() => ({
     age: window.__vcSanitize("13th Age"),

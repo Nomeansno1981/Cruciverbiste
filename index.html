@@ -950,7 +950,7 @@ function svgString(model, solution, animate){
     const delay = animate ? ` style="animation-delay:${(i*10)}ms"` : "";
     s += `<g class="cell"${delay}>`;
     s += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="#ffffff"/>`;
-    if(num) s += `<text x="${x+3.5}" y="${y+11}" font-family="${'SF Mono,Menlo,monospace'}" font-size="9" fill="#5B574F">${num}</text>`;
+    if(num) s += `<text x="${x+3.5}" y="${y+11.5}" font-family="${'SF Mono,Menlo,monospace'}" font-size="10.5" font-weight="600" fill="#7C1D2E">${num}</text>`;
     if(solution){
       const ch = cells[keyOf(r,c)].display;
       s += `<text x="${x+CELL/2}" y="${y+CELL/2+7.5}" text-anchor="middle" font-family="${'SF Mono,Menlo,monospace'}" font-size="20" font-weight="600" fill="#1C1B19">${escapeXml(ch)}</text>`;
