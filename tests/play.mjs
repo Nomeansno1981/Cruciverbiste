@@ -98,24 +98,37 @@ await check("completer la grille declenche la victoire", async () => {
   if (shown !== 1) throw new Error("banniere de victoire absente");
 });
 
-await check("petit ecran : la barre de definition remplace les listes", async () => {
+await check("mobile : clavier integre visible, listes masquees, touche active", async () => {
   await page.setViewportSize({ width: 390, height: 780 });
   await page.reload();
   await page.waitForSelector("#board .cell");
-  const barShown = await page.evaluate(() => getComputedStyle(document.getElementById("cluebar")).display);
-  const asideShown = await page.evaluate(() => getComputedStyle(document.querySelector(".aside")).display);
-  if (barShown === "none") throw new Error("barre de definition masquee sur mobile");
-  if (asideShown !== "none") throw new Error("listes encore visibles sur mobile");
+  const kb = await page.evaluate(() => getComputedStyle(document.getElementById("kbd")).display);
+  const aside = await page.evaluate(() => getComputedStyle(document.querySelector(".aside")).display);
+  if (kb === "none") throw new Error("clavier integre masque sur mobile");
+  if (aside !== "none") throw new Error("listes encore visibles sur mobile");
+  // une touche du clavier integre pose une lettre dans la case courante (KOBOLD, [0,2])
+  await page.click('#kbd [data-k="K"]');
+  const l = await page.evaluate(() => window.__play.letterAt(0, 2));
+  if (l !== "K") throw new Error("touche du clavier integre sans effet : " + l);
 });
 
-await check("grand ecran : les listes de definitions sont visibles", async () => {
+await check("mobile : la grille entiere tient dans la vue (sans defilement)", async () => {
+  const overflow = await page.evaluate(() => ({
+    doc: document.documentElement.scrollHeight <= window.innerHeight + 1,
+    board: (() => { const b = document.getElementById("board").getBoundingClientRect(); return b.top >= 0 && b.bottom <= window.innerHeight + 1; })()
+  }));
+  if (!overflow.doc) throw new Error("la page defile sur mobile");
+  if (!overflow.board) throw new Error("la grille depasse de la vue");
+});
+
+await check("ordinateur : clavier integre masque, listes visibles", async () => {
   await page.setViewportSize({ width: 1100, height: 900 });
   await page.reload();
   await page.waitForSelector("#board .cell");
-  const asideShown = await page.evaluate(() => getComputedStyle(document.querySelector(".aside")).display);
-  const barShown = await page.evaluate(() => getComputedStyle(document.getElementById("cluebar")).display);
-  if (asideShown === "none") throw new Error("listes masquees sur ordinateur");
-  if (barShown !== "none") throw new Error("barre mobile visible sur ordinateur");
+  const kb = await page.evaluate(() => getComputedStyle(document.getElementById("kbd")).display);
+  const aside = await page.evaluate(() => getComputedStyle(document.querySelector(".aside")).display);
+  if (kb !== "none") throw new Error("clavier integre visible sur ordinateur");
+  if (aside === "none") throw new Error("listes masquees sur ordinateur");
 });
 
 await check("aucune erreur JavaScript", async () => {
