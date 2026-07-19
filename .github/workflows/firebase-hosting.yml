@@ -1,0 +1,40 @@
+name: deploiement-firebase-hosting
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  hebergement:
+    runs-on: ubuntu-latest
+    # la cle de service est exposee en variable pour pouvoir tester sa presence :
+    # tant qu'elle n'est pas ajoutee, l'etape de publication est simplement sautee
+    env:
+      SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DONJONS_DEFINITIONS }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Construire le contenu du jeu (dossier _fire)
+        run: |
+          mkdir -p _fire
+          cp donjons.html _fire/index.html
+          cp donjons.html _fire/donjons.html
+          cp publier.html _fire/publier.html
+          cp jouer.html _fire/jouer.html
+          cp jeu.js _fire/jeu.js
+          cp jeu.css _fire/jeu.css
+          horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
+          tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
+          for f in index.html donjons.html publier.html jouer.html; do
+            sed -i "s|version de travail|${tampon}|" "_fire/$f"
+          done
+
+      - name: Publier sur Firebase Hosting
+        if: ${{ env.SA != '' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DONJONS_DEFINITIONS }}
+          projectId: donjons-definitions
+          channelId: live
