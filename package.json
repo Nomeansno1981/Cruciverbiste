@@ -5,6 +5,7 @@
   "description": "Atelier de mots croisés pédagogiques : dictionnaire personnel et générateur de grilles",
   "scripts": {
     "test": "node tests/smoke.mjs",
+    "test:play": "node tests/play.mjs",
     "test:sync": "firebase emulators:exec --only auth,firestore --project demo-verbicruciste \"node tests/sync.mjs\""
   },
   "devDependencies": {
