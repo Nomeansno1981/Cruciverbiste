@@ -56,7 +56,11 @@ Le jeu public en préparation : une grille du jour à résoudre, sur le thème d
 - `jouer.html` : aperçu autonome, sans connexion, sur une grille de démonstration. https://nomeansno1981.github.io/Cruciverbiste/jouer.html
 - `donjons.html` : le site public branché à Firebase (projet `donjons-definitions`). Écran de connexion (Google ou e-mail/mot de passe), lecture de la grille du jour depuis Firestore (`puzzles/{AAAA-MM-JJ}`, heure de Paris) avec repli sur la démonstration si rien n'est publié, et enregistrement du résultat du joueur sous `users/{uid}/results`. https://nomeansno1981.github.io/Cruciverbiste/donjons.html
 
-Tests : `npm run test:play` (moteur, hors ligne) et `npm run test:game` (site public sur les émulateurs Firebase : connexion, grille du jour, résultat enregistré).
+- `publier.html` : la page d'administration de l'auteur. Connexion Google (réservée au compte administrateur par les règles Firestore), collage d'une grille exportée depuis l'atelier, choix de la date de parution, publication dans `puzzles/{date}` et liste des grilles publiées. https://nomeansno1981.github.io/Cruciverbiste/publier.html
+
+Publier une grille du jour : dans l'atelier, générez et réussissez une grille, cliquez sur « Copier pour le jeu », puis dans `publier.html` collez-la, choisissez la date et publiez. La grille est stockée en chaîne JSON (Firestore refuse les tableaux imbriqués). Le jeu affiche automatiquement la grille dont la date de parution est le jour même (heure de Paris).
+
+Tests : `npm run test:play` (moteur, hors ligne), `npm run test:game` (site public : connexion, grille du jour, résultat), `npm run test:publish` (auteur publie, joueur reçoit, non-admin refusé) sur les émulateurs Firebase.
 
 ## Déploiement
 
