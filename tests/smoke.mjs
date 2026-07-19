@@ -71,6 +71,11 @@ await check("une grille se génère réellement (cellules SVG présentes)", asyn
   if (cells < 10) throw new Error("seulement " + cells + " cellules");
 });
 
+await check("les dimensions proposées par défaut sont 25 x 25", async () => {
+  const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
+  if (w !== "25" || h !== "25") throw new Error("proposé : " + w + " x " + h);
+});
+
 await check("les définitions horizontales et verticales sont listées", async () => {
   const a = await count("#acrossList li"), d = await count("#downList li");
   if (a + d < 2) throw new Error("listes de définitions vides (" + a + " + " + d + ")");
