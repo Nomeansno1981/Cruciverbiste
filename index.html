@@ -296,6 +296,7 @@
           <button class="btn-out" id="saveGrid">Enregistrer la grille</button>
           <button class="btn-out" id="svgEmpty">SVG (grille vide)</button>
           <button class="btn-out" id="svgSolved">SVG (corrigé)</button>
+          <button class="btn-out" id="copyClues">Copier les définitions</button>
           <button class="btn-out" id="printBtn">Imprimer / PDF</button>
         </div>
 
@@ -1554,6 +1555,48 @@ function exportTsv(){
   download(safe + ".tsv", tsv, "text/tab-separated-values;charset=utf-8");
   flash("Liste exportée en .tsv");
 }
+// Texte des définitions de la grille courante, prêt à coller (numéro + texte,
+// par sens). Le texte brut des définitions est conservé, astérisques comprises.
+function cluesText(){
+  if(!currentModel) return "";
+  const lines = [(currentModel.listName || currentList().name || "Mots croisés").trim()];
+  const block = (label, items) => {
+    if(!items || !items.length) return;
+    lines.push("", label);
+    for(const it of items){
+      const def = it.clue ? it.clue : "(définition à compléter : " + it.word + ")";
+      lines.push(it.num + ". " + def);
+    }
+  };
+  block("HORIZONTALEMENT", currentModel.across);
+  block("VERTICALEMENT", currentModel.down);
+  return lines.join("\n");
+}
+// Copie dans le presse-papiers, avec repli si l'API moderne est indisponible.
+async function copyToClipboard(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){ /* on tente le repli */ }
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.top = "0"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+async function copyClues(){
+  if(!currentModel) return;
+  const ok = await copyToClipboard(cluesText());
+  flash(ok ? "Définitions copiées, prêtes à coller." : "Copie impossible sur ce navigateur.", !ok);
+}
 function importJsonFile(file){
   const reader = new FileReader();
   reader.onload = () => {
@@ -1698,6 +1741,7 @@ function bind(){
 
   $("svgEmpty").onclick = () => { if(currentModel) download((slug()+"-grille.svg"), svgString(currentModel,false,false), "image/svg+xml"); };
   $("svgSolved").onclick = () => { if(currentModel) download((slug()+"-corrige.svg"), svgString(currentModel,true,false), "image/svg+xml"); };
+  $("copyClues").onclick = copyClues;
   $("printBtn").onclick = () => window.print();
 }
 function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "grille"; }
@@ -1709,6 +1753,7 @@ window.__vcPoolWords = (W, H) => {
   const { out } = prep(currentList().entries.map(toGenEntry));
   return selectPool(out, W, H).pool.map(e => e.display.join(""));
 };
+window.__vcCluesText = () => cluesText();
 
 /* =========================================================
    Boot
