@@ -22,10 +22,13 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html _site/index.html
+          cp jouer.html _site/jouer.html
           # le tampon de version du pied de page permet de vérifier d'un coup
           # d'oeil que le navigateur affiche bien la dernière version publiée
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
-          sed -i "s|version de travail|version ${GITHUB_SHA::7} publiée le ${horodatage}|" _site/index.html
+          tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
+          sed -i "s|version de travail|${tampon}|" _site/index.html
+          sed -i "s|version de travail|${tampon}|" _site/jouer.html
           touch _site/.nojekyll
 
       - name: Publier sur la branche gh-pages

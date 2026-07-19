@@ -1,6 +1,6 @@
 # verbicruciste
 
-Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de mots et de définitions organisé en listes (une par séquence), un générateur de grilles resserrées et bornées, un rendu SVG imprimable. Tout est rédigé par l'autrice : 100 % des mots et 100 % des définitions viennent de vous, sans lexique externe.
+Atelier personnel de mots croisés : un dictionnaire de mots et de définitions organisé en listes (une par thème), un générateur de grilles resserrées et bornées, un rendu SVG imprimable. Tout est rédigé par l'auteur : 100 % des mots et 100 % des définitions viennent de vous, sans lexique externe.
 
 **Application en ligne : https://nomeansno1981.github.io/Cruciverbiste/**
 
@@ -48,6 +48,12 @@ npm test          # mode local : génération réelle, IndexedDB, définitions d
 npm run test:sync # synchronisation : deux navigateurs sur les émulateurs Firebase (Java requis)
 ```
 
+## Prototype de jeu en ligne (Donjons & Définitions)
+
+`jouer.html` est un prototype autonome du futur jeu public : une grille du jour à résoudre au clavier, sur ordinateur (définitions à gauche) comme sur mobile (définition de la case sélectionnée sous la grille, mot surligné). Il embarque pour l'instant une grille d'exemple; à terme, il lira la grille du jour publiée depuis l'atelier. Aperçu : https://nomeansno1981.github.io/Cruciverbiste/jouer.html
+
+Test : `npm run test:play` (rendu, saisie clavier, surlignage, vérification, complétion, bascule responsive).
+
 ## Déploiement
 
-À chaque push sur `main`, le workflow GitHub Actions publie `index.html` sur la branche `gh-pages`, servie par GitHub Pages. Au passage, il inscrit au pied de la page le commit publié et sa date (« version abc1234 publiée le 18/07/2026 »). Si ce tampon manque ou date, votre navigateur affiche une copie périmée : fermez complètement l'onglet et rouvrez l'adresse (ou Cmd+Maj+R sur Mac).
+À chaque push sur `main`, le workflow GitHub Actions publie `index.html` et `jouer.html` sur la branche `gh-pages`, servie par GitHub Pages. Au passage, il inscrit au pied de chaque page le commit publié et sa date. Au passage, il inscrit au pied de la page le commit publié et sa date (« version abc1234 publiée le 18/07/2026 »). Si ce tampon manque ou date, votre navigateur affiche une copie périmée : fermez complètement l'onglet et rouvrez l'adresse (ou Cmd+Maj+R sur Mac).
