@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node tests/smoke.mjs",
     "test:play": "node tests/play.mjs",
-    "test:sync": "firebase emulators:exec --only auth,firestore --project demo-verbicruciste \"node tests/sync.mjs\""
+    "test:sync": "firebase emulators:exec --only auth,firestore --project demo-verbicruciste \"node tests/sync.mjs\"",
+    "test:game": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/game.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "^14.0.0",

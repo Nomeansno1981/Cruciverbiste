@@ -15,7 +15,11 @@ const server = http.createServer(async (req, res) => {
     const clean = (req.url || "/").split("?")[0];
     const file = clean === "/" ? "jouer.html" : clean.slice(1);
     const data = await readFile(path.join(root, file));
-    res.writeHead(200, { "content-type": file.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream" });
+    const type = file.endsWith(".html") ? "text/html; charset=utf-8"
+      : file.endsWith(".js") ? "text/javascript; charset=utf-8"
+      : file.endsWith(".css") ? "text/css; charset=utf-8"
+      : "application/octet-stream";
+    res.writeHead(200, { "content-type": type });
     res.end(data);
   } catch { res.writeHead(404); res.end("introuvable"); }
 });

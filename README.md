@@ -48,11 +48,15 @@ npm test          # mode local : génération réelle, IndexedDB, définitions d
 npm run test:sync # synchronisation : deux navigateurs sur les émulateurs Firebase (Java requis)
 ```
 
-## Prototype de jeu en ligne (Donjons & Définitions)
+## Jeu en ligne (Donjons & Définitions)
 
-`jouer.html` est un prototype autonome du futur jeu public : une grille du jour à résoudre au clavier, sur ordinateur (définitions à gauche) comme sur mobile (définition de la case sélectionnée sous la grille, mot surligné). Il embarque pour l'instant une grille d'exemple; à terme, il lira la grille du jour publiée depuis l'atelier. Aperçu : https://nomeansno1981.github.io/Cruciverbiste/jouer.html
+Le jeu public en préparation : une grille du jour à résoudre, sur le thème du jeu de rôle. Sur ordinateur, définitions listées sous la grille et clavier physique; sur mobile, la grille tient entièrement à l'écran avec un clavier intégré à l'application (pas celui du téléphone) et la définition de la case sélectionnée en dessous.
 
-Test : `npm run test:play` (rendu, saisie clavier, surlignage, vérification, complétion, bascule responsive).
+- `jeu.js` et `jeu.css` : le moteur de résolution et les styles, partagés.
+- `jouer.html` : aperçu autonome, sans connexion, sur une grille de démonstration. https://nomeansno1981.github.io/Cruciverbiste/jouer.html
+- `donjons.html` : le site public branché à Firebase (projet `donjons-definitions`). Écran de connexion (Google ou e-mail/mot de passe), lecture de la grille du jour depuis Firestore (`puzzles/{AAAA-MM-JJ}`, heure de Paris) avec repli sur la démonstration si rien n'est publié, et enregistrement du résultat du joueur sous `users/{uid}/results`. https://nomeansno1981.github.io/Cruciverbiste/donjons.html
+
+Tests : `npm run test:play` (moteur, hors ligne) et `npm run test:game` (site public sur les émulateurs Firebase : connexion, grille du jour, résultat enregistré).
 
 ## Déploiement
 

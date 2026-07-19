@@ -1,0 +1,232 @@
+<!-- Donjons & Definitions : site public. Ecran de connexion (Google ou
+     e-mail/mot de passe), lecture de la grille du jour depuis Firestore (repli
+     sur la grille de demonstration si aucune n'est publiee), jeu et
+     enregistrement du resultat. Moteur et styles partages (jeu.js, jeu.css). -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Donjons &amp; Definitions</title>
+<link rel="stylesheet" href="jeu.css">
+</head>
+<body>
+
+<div id="authGate">
+  <div class="gate-card">
+    <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+      <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
+      <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="19.6" y1="1" x2="19.6" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="10.3" x2="29" y2="10.3" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
+      <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
+    </svg>
+    <h2>Donjons &amp; Definitions</h2>
+    <p class="gate-text">La grille de mots croises du jour, sur le theme du jeu de role. Connectez-vous pour jouer et garder votre progression.</p>
+    <button class="gate-btn primary" id="gGoogle">Se connecter avec Google</button>
+    <div class="gate-sep">ou</div>
+    <input class="gate-field" id="gEmail" type="email" placeholder="Adresse e-mail" autocomplete="email">
+    <input class="gate-field" id="gPass" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <div class="gate-row">
+      <button class="gate-btn" id="gSignin">Se connecter</button>
+      <button class="gate-btn" id="gCreate">Creer un compte</button>
+    </div>
+    <p class="gate-status" id="gStatus">Verification de la session...</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+        <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
+        <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="19.6" y1="1" x2="19.6" y2="29" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="1" y1="10.3" x2="29" y2="10.3" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
+        <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
+      </svg>
+      <div>
+        <h1>Donjons &amp; Definitions</h1>
+        <div class="date" id="date"></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="mode">Mode detente</span>
+      <span class="timer" id="timer">0:00</span>
+      <span class="acct" id="acct" hidden><span class="mail" id="acctMail"></span><button id="signOut">Deconnexion</button></span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="layout">
+    <div class="gridarea"><div class="board" id="board"></div></div>
+
+    <div class="cluebar" id="cluebar">
+      <button class="arrow" id="prevClue" aria-label="Definition precedente">&#8249;</button>
+      <div class="txt" id="cluebarTxt"></div>
+      <button class="arrow" id="nextClue" aria-label="Definition suivante">&#8250;</button>
+    </div>
+
+    <div class="tools">
+      <button class="tool" id="checkBtn">Verifier</button>
+      <button class="tool" id="revealBtn">Reveler la grille</button>
+      <button class="tool" id="clearBtn">Effacer</button>
+    </div>
+
+    <div class="kbd" id="kbd"></div>
+
+    <aside class="aside">
+      <div class="cols">
+        <div><h2>Horizontalement</h2><ol id="acrossList"></ol></div>
+        <div><h2>Verticalement</h2><ol id="downList"></ol></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="stamp">version de travail</div>
+</div>
+
+<script type="module">
+import { monterJeu, DEMO_PUZZLE } from "./jeu.js";
+
+const EMU_MODE = location.hash.includes("emu");
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
+};
+
+window.__ddef = { ready: false, source: null, result: null };
+
+const $ = id => document.getElementById(id);
+const gate = $("authGate"), status = $("gStatus");
+function warn(msg){ status.textContent = msg; status.classList.add("warn"); }
+function info(msg){ status.textContent = msg; status.classList.remove("warn"); }
+
+// date du jour (heure de Paris) : cle de la grille et libelle affiche
+function parisDate(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function parisLabel(){
+  try{ return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()); }
+  catch(e){ return ""; }
+}
+
+let m;
+try{
+  const [appM, authM, fsM] = await Promise.all([
+    import(FIREBASE_SDK + "/firebase-app.js"),
+    import(FIREBASE_SDK + "/firebase-auth.js"),
+    import(FIREBASE_SDK + "/firebase-firestore.js")
+  ]);
+  m = Object.assign({}, appM, authM, fsM);
+}catch(e){
+  warn("Impossible de charger le module de connexion. Verifiez votre connexion, puis rechargez la page.");
+  throw e;
+}
+
+const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
+const app = m.initializeApp(cfg);
+const auth = m.getAuth(app);
+let db;
+try{ db = m.initializeFirestore(app, { localCache: m.persistentLocalCache({ tabManager: m.persistentMultipleTabManager() }) }); }
+catch(e){ db = m.initializeFirestore(app, {}); }
+if(EMU_MODE){
+  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
+async function googleLogin(){
+  info("Connexion...");
+  try{
+    if(EMU_MODE){
+      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "joueur-test", email: "joueur@example.com", email_verified: true }));
+      await m.signInWithCredential(auth, cred);
+    } else {
+      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+    }
+  }catch(e){ authError(e); }
+}
+async function emailLogin(create){
+  const email = $("gEmail").value.trim(), pass = $("gPass").value;
+  if(!email || !pass){ warn("Renseignez une adresse e-mail et un mot de passe."); return; }
+  info(create ? "Creation du compte..." : "Connexion...");
+  try{
+    if(create) await m.createUserWithEmailAndPassword(auth, email, pass);
+    else await m.signInWithEmailAndPassword(auth, email, pass);
+  }catch(e){ authError(e); }
+}
+function authError(e){
+  const code = (e && e.code) || "";
+  if(code === "auth/popup-blocked") warn("La fenetre de connexion a ete bloquee. Autorisez les fenetres surgissantes, puis reessayez.");
+  else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") warn("Fenetre refermee avant la fin de la connexion. Reessayez.");
+  else if(code === "auth/operation-not-allowed") warn("Ce mode de connexion n'est pas active dans la console Firebase.");
+  else if(code === "auth/unauthorized-domain") warn("Ce domaine n'est pas autorise dans la console Firebase (Authentication, Settings, Domaines autorises).");
+  else if(code === "auth/invalid-email") warn("Adresse e-mail invalide.");
+  else if(code === "auth/weak-password") warn("Mot de passe trop court (au moins 6 caracteres).");
+  else if(code === "auth/email-already-in-use") warn("Un compte existe deja avec cette adresse. Utilisez Se connecter.");
+  else if(code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") warn("Adresse ou mot de passe incorrect.");
+  else warn("Connexion impossible : " + (e && e.message ? e.message : e));
+}
+
+$("gGoogle").onclick = googleLogin;
+$("gSignin").onclick = () => emailLogin(false);
+$("gCreate").onclick = () => emailLogin(true);
+$("gPass").addEventListener("keydown", e => { if(e.key === "Enter") emailLogin(false); });
+
+async function loadPuzzle(dateStr){
+  try{
+    const snap = await m.getDoc(m.doc(db, "puzzles", dateStr));
+    if(snap.exists()){
+      const data = snap.data();
+      if(data && data.puzzle && data.puzzle.solution){ window.__ddef.source = "firestore"; return data.puzzle; }
+    }
+  }catch(e){ /* base verrouillee ou hors-ligne : on joue la demonstration */ }
+  window.__ddef.source = "demo";
+  return DEMO_PUZZLE;
+}
+
+let mounted = false;
+m.onAuthStateChanged(auth, async user => {
+  if(!user){
+    gate.hidden = false;
+    $("acct").hidden = true;
+    if(!mounted) info("");
+    return;
+  }
+  $("acctMail").textContent = user.email || "";
+  $("acct").hidden = false;
+  $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+  if(mounted) return;
+  mounted = true;
+  info("Chargement de la grille du jour...");
+
+  const dateStr = parisDate();
+  const puzzle = await loadPuzzle(dateStr);
+
+  const saveResult = async seconds => {
+    try{
+      const ref = m.doc(db, "users", user.uid, "results", dateStr);
+      await m.setDoc(ref, { solved: true, seconds, date: dateStr, at: m.serverTimestamp() }, { merge: true });
+      const snap = await m.getDoc(ref);
+      window.__ddef.result = snap.exists() ? snap.data() : null;
+    }catch(e){ window.__ddef.resultError = String(e); }
+  };
+
+  gate.hidden = true;
+  monterJeu(puzzle, { onSolved: saveResult, dateText: parisLabel() });
+  window.__ddef.ready = true;
+});
+</script>
+</body>
+</html>
