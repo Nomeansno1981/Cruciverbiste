@@ -87,9 +87,10 @@ await check("connexion Google puis montage du jeu", async () => {
   if (n !== 120) throw new Error("attendu 120 cases (demonstration), obtenu " + n);
 });
 
-await check("le compte connecte est affiche", async () => {
-  const mail = await page.locator("#acctMail").innerText();
-  if (!mail.includes("joueur@example.com")) throw new Error("compte affiche : " + mail);
+await check("le profil par defaut affiche le pseudo tire de l'e-mail", async () => {
+  await page.waitForFunction(() => window.__ddef && window.__ddef.profile);
+  const pseudo = await page.locator("#hdrPseudo").innerText();
+  if (pseudo !== "joueur") throw new Error("pseudo affiche : " + pseudo);
 });
 
 await check("faute de grille publiee, la demonstration est jouee", async () => {
@@ -134,6 +135,44 @@ await check("calcul de la serie : jours consecutifs et remise a zero apres un tr
   });
   const exp = { fresh: 1, consec: 5, sameDay: 4, gap: 1, aliveToday: 5, aliveYesterday: 5, broken: 0 };
   for (const k in exp) if (r[k] !== exp[k]) throw new Error(`${k} : attendu ${exp[k]}, obtenu ${r[k]}`);
+});
+
+await check("profil : redimensionnement d'une image en petit JPEG (data URL)", async () => {
+  const d = await page.evaluate(async () => {
+    const c = document.createElement("canvas"); c.width = 12; c.height = 8;
+    c.getContext("2d").fillRect(0, 0, 12, 8);
+    const blob = await new Promise(res => c.toBlob(res, "image/png"));
+    const file = new File([blob], "a.png", { type: "image/png" });
+    return window.__ddef.resize(file, 128);
+  });
+  if (!/^data:image\/jpeg/.test(d)) throw new Error("resize n'a pas produit un JPEG : " + String(d).slice(0, 30));
+});
+
+await check("profil : pseudo et avatar enregistres et persistants apres rechargement", async () => {
+  await page.click("#profileBtn");
+  await page.waitForSelector("#profileModal:not([hidden])");
+  await page.fill("#pseudoInput", "Rolista");
+  await page.evaluate(() => window.__ddef.setPendingAvatar("data:image/jpeg;base64,TESTAVATAR=="));
+  await page.click("#saveProfile");
+  await page.waitForFunction(() => window.__ddef.profile && window.__ddef.profile.pseudo === "Rolista");
+  const p = await page.evaluate(() => window.__ddef.profile);
+  if (!/^data:image/.test(p.avatar || "")) throw new Error("avatar non enregistre");
+  const hp = await page.locator("#hdrPseudo").innerText();
+  if (hp !== "Rolista") throw new Error("pseudo entete apres enregistrement : " + hp);
+  await page.reload();
+  await page.waitForFunction(() => window.__ddef && window.__ddef.profile);
+  const p2 = await page.evaluate(() => window.__ddef.profile);
+  if (p2.pseudo !== "Rolista" || !/^data:image/.test(p2.avatar || "")) throw new Error("profil non persistant : " + JSON.stringify(p2).slice(0, 60));
+});
+
+await check("profil : l'historique liste la grille reussie", async () => {
+  await page.waitForSelector("#board .cell");
+  await page.click("#profileBtn");
+  await page.waitForSelector("#profileModal:not([hidden])");
+  await page.waitForSelector("#histList li");
+  const rows = await page.locator("#histList li:not(.empty)").count();
+  if (rows < 1) throw new Error("historique vide alors qu'une grille a ete reussie");
+  await page.click("#closeProfile");
 });
 
 await check("aucune erreur JavaScript", async () => {
