@@ -1,13 +1,14 @@
 <!-- Donjons & Definitions : moteur de resolution (prototype, tranche 1).
-     Page autonome, sans dependance serveur : elle charge une grille du jour
-     (ici un exemple embarque) et permet de la resoudre au clavier, sur
-     ordinateur comme sur mobile. Definitions a gauche sur grand ecran, sous
-     la grille sur petit ecran. -->
+     Page autonome, sans dependance serveur. Sur mobile, l'ecran se compose
+     de trois zones fixes qui tiennent toujours dans la vue, sans defilement :
+     la grille (toujours entierement visible), la definition de la case
+     selectionnee, et un clavier integre (pas le clavier du telephone). Sur
+     ordinateur, clavier physique et definitions listees sous la grille. -->
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Donjons &amp; Definitions</title>
 <style>
   :root{
@@ -21,36 +22,41 @@
   *{box-sizing:border-box}
   html,body{margin:0}
   body{background:var(--paper); color:var(--ink); font-family:var(--sans); -webkit-text-size-adjust:100%}
-  .wrap{max-width:1040px; margin:0 auto; padding:16px 16px 120px}
+  .wrap{max-width:1040px; margin:0 auto; padding:16px 16px 40px}
 
-  header{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px}
-  .brand{display:flex; align-items:center; gap:9px}
+  header{display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px}
+  .brand{display:flex; align-items:center; gap:9px; min-width:0}
   .mark{width:26px; height:26px; flex:none}
-  h1{font-size:19px; letter-spacing:-.02em; margin:0; font-weight:700}
+  h1{font-size:19px; letter-spacing:-.02em; margin:0; font-weight:700; white-space:nowrap}
   .date{font-family:var(--serif); font-size:13.5px; color:var(--muted); text-transform:capitalize}
   .spacer{flex:1}
   .meta{display:flex; align-items:center; gap:14px}
   .timer{font-family:var(--mono); font-size:15px; color:var(--accent-ink); font-weight:600; font-variant-numeric:tabular-nums}
   .mode{font-size:12px; color:var(--muted)}
 
-  .layout{display:flex; flex-direction:column; align-items:center; gap:20px}
-  .boardwrap{display:flex; flex-direction:column; align-items:center; gap:12px}
-  .aside{width:100%; max-width:760px}
+  .layout{display:flex; flex-direction:column; align-items:center; gap:18px}
+  .gridarea{display:flex; align-items:center; justify-content:center; width:100%}
 
   /* grille */
   .board{position:relative; touch-action:manipulation; user-select:none; -webkit-user-select:none}
   .cell{position:absolute; background:var(--panel); display:flex; align-items:flex-end; justify-content:center; cursor:pointer; overflow:hidden}
-  .cell .num{position:absolute; top:1px; left:2.5px; font-family:var(--mono); font-size:9px; font-weight:600; color:var(--accent); line-height:1}
+  .cell .num{position:absolute; top:1px; left:2.5px; font-family:var(--mono); font-weight:600; color:var(--accent); line-height:1}
   .cell .ch{font-family:var(--mono); font-weight:600; color:var(--ink); line-height:1; padding-bottom:2px}
   .cell.word{background:var(--sun-weak)}
   .cell.here{background:var(--sun)}
-  .cell.bad .ch{color:var(--accent)}
   .cell.bad{background:#F7DEDE}
   .board.done .cell{background:#EAF3E9}
-  .board.done .cell.here, .board.done .cell.word{background:#EAF3E9}
   .grid-svg{position:absolute; top:0; left:0; pointer-events:none}
 
-  /* listes de definitions (grand ecran) */
+  /* barre de definition */
+  .cluebar{display:flex; align-items:center; gap:10px; width:100%; max-width:620px; background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:10px 12px}
+  .cluebar .arrow{flex:none; width:40px; height:40px; border:1px solid var(--line); border-radius:9px; background:var(--panel); font-size:19px; color:var(--accent-ink); cursor:pointer; display:flex; align-items:center; justify-content:center}
+  .cluebar .arrow:active{background:var(--accent-weak)}
+  .cluebar .txt{flex:1; min-width:0; font-family:var(--serif); font-size:15.5px; line-height:1.35}
+  .cluebar .txt .dir{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:1px}
+
+  /* listes (ordinateur) */
+  .aside{width:100%; max-width:760px}
   .cols{display:flex; gap:22px}
   .cols > div{flex:1; min-width:0}
   h2{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 8px; font-family:var(--mono)}
@@ -61,35 +67,38 @@
   ol li.on{background:var(--sun-weak)}
   ol li.filled{color:var(--muted)}
 
-  /* barre de definition (petit ecran) */
-  .cluebar{position:fixed; left:0; right:0; bottom:0; background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -2px 10px rgba(30,27,20,.06); display:none; align-items:center; gap:10px; padding:12px 14px calc(12px + env(safe-area-inset-bottom)); z-index:5}
-  .cluebar .arrow{flex:none; width:38px; height:38px; border:1px solid var(--line); border-radius:9px; background:var(--panel); font-size:18px; color:var(--accent-ink); cursor:pointer; display:flex; align-items:center; justify-content:center}
-  .cluebar .arrow:active{background:var(--accent-weak)}
-  .cluebar .txt{flex:1; min-width:0; font-family:var(--serif); font-size:15px; line-height:1.35}
-  .cluebar .txt .ln{font-family:var(--mono); font-weight:600; color:var(--accent); margin-right:6px}
-  .cluebar .txt .dir{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:1px}
-
   .tools{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
   button.tool{font-family:var(--sans); font-size:13px; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--ink); cursor:pointer}
   button.tool:hover{border-color:#d8cfbe}
-  button.tool.primary{background:var(--accent); border-color:var(--accent); color:#fff}
 
-  .banner{display:none; background:#EAF3E9; border:1px solid #BFD9BB; color:#2c4a2a; border-radius:11px; padding:12px 16px; font-family:var(--serif); font-size:15px; text-align:center}
+  /* clavier integre (masque sur ordinateur) */
+  .kbd{display:none; flex-direction:column; gap:6px; width:100%; max-width:560px}
+  .kbd .krow{display:flex; gap:5px; justify-content:center}
+  .kbd .key{flex:1 1 0; max-width:44px; height:46px; display:flex; align-items:center; justify-content:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; font-family:var(--sans); font-size:18px; font-weight:600; color:var(--ink); cursor:pointer; user-select:none; -webkit-user-select:none}
+  .kbd .key:active{background:var(--sun)}
+  .kbd .key.wide{flex:1.7 1 0; max-width:72px; font-size:20px; color:var(--accent-ink)}
+
+  .banner{display:none; background:#EAF3E9; border:1px solid #BFD9BB; color:#2c4a2a; border-radius:11px; padding:12px 16px; font-family:var(--serif); font-size:15px; text-align:center; width:100%; max-width:560px}
   .banner.show{display:block}
   .banner b{font-weight:700}
 
-  #keycatcher{position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; border:0; padding:0; font-size:16px}
-
   .stamp{margin-top:22px; font-size:11px; color:#b3ab9c; text-align:center; font-family:var(--mono)}
 
-  /* petit ecran : listes masquees, barre de definition sous la grille,
-     marges reduites pour donner un maximum de place a la grille */
+  /* ---- mobile : trois zones fixes, aucune barre systeme, aucun defilement ---- */
   @media (max-width:859px){
+    html,body{height:100%; overflow:hidden; overscroll-behavior:none}
+    .wrap{max-width:none; height:100dvh; padding:6px 6px 0; display:flex; flex-direction:column; gap:7px}
+    header{flex:none; border:none; padding:2px 2px 0; margin:0; gap:8px}
+    .date{display:none}
+    h1{font-size:16px}
+    .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
+    .gridarea{flex:1; min-height:0}
     .aside{display:none}
-    .cluebar{display:flex}
-    .wrap{padding:12px 6px 92px}
-    header{padding-left:2px; padding-right:2px}
-    .layout{gap:12px}
+    .tools{display:none}
+    .cluebar{flex:none}
+    .kbd{display:flex; flex:none; padding-bottom:calc(4px + env(safe-area-inset-bottom))}
+    .stamp{display:none}
+    .banner{position:fixed; left:8px; right:8px; top:50%; transform:translateY(-50%); z-index:9; max-width:none}
   }
 </style>
 </head>
@@ -120,14 +129,22 @@
   <div class="banner" id="banner"></div>
 
   <div class="layout">
-    <div class="boardwrap">
-      <div class="board" id="board"></div>
-      <div class="tools">
-        <button class="tool" id="checkBtn">Verifier</button>
-        <button class="tool" id="revealBtn">Reveler la grille</button>
-        <button class="tool" id="clearBtn">Effacer</button>
-      </div>
+    <div class="gridarea"><div class="board" id="board"></div></div>
+
+    <div class="cluebar" id="cluebar">
+      <button class="arrow" id="prevClue" aria-label="Definition precedente">&#8249;</button>
+      <div class="txt" id="cluebarTxt"></div>
+      <button class="arrow" id="nextClue" aria-label="Definition suivante">&#8250;</button>
     </div>
+
+    <div class="tools">
+      <button class="tool" id="checkBtn">Verifier</button>
+      <button class="tool" id="revealBtn">Reveler la grille</button>
+      <button class="tool" id="clearBtn">Effacer</button>
+    </div>
+
+    <div class="kbd" id="kbd"></div>
+
     <aside class="aside">
       <div class="cols">
         <div><h2>Horizontalement</h2><ol id="acrossList"></ol></div>
@@ -139,14 +156,6 @@
   <div class="stamp">version de travail</div>
 </div>
 
-<div class="cluebar" id="cluebar">
-  <button class="arrow" id="prevClue" aria-label="Definition precedente">&#8249;</button>
-  <div class="txt" id="cluebarTxt"></div>
-  <button class="arrow" id="nextClue" aria-label="Definition suivante">&#8250;</button>
-</div>
-
-<input id="keycatcher" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-hidden="true">
-
 <script>
 "use strict";
 const PUZZLE = /*PUZZLE*/{"title":"Jeu de role","rows":15,"cols":15,"solution":{"9,0":"I","9,1":"N","9,2":"I","9,3":"T","9,4":"I","9,5":"A","9,6":"T","9,7":"I","9,8":"V","9,9":"E","6,6":"S","7,6":"O","8,6":"R","10,6":"I","11,6":"L","12,6":"E","13,6":"G","14,6":"E","7,2":"G","7,3":"R","7,4":"I","7,5":"M","7,7":"I","7,8":"R","7,9":"E","12,0":"B","12,1":"O","12,2":"U","12,3":"C","12,4":"L","12,5":"I","12,7":"R","14,0":"G","14,1":"U","14,2":"E","14,3":"R","14,4":"R","14,5":"I","14,7":"R","1,9":"S","2,9":"P","3,9":"E","4,9":"C","5,9":"T","6,9":"R","3,3":"V","3,4":"A","3,5":"M","3,6":"P","3,7":"I","3,8":"R","0,7":"D","1,7":"R","2,7":"U","4,7":"D","5,7":"E","0,2":"K","0,3":"O","0,4":"B","0,5":"O","0,6":"L","5,10":"R","5,11":"E","5,12":"S","5,13":"O","5,14":"R","1,10":"I","1,11":"R","1,12":"E","1,13":"N","1,14":"E","4,13":"P","6,13":"T","7,13":"I","8,13":"O","9,13":"N","0,11":"A","2,11":"M","3,11":"U","4,11":"R","8,10":"D","8,11":"E","8,12":"M","8,14":"N","7,11":"G","9,11":"A","10,11":"N","11,11":"T","6,0":"M","7,0":"O","8,0":"M","10,0":"E","11,8":"Q","11,9":"U","11,10":"E","11,12":"E","12,10":"L","13,10":"F","14,10":"E","2,4":"M","4,4":"G","5,4":"E","5,1":"E","5,2":"P","5,3":"E","11,2":"R","13,2":"N","14,9":"H","14,11":"A","14,12":"U","14,13":"M","14,14":"E","1,1":"O","2,1":"R","3,1":"Q","4,1":"U","10,14":"H","11,14":"Y","12,14":"D","13,14":"R"},"numbers":{"0,2":1,"0,7":2,"0,11":3,"1,1":4,"1,9":5,"2,4":6,"3,3":7,"4,13":8,"5,1":9,"5,9":10,"6,0":11,"6,6":12,"7,2":13,"7,11":14,"8,10":15,"9,0":16,"10,14":17,"11,2":18,"11,8":19,"11,10":20,"12,0":21,"14,0":22,"14,9":23},"bars":{},"across":[{"num":1,"clue":"Le petit reptilien fouisseur.","cells":[[0,2],[0,3],[0,4],[0,5],[0,6],[0,7]]},{"num":5,"clue":"La voix qui perd les marins.","cells":[[1,9],[1,10],[1,11],[1,12],[1,13],[1,14]]},{"num":7,"clue":"Le buveur de sang nocturne.","cells":[[3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9]]},{"num":9,"clue":"L'arme blanche du chevalier.","cells":[[5,1],[5,2],[5,3],[5,4]]},{"num":10,"clue":"Le butin au fond du donjon.","cells":[[5,9],[5,10],[5,11],[5,12],[5,13],[5,14]]},{"num":13,"clue":"Le livre de sorts du mage.","cells":[[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[7,9]]},{"num":15,"clue":"La creature des enfers.","cells":[[8,10],[8,11],[8,12],[8,13],[8,14]]},{"num":16,"clue":"Ce qui fixe l'ordre du combat.","cells":[[9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9]]},{"num":19,"clue":"L'aventure a accomplir.","cells":[[11,8],[11,9],[11,10],[11,11],[11,12]]},{"num":21,"clue":"Ce qui pare les coups.","cells":[[12,0],[12,1],[12,2],[12,3],[12,4],[12,5],[12,6],[12,7]]},{"num":22,"clue":"Le combattant de premiere ligne.","cells":[[14,0],[14,1],[14,2],[14,3],[14,4],[14,5],[14,6],[14,7]]},{"num":23,"clue":"Le casque ferme du combattant.","cells":[[14,9],[14,10],[14,11],[14,12],[14,13],[14,14]]}],"down":[{"num":2,"clue":"Le gardien de la nature.","cells":[[0,7],[1,7],[2,7],[3,7],[4,7],[5,7]]},{"num":3,"clue":"La protection de plates du chevalier.","cells":[[0,11],[1,11],[2,11],[3,11],[4,11],[5,11]]},{"num":4,"clue":"La brute verte des armees du mal.","cells":[[1,1],[2,1],[3,1],[4,1],[5,1]]},{"num":5,"clue":"Le fantome vengeur.","cells":[[1,9],[2,9],[3,9],[4,9],[5,9],[6,9],[7,9]]},{"num":6,"clue":"Celui qui manie l'arcane.","cells":[[2,4],[3,4],[4,4],[5,4]]},{"num":8,"clue":"La fiole qui soigne ou empoisonne.","cells":[[4,13],[5,13],[6,13],[7,13],[8,13],[9,13]]},{"num":11,"clue":"Le mort bande des tombeaux.","cells":[[6,0],[7,0],[8,0],[9,0],[10,0]]},{"num":12,"clue":"L'effet magique de l'incantation.","cells":[[6,6],[7,6],[8,6],[9,6],[10,6],[11,6],[12,6],[13,6],[14,6]]},{"num":14,"clue":"Le colosse des hautes terres.","cells":[[7,11],[8,11],[9,11],[10,11],[11,11]]},{"num":17,"clue":"Le monstre a plusieurs tetes.","cells":[[10,14],[11,14],[12,14],[13,14],[14,14]]},{"num":18,"clue":"Le signe grave, magique.","cells":[[11,2],[12,2],[13,2],[14,2]]},{"num":20,"clue":"L'oreille pointue des forets.","cells":[[11,10],[12,10],[13,10],[14,10]]}]}/*/PUZZLE*/;
@@ -154,20 +163,20 @@ const PUZZLE = /*PUZZLE*/{"title":"Jeu de role","rows":15,"cols":15,"solution":{
 const K = (r,c) => r + "," + c;
 const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);
 const norm = ch => (ch||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const hasDigits = Object.values(PUZZLE.solution).some(ch => /[0-9]/.test(ch));
 
-// index case -> mot (par sens)
 const cellWord = {};
 for(const w of PUZZLE.across){ w.dir = "across"; w.id = "A" + w.num; for(const [r,c] of w.cells){ (cellWord[K(r,c)] = cellWord[K(r,c)] || {}).across = w; } }
 for(const w of PUZZLE.down){ w.dir = "down"; w.id = "D" + w.num; for(const [r,c] of w.cells){ (cellWord[K(r,c)] = cellWord[K(r,c)] || {}).down = w; } }
 const orderedClues = PUZZLE.across.concat(PUZZLE.down);
 
-const user = {};                 // "r,c" -> lettre saisie
-let sel = null;                  // { r, c, dir }
-let solved = false, started = 0, tick = null, cell = 34;
+const user = {};
+let sel = null, solved = false, started = 0, tick = null, cell = 30;
 
 const board = document.getElementById("board");
+const gridarea = document.querySelector(".gridarea");
 const svgNS = "http://www.w3.org/2000/svg";
-const cellEls = {};              // "r,c" -> element
+const cellEls = {};
 let latticeSvg = null;
 
 function buildBoard(){
@@ -190,21 +199,25 @@ function buildBoard(){
 }
 
 function layout(){
-  // taille de case : plus grande sur ordinateur, ajustee a la largeur dispo
-  // sur mobile (marges reduites) sans jamais depasser la hauteur de l'ecran
-  const maxByW = board.parentElement.clientWidth || 520;
-  const maxByH = (window.innerHeight - 190) / PUZZLE.rows;
-  const cap = window.innerWidth >= 860 ? 46 : 40;
-  cell = Math.max(19, Math.min(cap, Math.floor(maxByW / PUZZLE.cols), Math.floor(maxByH)));
+  const mobile = window.innerWidth < 860;
+  const cap = mobile ? 40 : 46;
+  const availW = (mobile ? gridarea.clientWidth : (gridarea.clientWidth || 700)) - 2;
+  let c = Math.min(cap, Math.floor(availW / PUZZLE.cols));
+  if(mobile){
+    const availH = gridarea.clientHeight - 2;
+    if(availH > 0) c = Math.min(c, Math.floor(availH / PUZZLE.rows));
+  }
+  cell = Math.max(16, c);
   const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
   board.style.width = W + "px";
   board.style.height = H + "px";
   for(const k in cellEls){
-    const [r,c] = k.split(",").map(Number);
+    const [r,c2] = k.split(",").map(Number);
     const el = cellEls[k];
-    el.style.left = (c*cell) + "px"; el.style.top = (r*cell) + "px";
+    el.style.left = (c2*cell) + "px"; el.style.top = (r*cell) + "px";
     el.style.width = cell + "px"; el.style.height = cell + "px";
     el.querySelector(".ch").style.fontSize = Math.round(cell*0.52) + "px";
+    const nEl = el.querySelector(".num"); if(nEl) nEl.style.fontSize = Math.max(7, Math.round(cell*0.26)) + "px";
   }
   drawLattice(W, H);
 }
@@ -234,50 +247,25 @@ function drawLattice(W, H){
   latticeSvg.innerHTML = s;
 }
 
-function wordAt(r, c, dir){
-  const cw = cellWord[K(r,c)] || {};
-  return cw[dir] || cw[dir === "across" ? "down" : "across"] || null;
-}
 function currentWord(){
   if(!sel) return null;
   const cw = cellWord[K(sel.r, sel.c)] || {};
   return cw[sel.dir] || cw[sel.dir === "across" ? "down" : "across"] || null;
 }
-
 function onCellTap(r, c){
-  if(solved){ focusCatcher(); return; }
+  if(solved) return;
   const cw = cellWord[K(r,c)] || {};
-  let dir = sel && sel.r === r && sel.c === c
-    ? (cw[sel.dir === "across" ? "down" : "across"] ? (sel.dir === "across" ? "down" : "across") : sel.dir) // re-tap : bascule si possible
+  const dir = sel && sel.r === r && sel.c === c
+    ? (cw[sel.dir === "across" ? "down" : "across"] ? (sel.dir === "across" ? "down" : "across") : sel.dir)
     : (sel ? (cw[sel.dir] ? sel.dir : (cw.across ? "across" : "down")) : (cw.across ? "across" : "down"));
   sel = { r, c, dir };
-  focusCatcher();
   render();
-  ensureVisible();
-}
-
-function focusCatcher(){ const kc = document.getElementById("keycatcher"); kc.value = ""; try{ kc.focus({ preventScroll:true }); }catch(e){ kc.focus(); } }
-
-// mobile : garder la case selectionnee visible au-dessus du clavier, et
-// remonter la barre de definition juste au-dessus du clavier virtuel
-function ensureVisible(){
-  if(window.innerWidth >= 860 || !sel) return;
-  const el = cellEls[K(sel.r, sel.c)];
-  if(el && el.scrollIntoView) el.scrollIntoView({ block: "center", inline: "center" });
-}
-function fitClueBar(){
-  const vv = window.visualViewport;
-  const bar = document.getElementById("cluebar");
-  if(!vv){ bar.style.bottom = "0px"; return; }
-  const overlap = window.innerHeight - (vv.height + vv.offsetTop);
-  bar.style.bottom = Math.max(0, Math.round(overlap)) + "px";
 }
 
 function place(ch){
   if(solved || !sel) return;
-  const k = K(sel.r, sel.c);
-  user[k] = ch.toUpperCase();
-  cellEls[k].classList.remove("bad");
+  user[K(sel.r, sel.c)] = ch.toUpperCase();
+  cellEls[K(sel.r, sel.c)].classList.remove("bad");
   startTimer();
   advance(1);
   render();
@@ -287,20 +275,20 @@ function erase(){
   if(solved || !sel) return;
   const k = K(sel.r, sel.c);
   if(user[k]){ delete user[k]; cellEls[k].classList.remove("bad"); }
-  else { advance(-1); const k2 = K(sel.r, sel.c); delete user[k2]; cellEls[k2] && cellEls[k2].classList.remove("bad"); }
+  else { advance(-1); const k2 = K(sel.r, sel.c); delete user[k2]; if(cellEls[k2]) cellEls[k2].classList.remove("bad"); }
   render();
 }
 function advance(step){
   const w = currentWord(); if(!w) return;
   const idx = w.cells.findIndex(([r,c]) => r === sel.r && c === sel.c);
   const ni = idx + step;
-  if(ni >= 0 && ni < w.cells.length){ sel = { r:w.cells[ni][0], c:w.cells[ni][1], dir:sel.dir }; }
+  if(ni >= 0 && ni < w.cells.length) sel = { r:w.cells[ni][0], c:w.cells[ni][1], dir:sel.dir };
 }
 function moveTo(dr, dc){
   if(!sel) return;
   let r = sel.r + dr, c = sel.c + dc;
   while(r >= 0 && r < PUZZLE.rows && c >= 0 && c < PUZZLE.cols){
-    if(filled(K(r,c))){ sel = { r, c, dir: dr !== 0 ? "down" : "across" }; render(); ensureVisible(); return; }
+    if(filled(K(r,c))){ sel = { r, c, dir: dr !== 0 ? "down" : "across" }; render(); return; }
     r += dr; c += dc;
   }
 }
@@ -308,15 +296,19 @@ function gotoClue(w, toEmpty){
   let target = w.cells[0];
   if(toEmpty){ const e = w.cells.find(([r,c]) => !user[K(r,c)]); if(e) target = e; }
   sel = { r: target[0], c: target[1], dir: w.dir };
-  focusCatcher();
   render();
-  ensureVisible();
 }
 function stepClue(delta){
   const w = currentWord();
   let i = w ? orderedClues.findIndex(x => x.id === w.id) : -1;
   i = (i + delta + orderedClues.length) % orderedClues.length;
   gotoClue(orderedClues[i], true);
+}
+function toggleDir(){
+  if(!sel) return;
+  const cw = cellWord[K(sel.r,sel.c)] || {};
+  const o = sel.dir === "across" ? "down" : "across";
+  if(cw[o]){ sel.dir = o; render(); }
 }
 
 function render(){
@@ -328,7 +320,6 @@ function render(){
     el.classList.toggle("here", !!sel && k === K(sel.r, sel.c));
     el.querySelector(".ch").textContent = user[k] || "";
   }
-  // listes
   for(const w of orderedClues){
     const li = document.getElementById("li-" + w.id);
     if(!li) continue;
@@ -336,11 +327,10 @@ function render(){
     const done = w.cells.every(([r,c]) => user[K(r,c)]);
     li.classList.toggle("filled", done && !(cw && w.id === cw.id));
   }
-  // barre mobile
   if(cw){
     const label = cw.dir === "across" ? "Horizontal" : "Vertical";
     document.getElementById("cluebarTxt").innerHTML =
-      `<span class="dir">${cw.num} ${label}</span><span class="ln"></span>${escapeHtml(cw.clue || "Definition a venir")}`;
+      `<span class="dir">${cw.num} ${label}</span>${escapeHtml(cw.clue || "Definition a venir")}`;
   }
 }
 
@@ -359,6 +349,30 @@ function buildLists(){
   fillList(document.getElementById("downList"), PUZZLE.down);
 }
 
+function buildKeyboard(){
+  const kbd = document.getElementById("kbd");
+  kbd.innerHTML = "";
+  const rows = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
+  if(hasDigits) rows.unshift("1234567890");
+  rows.forEach((row, i) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "krow";
+    for(const ch of row){
+      const key = document.createElement("div");
+      key.className = "key"; key.textContent = ch; key.setAttribute("data-k", ch);
+      key.addEventListener("pointerdown", e => { e.preventDefault(); place(ch); });
+      rowEl.appendChild(key);
+    }
+    if(i === rows.length - 1){
+      const del = document.createElement("div");
+      del.className = "key wide"; del.innerHTML = "&#9003;"; del.setAttribute("data-act", "del");
+      del.addEventListener("pointerdown", e => { e.preventDefault(); erase(); });
+      rowEl.appendChild(del);
+    }
+    kbd.appendChild(rowEl);
+  });
+}
+
 function checkSolved(){
   for(const k in PUZZLE.solution){ if(norm(user[k]) !== norm(PUZZLE.solution[k])) return false; }
   win();
@@ -366,8 +380,7 @@ function checkSolved(){
 }
 function win(){
   if(solved) return;
-  solved = true;
-  stopTimer();
+  solved = true; stopTimer();
   board.classList.add("done");
   for(const k in cellEls) cellEls[k].classList.remove("here", "word", "bad");
   const b = document.getElementById("banner");
@@ -391,26 +404,24 @@ function clearAll(){
 
 function escapeHtml(s){ return (s||"").replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
 function elapsed(){ return started ? Math.floor((Date.now() - started)/1000) : 0; }
-function fmt(s){ const m = Math.floor(s/60); return m + ":" + String(s%60).padStart(2,"0"); }
+function fmt(s){ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
 function startTimer(){ if(started) return; started = Date.now(); tick = setInterval(() => { document.getElementById("timer").textContent = fmt(elapsed()); }, 1000); }
 function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } document.getElementById("timer").textContent = fmt(elapsed()); }
 
-// saisie : un champ cache capte le clavier (mobile compris)
-const kc = document.getElementById("keycatcher");
-kc.addEventListener("input", () => {
-  const v = kc.value; kc.value = "";
-  const ch = (v || "").slice(-1);
-  if(ch && /[0-9a-zA-ZÀ-ÿ]/.test(ch)) place(ch);
-});
-kc.addEventListener("keydown", e => {
+// clavier physique (ordinateur) : la page capte les touches globalement
+window.addEventListener("keydown", e => {
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if(t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return;
   const k = e.key;
-  if(k === "Backspace"){ e.preventDefault(); erase(); }
+  if(k.length === 1 && /[0-9a-zA-ZÀ-ÿ]/.test(k)){ e.preventDefault(); place(k); }
+  else if(k === "Backspace"){ e.preventDefault(); erase(); }
   else if(k === "ArrowLeft"){ e.preventDefault(); moveTo(0,-1); }
   else if(k === "ArrowRight"){ e.preventDefault(); moveTo(0,1); }
   else if(k === "ArrowUp"){ e.preventDefault(); moveTo(-1,0); }
   else if(k === "ArrowDown"){ e.preventDefault(); moveTo(1,0); }
   else if(k === "Tab"){ e.preventDefault(); stepClue(e.shiftKey ? -1 : 1); }
-  else if(k === " "){ e.preventDefault(); if(sel){ const cw = cellWord[K(sel.r,sel.c)]||{}; const o = sel.dir==="across"?"down":"across"; if(cw[o]){ sel.dir = o; render(); } } }
+  else if(k === " "){ e.preventDefault(); toggleDir(); }
 });
 
 document.getElementById("prevClue").addEventListener("click", () => stepClue(-1));
@@ -418,13 +429,10 @@ document.getElementById("nextClue").addEventListener("click", () => stepClue(1))
 document.getElementById("checkBtn").addEventListener("click", verify);
 document.getElementById("revealBtn").addEventListener("click", reveal);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
-window.addEventListener("resize", layout);
-if(window.visualViewport){
-  window.visualViewport.addEventListener("resize", () => { fitClueBar(); ensureVisible(); });
-  window.visualViewport.addEventListener("scroll", fitClueBar);
-}
+let relayoutTimer = null;
+window.addEventListener("resize", () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(layout, 60); });
+if(window.visualViewport) window.visualViewport.addEventListener("resize", () => setTimeout(layout, 60));
 
-// date du jour (a terme, la date de parution de la grille)
 try{
   document.getElementById("date").textContent =
     new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
@@ -432,17 +440,19 @@ try{
 
 buildBoard();
 buildLists();
+buildKeyboard();
 gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
+requestAnimationFrame(layout);
 
-// acces pour les tests automatises
 window.__play = {
   selectClue: (dir, num) => { const w = (dir==="across"?PUZZLE.across:PUZZLE.down).find(x => x.num===num); if(w) gotoClue(w, true); },
   type: s => { for(const ch of s) place(ch); },
+  tapKey: ch => place(ch),
   letterAt: (r,c) => user[K(r,c)] || "",
   currentClue: () => { const w = currentWord(); return w ? w.id : null; },
-  wordHighlight: () => [...board.querySelectorAll(".cell.word")].length,
+  wordHighlight: () => board.querySelectorAll(".cell.word").length,
   isSolved: () => solved,
-  fillSolution: () => { for(const k in PUZZLE.solution){ user[k] = PUZZLE.solution[k]; } render(); checkSolved(); },
+  fillSolution: () => { for(const k in PUZZLE.solution) user[k] = PUZZLE.solution[k]; render(); checkSolved(); },
   elapsedShown: () => document.getElementById("timer").textContent
 };
 </script>
