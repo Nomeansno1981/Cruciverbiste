@@ -1042,15 +1042,9 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  // suggest grid dimensions when the fields are empty (user values are kept):
-  // 25 x 25 par défaut, élargi si un mot dépasse 25 lettres
-  const words = prep(l.entries.map(toGenEntry)).out;
-  if(words.length){
-    const longest = words.reduce((m,e)=>Math.max(m,e.letters.length),0);
-    const suggest = Math.max(longest, 25);
-    if(!$("maxW").value) $("maxW").value = String(suggest);
-    if(!$("maxH").value) $("maxH").value = String(suggest);
-  }
+  // les champs vides se préremplissent au défaut ferme : 25 x 25
+  if(!$("maxW").value) $("maxW").value = "25";
+  if(!$("maxH").value) $("maxH").value = "25";
 }
 
 // Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
@@ -1311,7 +1305,8 @@ function savedGridUsage(){
 // Candidats d'une grille : autant de mots que la boîte peut en accueillir.
 // Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
 // les grilles enregistrées passent d'abord (hasard à égalité). Jamais deux
-// formes d'un même mot (singulier et pluriel) dans une même grille.
+// formes d'un même mot (singulier et pluriel) dans une même grille. Un mot
+// plus long que la boîte n'est pas utilisé.
 function stemOf(letters){ return letters.length > 2 && letters.endsWith("S") ? letters.slice(0, -1) : letters; }
 function selectPool(out, W, H){
   // aire/6 : réserve mesurée au banc d'essai, environ 13 % de croisements de
@@ -1323,6 +1318,7 @@ function selectPool(out, W, H){
   const pool = [];
   const stems = new Set();
   for(const { e } of scored){
+    if(e.letters.length > Math.max(W, H)) continue;
     const st = stemOf(e.letters);
     if(stems.has(st)) continue;
     stems.add(st);
@@ -1389,14 +1385,12 @@ function doGenerate(){
     currentModel = null; renderGrid(false); return;
   }
   // dimensions (bounding box). Empty or too-small fields fall back to the
-  // default: 25 x 25, élargi si un mot dépasse 25 lettres
-  const longest = out.reduce((m,e)=>Math.max(m,e.letters.length),0);
-  const suggest = Math.max(longest, 25);
+  // default: 25 x 25 ferme; un mot plus long que la boîte n'est pas utilisé
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
-  if(!W || W < 2){ W = suggest; $("maxW").value = String(W); }
-  if(!H || H < 2){ H = suggest; $("maxH").value = String(H); }
+  if(!W || W < 2){ W = 25; $("maxW").value = "25"; }
+  if(!H || H < 2){ H = 25; $("maxH").value = "25"; }
   const { pool, rotated } = selectPool(out, W, H);
-  const tooLong = pool.filter(e => e.letters.length > Math.max(W, H));
+  const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
   // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
   const attempts = Math.max(pool.length > 60 ? 60 : 150, Math.min(600, Math.round(6500 / pool.length)));
 
@@ -1417,12 +1411,13 @@ function doGenerate(){
       extended = extendGrid(best, extras, W, H, 2);
     }
     currentModel = buildModel(best);
-    currentModel.sampled = pool.length < out.length ? { total: out.length, rotated, extended } : null;
+    const eligible = out.length - tooLong.length;
+    currentModel.sampled = pool.length < eligible ? { total: eligible, rotated, extended } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
     renderGrid(true);
     const notes = [];
     if(skipped.length) notes.push(`${skipped.length} trop courte(s) ignorée(s)`);
-    if(tooLong.length) notes.push(`${tooLong.length} mot(s) plus long(s) que la grille : agrandissez-la`);
+    if(tooLong.length) notes.push(`${tooLong.length} mot(s) plus long(s) que la grille, non utilisé(s)`);
     if(notes.length) flash(notes.join(" · "), true);
   }, 30);
 }

@@ -303,9 +303,11 @@ await check("rotation : les mots d'une grille enregistrée cèdent la place aux 
   if (used.length < 2 || used.length > 18) throw new Error("grille 8×8 inattendue : " + used.length + " mots placés");
   const pool = await page.evaluate(() => window.__vcPoolWords(8, 8));
   if (pool.length !== 20) throw new Error("taille de tirage inattendue : " + pool.length);
-  // les mots enregistrés cèdent la place tant qu'il reste assez de mots frais
+  // les mots enregistrés cèdent la place tant qu'il reste assez de mots frais.
+  // En 8×8, 26 animaux sont éligibles : la boîte ferme écarte chevreuil,
+  // campagnol, musaraigne et bouquetin (plus de 8 lettres) pour 20 places.
   const usedInPool = used.filter(w => pool.includes(w)).length;
-  const tolerated = Math.max(0, used.length - (30 - 20));
+  const tolerated = Math.max(0, used.length - (26 - 20));
   if (usedInPool > tolerated) throw new Error("mots déjà enregistrés encore prioritaires : " + usedInPool + " (toléré " + tolerated + ")");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
@@ -345,6 +347,24 @@ await check("jamais deux formes d'un même mot dans une grille", async () => {
   const forms = words.filter(w => /^DONJONS?$/.test(w));
   if (forms.length !== 1) throw new Error("formes de « donjon » placées : " + forms.join(", "));
   if (words.length !== 2) throw new Error("attendu 2 mots placés, obtenu : " + words.join(", "));
+});
+
+await check("boîte ferme : un mot plus long que la grille n'est pas utilisé", async () => {
+  await page.click("#newList");
+  await page.fill("#wIn", "supercalifragilisticexpialidocious ; dragon ; grimoire");
+  await page.click("#addBtn");
+  await page.fill("#maxW", "");
+  await page.fill("#maxH", "");
+  await page.click("#genBtn");
+  await page.waitForSelector("#board svg g.cell");
+  const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
+  if (w !== "25" || h !== "25") throw new Error("dimensions retenues : " + w + " x " + h);
+  const words = await page.locator(".clues .definebox input").evaluateAll(
+    els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1]));
+  if (words.some(x => x && x.length > 25)) throw new Error("mot trop long placé : " + words.join(", "));
+  if (words.length !== 2) throw new Error("attendu 2 mots placés, obtenu : " + words.join(", "));
+  const note = await page.locator("#hstatus").innerText();
+  if (!note.includes("non utilisé")) throw new Error("signalement absent : " + note);
 });
 
 await check("frontières de mots : espaces et traits d'union barrés, pas l'apostrophe", async () => {
