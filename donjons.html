@@ -54,6 +54,7 @@
     </div>
     <div class="spacer"></div>
     <div class="meta">
+      <span class="streak" id="streak" hidden></span>
       <span class="mode">Mode detente</span>
       <span class="timer" id="timer">0:00</span>
       <span class="acct" id="acct" hidden><span class="mail" id="acctMail"></span><button id="signOut">Deconnexion</button></span>
@@ -199,6 +200,37 @@ async function loadPuzzle(dateStr){
   return DEMO_PUZZLE;
 }
 
+// ---- serie (streak) facon Duolingo ----
+function prevDate(ds){
+  const [y,mo,d] = ds.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, mo-1, d, 12, 0, 0));
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toISOString().slice(0, 10);
+}
+// serie affichable : le compteur si le dernier jour reussi est aujourd'hui ou
+// hier (serie encore vivante), 0 si un jour a ete manque.
+function effectiveStreak(doc, today){
+  if(!doc || !doc.lastDate) return 0;
+  if(doc.lastDate === today || doc.lastDate === prevDate(today)) return doc.count || 0;
+  return 0;
+}
+// nouveau compteur apres une reussite du jour.
+function nextStreakCount(doc, today){
+  if(!doc || !doc.lastDate) return 1;
+  if(doc.lastDate === today) return doc.count || 1;                 // deja compte aujourd'hui
+  if(doc.lastDate === prevDate(today)) return (doc.count || 0) + 1; // jour consecutif
+  return 1;                                                          // serie rompue, on repart
+}
+const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2c.5 4-2.5 5.5-2.5 8.5A2.5 2.5 0 0 0 15 11c0-.6-.1-1 .3-1.6 1.4 1.6 2.7 3.5 2.7 6.1a6 6 0 1 1-12 0c0-4.8 6-7 7-13.5z"/></svg>';
+function setStreak(n){
+  const el = $("streak");
+  if(n > 0){ el.innerHTML = FLAME + " " + n; el.hidden = false; el.title = "Serie : " + n + " jour" + (n > 1 ? "s" : ""); }
+  else { el.hidden = true; }
+  window.__ddef.streak = n;
+}
+window.__ddef.effectiveStreak = effectiveStreak;
+window.__ddef.nextStreakCount = nextStreakCount;
+
 let mounted = false;
 m.onAuthStateChanged(auth, async user => {
   if(!user){
@@ -217,6 +249,12 @@ m.onAuthStateChanged(auth, async user => {
   const dateStr = parisDate();
   const puzzle = await loadPuzzle(dateStr);
 
+  // serie affichee au chargement (avant meme d'avoir joue le jour)
+  try{
+    const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak"));
+    setStreak(effectiveStreak(s.exists() ? s.data() : null, dateStr));
+  }catch(e){ /* pas de serie affichee */ }
+
   const saveResult = async seconds => {
     try{
       const ref = m.doc(db, "users", user.uid, "results", dateStr);
@@ -224,6 +262,16 @@ m.onAuthStateChanged(auth, async user => {
       const snap = await m.getDoc(ref);
       window.__ddef.result = snap.exists() ? snap.data() : null;
     }catch(e){ window.__ddef.resultError = String(e); }
+    // met a jour la serie et l'affiche dans la banniere de reussite
+    try{
+      const sref = m.doc(db, "users", user.uid, "state", "streak");
+      const cur = await m.getDoc(sref);
+      const n = nextStreakCount(cur.exists() ? cur.data() : null, dateStr);
+      await m.setDoc(sref, { count: n, lastDate: dateStr, at: m.serverTimestamp() });
+      setStreak(n);
+      const b = document.getElementById("banner");
+      if(b && b.classList.contains("show")) b.innerHTML += ` Serie : ${n} jour${n > 1 ? "s" : ""}.`;
+    }catch(e){ window.__ddef.streakError = String(e); }
   };
 
   gate.hidden = true;
