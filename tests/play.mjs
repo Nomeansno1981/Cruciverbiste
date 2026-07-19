@@ -60,21 +60,21 @@ await page.waitForSelector("#board .cell");
 
 await check("la grille se dessine (toutes les cases pleines)", async () => {
   const n = await page.locator("#board .cell").count();
-  if (n !== 87) throw new Error("attendu 87 cases, obtenu " + n);
+  if (n !== 120) throw new Error("attendu 120 cases, obtenu " + n);
 });
 
 await check("choisir une definition surligne le mot entier", async () => {
-  await page.click("#li-A5"); // DRAGON, 6 lettres
+  await page.click("#li-A1"); // KOBOLD, 6 lettres
   const id = await page.evaluate(() => window.__play.currentClue());
-  if (id !== "A5") throw new Error("definition active : " + id);
+  if (id !== "A1") throw new Error("definition active : " + id);
   const hl = await page.evaluate(() => window.__play.wordHighlight());
   if (hl !== 6) throw new Error("cases surlignees : " + hl);
 });
 
 await check("saisie au clavier : les lettres se posent et avancent", async () => {
-  await page.keyboard.type("dragon");
-  const letters = await page.evaluate(() => [[1,2],[1,3],[1,4],[1,5],[1,6],[1,7]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
-  if (letters !== "DRAGON") throw new Error("lettres posees : " + letters);
+  await page.keyboard.type("kobold");
+  const letters = await page.evaluate(() => [[0,2],[0,3],[0,4],[0,5],[0,6],[0,7]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
+  if (letters !== "KOBOLD") throw new Error("lettres posees : " + letters);
 });
 
 await check("le chrono se declenche a la premiere lettre", async () => {
