@@ -1,5 +1,10 @@
 {
   "firestore": { "rules": "firestore.rules" },
+  "hosting": {
+    "public": "_fire",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true
+  },
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },
