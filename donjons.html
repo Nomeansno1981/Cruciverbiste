@@ -189,7 +189,10 @@ async function loadPuzzle(dateStr){
     const snap = await m.getDoc(m.doc(db, "puzzles", dateStr));
     if(snap.exists()){
       const data = snap.data();
-      if(data && data.puzzle && data.puzzle.solution){ window.__ddef.source = "firestore"; return data.puzzle; }
+      // la grille est stockee en chaine JSON (Firestore refuse les tableaux imbriques)
+      let p = data && data.puzzle;
+      if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){ p = null; } }
+      if(p && p.solution){ window.__ddef.source = "firestore"; return p; }
     }
   }catch(e){ /* base verrouillee ou hors-ligne : on joue la demonstration */ }
   window.__ddef.source = "demo";

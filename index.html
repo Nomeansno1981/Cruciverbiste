@@ -297,6 +297,7 @@
           <button class="btn-out" id="svgEmpty">SVG (grille vide)</button>
           <button class="btn-out" id="svgSolved">SVG (corrigé)</button>
           <button class="btn-out" id="copyClues">Copier les définitions</button>
+          <button class="btn-out" id="copyGame" title="Copier la grille au format du jeu Donjons &amp; Définitions, à coller dans la page de publication">Copier pour le jeu</button>
           <button class="btn-out" id="printBtn">Imprimer / PDF</button>
         </div>
 
@@ -1597,6 +1598,38 @@ async function copyClues(){
   const ok = await copyToClipboard(cluesText());
   flash(ok ? "Définitions copiées, prêtes à coller." : "Copie impossible sur ce navigateur.", !ok);
 }
+// Grille courante au format attendu par le jeu Donjons & Définitions :
+// solution, numéros, séparateurs, et pour chaque définition ses coordonnées.
+function puzzleForGame(){
+  if(!currentModel) return null;
+  const g = currentModel;
+  const numPos = {};
+  for(const k in g.number){ const [r,c] = k.split(",").map(Number); numPos[g.number[k]] = [r,c]; }
+  const cellsOf = (item, dir) => {
+    const [r,c] = numPos[item.num];
+    const len = [...item.word].length;
+    const out = [];
+    for(let i=0;i<len;i++) out.push(dir === "down" ? [r+i, c] : [r, c+i]);
+    return out;
+  };
+  const solution = {};
+  for(const k in g.cells) solution[k] = g.cells[k].display;
+  return {
+    title: currentList().name || "Grille",
+    rows: g.rows, cols: g.cols,
+    solution, numbers: g.number, bars: g.bars || {},
+    across: g.across.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "across") })),
+    down: g.down.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "down") }))
+  };
+}
+async function copyGamePuzzle(){
+  const p = puzzleForGame();
+  if(!p) return;
+  const undef = p.across.concat(p.down).filter(w => !w.clue).length;
+  const ok = await copyToClipboard(JSON.stringify(p));
+  if(!ok){ flash("Copie impossible sur ce navigateur.", true); return; }
+  flash(undef ? `Grille copiée pour le jeu (${undef} définition(s) manquante(s)).` : "Grille copiée pour le jeu, à coller dans la page de publication.", !!undef);
+}
 function importJsonFile(file){
   const reader = new FileReader();
   reader.onload = () => {
@@ -1742,6 +1775,7 @@ function bind(){
   $("svgEmpty").onclick = () => { if(currentModel) download((slug()+"-grille.svg"), svgString(currentModel,false,false), "image/svg+xml"); };
   $("svgSolved").onclick = () => { if(currentModel) download((slug()+"-corrige.svg"), svgString(currentModel,true,false), "image/svg+xml"); };
   $("copyClues").onclick = copyClues;
+  $("copyGame").onclick = copyGamePuzzle;
   $("printBtn").onclick = () => window.print();
 }
 function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "grille"; }
@@ -1754,6 +1788,7 @@ window.__vcPoolWords = (W, H) => {
   return selectPool(out, W, H).pool.map(e => e.display.join(""));
 };
 window.__vcCluesText = () => cluesText();
+window.__vcGamePuzzle = () => puzzleForGame();
 
 /* =========================================================
    Boot

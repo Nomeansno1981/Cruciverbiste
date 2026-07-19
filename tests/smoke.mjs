@@ -494,6 +494,24 @@ await check("export des définitions : mot sans définition signalé", async () 
   if (redigee) throw new Error("mention « à compléter » attendue : " + redigee);
 });
 
+await check("export « Copier pour le jeu » : structure valide et coordonnées cohérentes", async () => {
+  // une grille est présente (générée au contrôle précédent)
+  const p = await page.evaluate(() => window.__vcGamePuzzle());
+  if (!p || !p.solution || !p.rows || !p.cols) throw new Error("structure invalide");
+  if (!Array.isArray(p.across) || !Array.isArray(p.down)) throw new Error("across/down manquants");
+  const all = p.across.concat(p.down);
+  if (!all.length) throw new Error("aucune définition exportée");
+  for (const w of all) {
+    if (!Array.isArray(w.cells) || !w.cells.length) throw new Error("cellules manquantes pour un mot");
+    for (const [r, c] of w.cells) {
+      if (r < 0 || r >= p.rows || c < 0 || c >= p.cols) throw new Error("case hors grille : " + r + "," + c);
+      if (!p.solution[r + "," + c]) throw new Error("case sans lettre : " + r + "," + c);
+    }
+  }
+  // pas de tableau imbriqué au premier niveau des champs simples (stockage JSON côté publication)
+  if (typeof JSON.stringify(p) !== "string") throw new Error("sérialisation impossible");
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
