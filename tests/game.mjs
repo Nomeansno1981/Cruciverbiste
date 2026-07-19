@@ -1,0 +1,126 @@
+// Test du site public (donjons.html) sur les emulateurs Firebase : connexion,
+// lecture de la grille du jour (repli sur la demonstration si aucune n'est
+// publiee), jeu, et enregistrement du resultat du joueur.
+// A lancer via : npm run test:game
+import http from "node:http";
+import { readFile } from "node:fs/promises";
+import { readdirSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+// En mode #emu la page importe le SDK depuis ./firebasejs/ : copie locale.
+const SDK_VERSION = "12.8.0";
+const vendorDir = path.join(root, "tests", "vendor", "firebasejs");
+const sdkFiles = ["firebase-app.js", "firebase-auth.js", "firebase-firestore.js"];
+if (sdkFiles.some(f => !existsSync(path.join(vendorDir, f)))) {
+  mkdirSync(vendorDir, { recursive: true });
+  for (const f of sdkFiles) {
+    execSync(`curl -sf -o "${path.join(vendorDir, f)}" "https://www.gstatic.com/firebasejs/${SDK_VERSION}/${f}"`);
+    const p = path.join(vendorDir, f);
+    writeFileSync(p, readFileSync(p, "utf8").replaceAll(`https://www.gstatic.com/firebasejs/${SDK_VERSION}/firebase-app.js`, "./firebase-app.js"));
+  }
+  console.log("SDK Firebase telecharge dans tests/vendor/firebasejs/");
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const clean = (req.url || "/").split("?")[0];
+    const file = clean === "/" ? "donjons.html" : clean.slice(1);
+    const fsPath = file.startsWith("firebasejs/") ? path.join(vendorDir, file.slice("firebasejs/".length)) : path.join(root, file);
+    const data = await readFile(fsPath);
+    const type = file.endsWith(".html") ? "text/html; charset=utf-8"
+      : file.endsWith(".js") ? "text/javascript; charset=utf-8"
+      : file.endsWith(".css") ? "text/css; charset=utf-8"
+      : "application/octet-stream";
+    res.writeHead(200, { "content-type": type });
+    res.end(data);
+  } catch { res.writeHead(404); res.end("introuvable"); }
+});
+await new Promise(r => server.listen(0, "127.0.0.1", r));
+const url = `http://127.0.0.1:${server.address().port}/donjons.html#emu`;
+
+async function launchBrowser(){
+  const opts = { chromiumSandbox: false };
+  try { return await chromium.launch(opts); }
+  catch (first) {
+    const base = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
+    const candidates = [];
+    if (existsSync(base)) {
+      for (const d of readdirSync(base)) {
+        for (const p of [path.join(base, d, "chrome-linux", "chrome"), path.join(base, d, "chrome-linux", "headless_shell")]) {
+          if (existsSync(p)) candidates.push(p);
+        }
+      }
+    }
+    candidates.push("/opt/pw-browsers/chromium");
+    for (const exe of candidates) {
+      try { return await chromium.launch({ ...opts, executablePath: exe }); } catch { /* suivant */ }
+    }
+    throw first;
+  }
+}
+
+const browser = await launchBrowser();
+const page = await browser.newPage();
+page.setDefaultTimeout(30000);
+const errs = [];
+page.on("pageerror", e => errs.push(String(e)));
+
+const failures = [];
+async function check(name, fn){
+  try { await fn(); console.log("ok     " + name); }
+  catch (err) { failures.push(name); console.log("ÉCHEC  " + name + " : " + (err && err.message ? err.message : err)); }
+}
+
+await page.goto(url);
+
+await check("connexion Google puis montage du jeu", async () => {
+  await page.waitForSelector("#gGoogle:not([disabled])");
+  await page.click("#gGoogle");
+  await page.waitForSelector("#authGate", { state: "hidden" });
+  await page.waitForSelector("#board .cell");
+  const n = await page.locator("#board .cell").count();
+  if (n !== 120) throw new Error("attendu 120 cases (demonstration), obtenu " + n);
+});
+
+await check("le compte connecte est affiche", async () => {
+  const mail = await page.locator("#acctMail").innerText();
+  if (!mail.includes("joueur@example.com")) throw new Error("compte affiche : " + mail);
+});
+
+await check("faute de grille publiee, la demonstration est jouee", async () => {
+  const src = await page.evaluate(() => window.__ddef.source);
+  if (src !== "demo") throw new Error("source de la grille : " + src);
+});
+
+await check("saisie au clavier", async () => {
+  await page.evaluate(() => window.__play.selectClue("across", 1)); // KOBOLD, [0,2]
+  await page.keyboard.type("k");
+  const l = await page.evaluate(() => window.__play.letterAt(0, 2));
+  if (l !== "K") throw new Error("touche sans effet : " + l);
+});
+
+await check("resolution : le resultat du joueur est enregistre en ligne", async () => {
+  await page.evaluate(() => window.__play.fillSolution());
+  await page.waitForFunction(() => window.__ddef && window.__ddef.result);
+  const r = await page.evaluate(() => window.__ddef.result);
+  if (!r || r.solved !== true) throw new Error("resultat non enregistre : " + JSON.stringify(r));
+  if (typeof r.seconds !== "number") throw new Error("duree absente du resultat");
+});
+
+await check("aucune erreur JavaScript", async () => {
+  if (errs.length) throw new Error(errs.join(" | "));
+});
+
+await browser.close();
+server.close();
+
+if (failures.length) {
+  console.error("\n" + failures.length + " controle(s) en echec.");
+  process.exit(1);
+}
+console.log("\nSite public verifie : tous les controles passent.");
