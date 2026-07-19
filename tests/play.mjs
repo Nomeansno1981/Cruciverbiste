@@ -63,6 +63,15 @@ await check("la grille se dessine (toutes les cases pleines)", async () => {
   if (n !== 120) throw new Error("attendu 120 cases, obtenu " + n);
 });
 
+await check("bords : le quadrillage deborde d'une marge (epaisseur uniforme)", async () => {
+  const r = await page.evaluate(() => {
+    const svg = document.querySelector("#board .grid-svg");
+    return { svgW: parseFloat(svg.getAttribute("width")), boardW: parseFloat(document.getElementById("board").style.width), left: svg.style.left };
+  });
+  if (!(r.svgW > r.boardW)) throw new Error("SVG pas plus large que la grille : " + r.svgW + " vs " + r.boardW);
+  if (r.left === "0px" || r.left === "") throw new Error("marge non appliquee : " + r.left);
+});
+
 await check("choisir une definition surligne le mot entier", async () => {
   await page.click("#li-A1"); // KOBOLD, 6 lettres
   const id = await page.evaluate(() => window.__play.currentClue());
