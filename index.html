@@ -1042,12 +1042,12 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  // suggest grid dimensions when the fields are empty (user values are kept)
+  // suggest grid dimensions when the fields are empty (user values are kept):
+  // 25 x 25 par défaut, élargi si un mot dépasse 25 lettres
   const words = prep(l.entries.map(toGenEntry)).out;
   if(words.length){
     const longest = words.reduce((m,e)=>Math.max(m,e.letters.length),0);
-    const sumLen = words.reduce((s,e)=>s+e.letters.length,0);
-    const suggest = Math.max(longest, Math.min(25, Math.round(Math.sqrt(sumLen)*1.7)));
+    const suggest = Math.max(longest, 25);
     if(!$("maxW").value) $("maxW").value = String(suggest);
     if(!$("maxH").value) $("maxH").value = String(suggest);
   }
@@ -1388,10 +1388,10 @@ function doGenerate(){
     flash("Il faut au moins deux mots valides pour générer une grille.", true);
     currentModel = null; renderGrid(false); return;
   }
-  // dimensions (bounding box). Empty or too-small fields fall back to a suggestion.
+  // dimensions (bounding box). Empty or too-small fields fall back to the
+  // default: 25 x 25, élargi si un mot dépasse 25 lettres
   const longest = out.reduce((m,e)=>Math.max(m,e.letters.length),0);
-  const sumLen = out.reduce((s,e)=>s+e.letters.length,0);
-  const suggest = Math.max(longest, Math.min(25, Math.round(Math.sqrt(sumLen)*1.7)));
+  const suggest = Math.max(longest, 25);
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
   if(!W || W < 2){ W = suggest; $("maxW").value = String(W); }
   if(!H || H < 2){ H = suggest; $("maxH").value = String(H); }

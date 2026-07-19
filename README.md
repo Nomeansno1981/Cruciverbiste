@@ -7,7 +7,7 @@ Atelier personnel de mots croisés à visée pédagogique : un dictionnaire de m
 ## Utilisation rapide
 
 1. Créez une liste (une par séquence), ajoutez vos mots : un par un, séparés par des points-virgules (« lancelot ; guenièvre ; charrette »), ou en collant une liste entière. Les définitions sont optionnelles : vous pouvez les rédiger plus tard, au moment où le mot sort dans une grille. Les doublons sont refusés automatiquement (un mot compte pour ses lettres de placement : « EPEE », « épée » et « Épée » sont le même mot); si le doublon arrive avec une définition nouvelle, elle rejoint le mot existant.
-2. Réglez les dimensions maximales (largeur, hauteur), puis générez : l'application case autant de mots que possible dans la boîte en maximisant les croisements. Régénérez autant de fois que souhaité.
+2. Réglez les dimensions maximales (largeur, hauteur), puis générez : l'application case autant de mots que possible dans la boîte en maximisant les croisements. Les champs se préremplissent à 25 x 25 (élargi si un mot dépasse 25 lettres); la boîte étant un maximum, une petite liste donne malgré tout une grille compacte. Régénérez autant de fois que souhaité.
 3. Enregistrez les grilles réussies, exportez la grille vide ou le corrigé en SVG, imprimez en PDF via le bouton dédié.
 
 ## Grands dictionnaires thématiques
