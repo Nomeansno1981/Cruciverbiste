@@ -1,6 +1,6 @@
-// Test du bareme d'experience (scoreXP), fonction pure sans DOM.
-// A lancer via : npm run test:score
-import { scoreXP } from "../jeu.js";
+// Test du bareme d'experience (scoreXP) et de l'echelle de niveaux
+// (niveauPourXp), fonctions pures sans DOM. A lancer via : npm run test:score
+import { scoreXP, niveauPourXp, NIVEAUX } from "../jeu.js";
 
 const cases = [
   { in: { seconds: 120, hints: 0, solutions: 0, words: 20 }, out: 200, label: "clean et rapide (20 mots, 2 min) : maximum" },
@@ -29,5 +29,33 @@ prop("le score ne descend jamais sous 20", [0, 5, 30, 120, 999].every(s => score
 prop("un appel sans argument reste valide (grille de 20 mots par defaut)", scoreXP() === 200);
 prop("plus d'indices ne rapporte jamais plus de points", scoreXP({ seconds: 120, hints: 2, words: 20 }) <= scoreXP({ seconds: 120, hints: 1, words: 20 }));
 
+// ---- echelle de niveaux ----
+function nv(name, cond, got){ if(cond){ console.log("ok     " + name); } else { failures++; console.log("ÉCHEC  " + name + (got !== undefined ? " : " + JSON.stringify(got) : "")); } }
+
+const n0 = niveauPourXp(0);
+nv("XP 0 : niveau 1 Roturier", n0.niveau === 1 && n0.titre === "Roturier" && n0.seuil === 0, n0);
+nv("XP 0 : progression nulle et prochain palier a 150", n0.progression === 0 && n0.prochain === 150 && n0.titreProchain === "Apprenti", n0);
+
+const n149 = niveauPourXp(149);
+nv("XP 149 : encore niveau 1, presque au palier", n149.niveau === 1 && n149.progression > 0.9 && n149.progression < 1, n149);
+
+const n150 = niveauPourXp(150);
+nv("XP 150 : passage au niveau 2 Apprenti", n150.niveau === 2 && n150.titre === "Apprenti" && n150.progression === 0, n150);
+
+const nMid = niveauPourXp(675); // milieu du niveau 3 (450..900)
+nv("XP 675 : niveau 3, progression a mi-chemin", nMid.niveau === 3 && Math.abs(nMid.progression - 0.5) < 1e-9, nMid);
+
+const nMax = niveauPourXp(25000);
+nv("XP 25000 : rang maximal Mythe", nMax.niveau === NIVEAUX.length && nMax.titre === "Mythe" && nMax.max === true && nMax.prochain === null, nMax);
+
+const nOver = niveauPourXp(999999);
+nv("XP tres eleve : reste au rang maximal, progression pleine", nOver.max === true && nOver.progression === 1, nOver);
+
+const nNeg = niveauPourXp(-50);
+nv("XP negatif : plancher au niveau 1", nNeg.niveau === 1, nNeg);
+
+nv("les seuils de niveaux sont strictement croissants", NIVEAUX.every((x, i) => i === 0 || x.seuil > NIVEAUX[i - 1].seuil));
+nv("le niveau ne recule jamais quand l'XP augmente", [0, 100, 150, 500, 3000, 12000, 30000].every((x, i, a) => i === 0 || niveauPourXp(x).niveau >= niveauPourXp(a[i - 1]).niveau));
+
 if (failures) { console.error("\n" + failures + " controle(s) en echec."); process.exit(1); }
-console.log("\nBareme d'experience verifie : tous les controles passent.");
+console.log("\nBareme d'experience et echelle de niveaux verifies : tous les controles passent.");

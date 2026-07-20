@@ -111,9 +111,19 @@
       <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
       <button class="gate-btn primary" id="saveProfile" type="button">Enregistrer</button>
     </div>
+    <div class="level" id="levelBox" hidden>
+      <div class="level-head">
+        <span class="level-rank" id="levelNum">1</span>
+        <div class="level-txt">
+          <div class="level-title" id="levelTitle">Roturier</div>
+          <div class="level-xp"><b id="xpTotal">0</b> XP au total</div>
+        </div>
+      </div>
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+      <div class="level-next" id="levelNext"></div>
+    </div>
     <div class="hist">
       <h3>Vos grilles reussies</h3>
-      <div class="xp-summary" id="xpSummary" hidden><b id="xpTotal">0</b> points d'expérience</div>
       <ul id="histList"></ul>
     </div>
     <div style="text-align:center"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
@@ -121,7 +131,7 @@
 </div>
 
 <script type="module">
-import { monterJeu, DEMO_PUZZLE } from "./jeu.js";
+import { monterJeu, DEMO_PUZZLE, niveauPourXp } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -303,12 +313,26 @@ function resizeImage(file, size){
     img.src = url;
   });
 }
+function renderLevel(total){
+  const box = $("levelBox");
+  if(!box) return;
+  const n = niveauPourXp(total);
+  $("levelNum").textContent = n.niveau;
+  $("levelTitle").textContent = n.titre;
+  $("xpTotal").textContent = total;
+  $("levelFill").style.width = Math.round(Math.min(1, Math.max(0, n.progression)) * 100) + "%";
+  $("levelNext").textContent = n.max
+    ? "Rang maximal atteint."
+    : "Encore " + (n.prochain - total) + " XP avant « " + n.titreProchain + " ».";
+  box.hidden = false;
+}
 async function renderHistory(){
   const ul = $("histList"); ul.innerHTML = "";
-  const summary = $("xpSummary");
-  if(summary) summary.hidden = true;
+  const box = $("levelBox");
+  if(box) box.hidden = true;
   try{
-    const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc"), m.limit(60)));
+    // toutes les grilles reussies : somme d'XP exacte pour le niveau, liste complete
+    const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc")));
     if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
     let total = 0, anyXp = false;
     snap.forEach(ds => {
@@ -323,7 +347,7 @@ async function renderHistory(){
       li.innerHTML = "<span>" + label + '</span><span class="t">' + right + "</span>";
       ul.appendChild(li);
     });
-    if(summary && anyXp){ $("xpTotal").textContent = total; summary.hidden = false; }
+    if(anyXp) renderLevel(total);
   }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
 }
 function openProfile(){

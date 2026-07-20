@@ -115,17 +115,29 @@ await check("resolution : le resultat du joueur (avec XP) est enregistre en lign
   if (typeof r.words !== "number") throw new Error("nombre de mots absent du resultat");
 });
 
-await check("l'historique du profil affiche l'XP totale et le detail par grille", async () => {
+await check("le profil affiche le niveau, l'XP totale et le detail par grille", async () => {
   await page.click("#profileBtn");
   await page.waitForSelector("#profileModal:not([hidden])");
   await page.waitForSelector("#histList li");
   const info = await page.evaluate(() => {
-    const sum = document.getElementById("xpSummary");
+    const box = document.getElementById("levelBox");
     const first = document.querySelector("#histList li .t");
-    return { sumHidden: sum.hidden, total: document.getElementById("xpTotal").textContent, line: first ? first.textContent : "" };
+    return {
+      boxHidden: box.hidden,
+      num: document.getElementById("levelNum").textContent,
+      title: document.getElementById("levelTitle").textContent,
+      total: document.getElementById("xpTotal").textContent,
+      next: document.getElementById("levelNext").textContent,
+      fill: document.getElementById("levelFill").style.width,
+      line: first ? first.textContent : ""
+    };
   });
-  if (info.sumHidden) throw new Error("total d'XP masque dans le profil");
+  if (info.boxHidden) throw new Error("bloc de niveau masque dans le profil");
+  if (!/^\d+$/.test(info.num) || Number(info.num) < 1) throw new Error("numero de niveau invalide : " + info.num);
+  if (!info.title) throw new Error("titre de niveau absent");
   if (!/^\d+$/.test(info.total) || Number(info.total) < 20) throw new Error("total d'XP invalide : " + info.total);
+  if (!/XP/.test(info.next)) throw new Error("indication du prochain palier absente : " + info.next);
+  if (!/%$/.test(info.fill)) throw new Error("barre de progression sans largeur : " + info.fill);
   if (!/XP/.test(info.line)) throw new Error("XP absente de la ligne d'historique : " + info.line);
   await page.click("#closeProfile");
 });
