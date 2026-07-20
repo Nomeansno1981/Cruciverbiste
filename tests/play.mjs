@@ -115,13 +115,25 @@ await check("Indice revele une lettre du mot selectionne, verrouillee", async ()
   if (await page.evaluate(() => window.__play.letterAt(3, 3)) !== "V") throw new Error("mauvaise lettre revelee");
 });
 
-await check("Solution revele le mot selectionne en entier", async () => {
+await check("Solution revele le mot en entier (rouge, jamais valide)", async () => {
   await page.evaluate(() => window.__play.selectClue("down", 6)); // MAGE, vide
+  const before = await page.evaluate(() => window.__play.solvedWordCount());
   await page.click("#solveBtn");
   if (await page.evaluate(() => window.__play.solutions()) < 1) throw new Error("compteur de solutions non incremente");
+  if (await page.evaluate(() => window.__play.solvedWordCount()) !== before + 1) throw new Error("mot non compte comme donne");
   const letters = await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
   if (letters !== "MAGE") throw new Error("mot non revele en entier : " + letters);
-  if (!(await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].every(([r,c]) => window.__play.isGiven(r,c))))) throw new Error("cases non marquees donnees");
+  if (!(await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].every(([r,c]) => window.__play.isSolvedCell(r,c))))) throw new Error("cases non marquees comme donnees par Solution");
+  if (await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].some(([r,c]) => window.__play.isOk(r,c)))) throw new Error("un mot donne par Solution est marque valide (vert)");
+});
+
+await check("un mot complete avec un indice se valide (vert) tout en gardant l'indice rouge", async () => {
+  await page.evaluate(() => window.__play.selectClue("across", 5)); // SIRENE, vide
+  await page.click("#hintBtn");                                     // revele S en [1,9], rouge
+  await page.keyboard.type("sirene");                              // complete IRENE
+  if (!(await page.evaluate(() => window.__play.isOk(1, 10)))) throw new Error("le mot complete avec indice n'est pas valide");
+  if (!(await page.evaluate(() => window.__play.isOk(1, 9)))) throw new Error("la case d'indice n'appartient pas au mot valide");
+  if (!(await page.evaluate(() => window.__play.isGiven(1, 9)))) throw new Error("la lettre d'indice n'est plus marquee donnee (rouge)");
 });
 
 await check("completer la grille declenche la victoire", async () => {

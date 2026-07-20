@@ -18,16 +18,19 @@ export function monterJeu(PUZZLE, opts = {}){
   const orderedClues = PUZZLE.across.concat(PUZZLE.down);
 
   const user = {};                 // lettres saisies ou revelees
-  const given = {};                // cases revelees (indice/solution) : rouges, verrouillees
-  const okWords = new Set();       // mots resolus sans aide : verts, verrouilles
+  const given = {};                // lettres revelees par Indice : rouges, verrouillees
+  const okWords = new Set();       // mots complets et corrects : verts, verrouilles
+  const solvedWords = new Set();   // mots reveles par Solution : rouges, verrouilles
   let hintCount = 0, solutionCount = 0;
   let muted = false; try{ muted = localStorage.getItem("dd-mute") === "1"; }catch(e){}
   let audioCtx = null;
   let sel = null, solved = false, started = 0, tick = null, cell = 30;
 
   const correct = k => norm(user[k]) === norm(PUZZLE.solution[k]);
-  const inOkWord = k => { const cw = cellWord[k]; return !!cw && ((cw.across && okWords.has(cw.across.id)) || (cw.down && okWords.has(cw.down.id))); };
-  const isLocked = k => !!given[k] || inOkWord(k);
+  const wordsAt = k => { const cw = cellWord[k]; return cw ? [cw.across, cw.down].filter(Boolean) : []; };
+  const inOkWord = k => wordsAt(k).some(w => okWords.has(w.id));
+  const inSolvedWord = k => wordsAt(k).some(w => solvedWords.has(w.id));
+  const isLocked = k => !!given[k] || inOkWord(k) || inSolvedWord(k);
   function beep(freq, dur){
     if(muted) return;
     try{
@@ -193,10 +196,12 @@ export function monterJeu(PUZZLE, opts = {}){
     for(const k in cellEls){
       const el = cellEls[k];
       const ok = inOkWord(k);
+      const inSolved = inSolvedWord(k);
       el.classList.toggle("word", inWord.has(k));
       el.classList.toggle("here", !!sel && k === K(sel.r, sel.c));
-      el.classList.toggle("ok", ok);
-      el.classList.toggle("given", !!given[k] && !ok);
+      el.classList.toggle("ok", ok);                        // fond vert : mot valide
+      el.classList.toggle("solved", inSolved && !ok);       // fond rouge : mot donne
+      el.classList.toggle("given", !!given[k] || inSolved); // lettre rouge : indice ou solution
       el.querySelector(".ch").textContent = user[k] || "";
     }
     for(const w of orderedClues){
@@ -257,13 +262,14 @@ export function monterJeu(PUZZLE, opts = {}){
     win();
     return true;
   }
-  // Un mot entierement correct et sans aucune case revelee se valide (vert,
-  // verrouille) : petit signal sonore de reussite.
+  // Tout mot entierement correct se valide (vert, verrouille), meme si le joueur
+  // s'est aide d'un indice ; les lettres d'indice y restent rouges. Un mot
+  // revele par « Solution » (deja dans solvedWords) n'est pas concerne : il reste
+  // rouge. Petit signal sonore de reussite a chaque validation.
   function checkWords(){
     for(const w of orderedClues){
-      if(okWords.has(w.id)) continue;
-      const clean = w.cells.every(([r,c]) => correct(K(r,c)) && !given[K(r,c)]);
-      if(clean){ okWords.add(w.id); beep(880, 0.16); }
+      if(okWords.has(w.id) || solvedWords.has(w.id)) continue;
+      if(w.cells.every(([r,c]) => correct(K(r,c)))){ okWords.add(w.id); beep(880, 0.16); }
     }
   }
   function win(){
@@ -277,7 +283,9 @@ export function monterJeu(PUZZLE, opts = {}){
     b.classList.add("show");
     if(opts.onSolved){ try{ opts.onSolved(elapsed(), { hints: hintCount, solutions: solutionCount }); }catch(e){ /* la page hote gere */ } }
   }
-  // Indice : revele une lettre encore introuvable du mot selectionne (rouge, verrouillee).
+  // Indice : revele une lettre encore introuvable du mot selectionne. La lettre
+  // donnee reste rouge (given) et verrouillee ; si elle complete le mot, celui-ci
+  // se valide (vert) tout en gardant sa lettre d'indice rouge.
   function hint(){
     if(solved) return;
     const w = currentWord(); if(!w) return;
@@ -285,18 +293,16 @@ export function monterJeu(PUZZLE, opts = {}){
     if(!t) return;
     const k = K(t[0], t[1]);
     user[k] = PUZZLE.solution[k]; given[k] = true; hintCount++;
-    startTimer(); render(); checkSolved();
+    startTimer(); checkWords(); render(); checkSolved();
   }
-  // Solution : revele toutes les lettres manquantes du mot selectionne (rouge, verrouille).
+  // Solution : revele le mot selectionne en entier. Le mot est marque solvedWords
+  // (rouge, verrouille) et n'est jamais compte comme valide.
   function solution(){
     if(solved) return;
     const w = currentWord(); if(!w) return;
-    let any = false;
-    for(const [r,c] of w.cells){
-      const k = K(r,c);
-      if(!correct(k)){ user[k] = PUZZLE.solution[k]; given[k] = true; any = true; }
-    }
-    if(any) solutionCount++;
+    if(okWords.has(w.id) || solvedWords.has(w.id)) return;   // deja resolu
+    for(const [r,c] of w.cells){ const k = K(r,c); user[k] = PUZZLE.solution[k]; }
+    solvedWords.add(w.id); solutionCount++;
     startTimer(); render(); checkSolved();
   }
 
@@ -374,8 +380,10 @@ export function monterJeu(PUZZLE, opts = {}){
     solutions: () => solutionCount,
     givenCount: () => Object.keys(given).length,
     okWordCount: () => okWords.size,
+    solvedWordCount: () => solvedWords.size,
     isOk: (r,c) => inOkWord(K(r,c)),
-    isGiven: (r,c) => !!given[K(r,c)]
+    isGiven: (r,c) => !!given[K(r,c)],
+    isSolvedCell: (r,c) => inSolvedWord(K(r,c))
   };
   window.__play = api;
   return api;
