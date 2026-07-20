@@ -9,7 +9,8 @@
     "test:tabs": "node tests/tabs.mjs",
     "test:sync": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/sync.mjs\"",
     "test:game": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/game.mjs\"",
-    "test:publish": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/publish.mjs\""
+    "test:publish": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/publish.mjs\"",
+    "test:atelier-publish": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/atelier-publish.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "^14.0.0",
