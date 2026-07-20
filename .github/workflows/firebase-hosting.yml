@@ -40,12 +40,20 @@ jobs:
           projectId: donjons-definitions
           channelId: live
 
-      # Regles Firestore (dont le classement) : versionnees dans firestore.rules
-      # et publiees a chaque deploiement, via le meme compte de service.
+      # Regles Firestore (dont le classement) : versionnees dans firestore.rules.
+      # Publiees automatiquement SI le compte de service a les droits requis
+      # (Firebase Rules Admin + Service Usage Consumer). Sinon l'etape n'a aucun
+      # effet et ne bloque pas le deploiement de l'hebergement : publier alors les
+      # regles a la main avec « firebase deploy --only firestore:rules ».
       - name: Publier les regles Firestore
         if: ${{ env.SA != '' }}
+        continue-on-error: true
         run: |
           printf '%s' "$SA" > "${RUNNER_TEMP}/sa-donjons.json"
           export GOOGLE_APPLICATION_CREDENTIALS="${RUNNER_TEMP}/sa-donjons.json"
-          npx --yes firebase-tools@14 deploy --only firestore:rules --project donjons-definitions --non-interactive
+          if npx --yes firebase-tools@14 deploy --only firestore:rules --project donjons-definitions --non-interactive; then
+            echo "Regles Firestore publiees."
+          else
+            echo "::warning::Regles Firestore non publiees (droits du compte de service insuffisants). Les publier a la main : firebase deploy --only firestore:rules"
+          fi
           rm -f "${RUNNER_TEMP}/sa-donjons.json"
