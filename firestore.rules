@@ -19,5 +19,18 @@ service cloud.firestore {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Classement : chaque joueur publie sa propre fiche (pseudo, XP totale et par
+    // mois). Lisible par tout joueur connecte (c'est un classement), mais chacun
+    // ne peut ecrire que la sienne. Le pseudo et le total sont valides sommairement.
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.pseudo is string
+        && request.resource.data.pseudo.size() <= 40
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0;
+    }
   }
 }

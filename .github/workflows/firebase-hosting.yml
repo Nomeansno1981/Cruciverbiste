@@ -39,3 +39,13 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DONJONS_DEFINITIONS }}
           projectId: donjons-definitions
           channelId: live
+
+      # Regles Firestore (dont le classement) : versionnees dans firestore.rules
+      # et publiees a chaque deploiement, via le meme compte de service.
+      - name: Publier les regles Firestore
+        if: ${{ env.SA != '' }}
+        run: |
+          printf '%s' "$SA" > "${RUNNER_TEMP}/sa-donjons.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="${RUNNER_TEMP}/sa-donjons.json"
+          npx --yes firebase-tools@14 deploy --only firestore:rules --project donjons-definitions --non-interactive
+          rm -f "${RUNNER_TEMP}/sa-donjons.json"
