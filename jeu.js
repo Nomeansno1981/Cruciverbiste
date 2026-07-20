@@ -1,8 +1,8 @@
 // Donjons & Definitions : moteur de resolution partage.
 // monterJeu(PUZZLE, opts) construit la grille interactive dans la page hote
 // (elements attendus par id : board, gridarea, cluebar, cluebarTxt, prevClue,
-// nextClue, checkBtn, revealBtn, clearBtn, kbd, acrossList, downList, timer,
-// banner, date). opts.onSolved(secondes) est appele a la resolution ;
+// nextClue, hintBtn, solveBtn, muteBtn, kbd, acrossList, downList, timer,
+// banner, date). opts.onSolved(secondes, {hints, solutions}) a la resolution ;
 // opts.dateText remplace la date affichee. Renvoie une petite API de controle
 // (aussi exposee en window.__play pour les tests).
 
@@ -17,8 +17,30 @@ export function monterJeu(PUZZLE, opts = {}){
   for(const w of PUZZLE.down){ w.dir = "down"; w.id = "D" + w.num; for(const [r,c] of w.cells){ (cellWord[K(r,c)] = cellWord[K(r,c)] || {}).down = w; } }
   const orderedClues = PUZZLE.across.concat(PUZZLE.down);
 
-  const user = {};
+  const user = {};                 // lettres saisies ou revelees
+  const given = {};                // cases revelees (indice/solution) : rouges, verrouillees
+  const okWords = new Set();       // mots resolus sans aide : verts, verrouilles
+  let hintCount = 0, solutionCount = 0;
+  let muted = false; try{ muted = localStorage.getItem("dd-mute") === "1"; }catch(e){}
+  let audioCtx = null;
   let sel = null, solved = false, started = 0, tick = null, cell = 30;
+
+  const correct = k => norm(user[k]) === norm(PUZZLE.solution[k]);
+  const inOkWord = k => { const cw = cellWord[k]; return !!cw && ((cw.across && okWords.has(cw.across.id)) || (cw.down && okWords.has(cw.down.id))); };
+  const isLocked = k => !!given[k] || inOkWord(k);
+  function beep(freq, dur){
+    if(muted) return;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.07, audioCtx.currentTime);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    }catch(e){ /* audio indisponible */ }
+  }
 
   const board = document.getElementById("board");
   const gridarea = document.querySelector(".gridarea");
@@ -115,18 +137,21 @@ export function monterJeu(PUZZLE, opts = {}){
 
   function place(ch){
     if(solved || !sel) return;
-    user[K(sel.r, sel.c)] = ch.toUpperCase();
-    cellEls[K(sel.r, sel.c)].classList.remove("bad");
+    const k = K(sel.r, sel.c);
+    if(isLocked(k)){ advance(1); render(); return; }   // case verrouillee : on n'ecrit pas
+    user[k] = ch.toUpperCase();
     startTimer();
     advance(1);
+    checkWords();
     render();
     checkSolved();
   }
   function erase(){
     if(solved || !sel) return;
     const k = K(sel.r, sel.c);
-    if(user[k]){ delete user[k]; cellEls[k].classList.remove("bad"); }
-    else { advance(-1); const k2 = K(sel.r, sel.c); delete user[k2]; if(cellEls[k2]) cellEls[k2].classList.remove("bad"); }
+    if(isLocked(k)){ advance(-1); render(); return; }   // case verrouillee : on n'efface pas
+    if(user[k]){ delete user[k]; }
+    else { advance(-1); const k2 = K(sel.r, sel.c); if(!isLocked(k2)) delete user[k2]; }
     render();
   }
   function advance(step){
@@ -167,8 +192,11 @@ export function monterJeu(PUZZLE, opts = {}){
     const inWord = new Set(cw ? cw.cells.map(([r,c]) => K(r,c)) : []);
     for(const k in cellEls){
       const el = cellEls[k];
+      const ok = inOkWord(k);
       el.classList.toggle("word", inWord.has(k));
       el.classList.toggle("here", !!sel && k === K(sel.r, sel.c));
+      el.classList.toggle("ok", ok);
+      el.classList.toggle("given", !!given[k] && !ok);
       el.querySelector(".ch").textContent = user[k] || "";
     }
     for(const w of orderedClues){
@@ -229,29 +257,47 @@ export function monterJeu(PUZZLE, opts = {}){
     win();
     return true;
   }
+  // Un mot entierement correct et sans aucune case revelee se valide (vert,
+  // verrouille) : petit signal sonore de reussite.
+  function checkWords(){
+    for(const w of orderedClues){
+      if(okWords.has(w.id)) continue;
+      const clean = w.cells.every(([r,c]) => correct(K(r,c)) && !given[K(r,c)]);
+      if(clean){ okWords.add(w.id); beep(880, 0.16); }
+    }
+  }
   function win(){
     if(solved) return;
     solved = true; stopTimer();
     board.classList.add("done");
-    for(const k in cellEls) cellEls[k].classList.remove("here", "word", "bad");
+    for(const k in cellEls) cellEls[k].classList.remove("here", "word");
+    beep(660, 0.14); setTimeout(() => beep(988, 0.3), 150);
     const b = document.getElementById("banner");
-    b.innerHTML = `<b>Bravo !</b> Grille resolue en ${fmt(elapsed())}.`;
+    b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(elapsed())}.`;
     b.classList.add("show");
-    if(opts.onSolved){ try{ opts.onSolved(elapsed()); }catch(e){ /* la page hote gere */ } }
+    if(opts.onSolved){ try{ opts.onSolved(elapsed(), { hints: hintCount, solutions: solutionCount }); }catch(e){ /* la page hote gere */ } }
   }
-  function verify(){
-    for(const k in PUZZLE.solution){
-      if(user[k]) cellEls[k].classList.toggle("bad", norm(user[k]) !== norm(PUZZLE.solution[k]));
+  // Indice : revele une lettre encore introuvable du mot selectionne (rouge, verrouillee).
+  function hint(){
+    if(solved) return;
+    const w = currentWord(); if(!w) return;
+    const t = w.cells.find(([r,c]) => !given[K(r,c)] && !correct(K(r,c)));
+    if(!t) return;
+    const k = K(t[0], t[1]);
+    user[k] = PUZZLE.solution[k]; given[k] = true; hintCount++;
+    startTimer(); render(); checkSolved();
+  }
+  // Solution : revele toutes les lettres manquantes du mot selectionne (rouge, verrouille).
+  function solution(){
+    if(solved) return;
+    const w = currentWord(); if(!w) return;
+    let any = false;
+    for(const [r,c] of w.cells){
+      const k = K(r,c);
+      if(!correct(k)){ user[k] = PUZZLE.solution[k]; given[k] = true; any = true; }
     }
-  }
-  function reveal(){
-    if(!confirm("Reveler toute la solution ?")) return;
-    for(const k in PUZZLE.solution){ user[k] = PUZZLE.solution[k]; cellEls[k].classList.remove("bad"); }
-    render(); checkSolved();
-  }
-  function clearAll(){
-    for(const k in PUZZLE.solution){ delete user[k]; cellEls[k].classList.remove("bad"); }
-    render();
+    if(any) solutionCount++;
+    startTimer(); render(); checkSolved();
   }
 
   function escapeHtml(s){ return (s||"").replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
@@ -278,9 +324,14 @@ export function monterJeu(PUZZLE, opts = {}){
 
   document.getElementById("prevClue").addEventListener("click", () => stepClue(-1));
   document.getElementById("nextClue").addEventListener("click", () => stepClue(1));
-  document.getElementById("checkBtn").addEventListener("click", verify);
-  document.getElementById("revealBtn").addEventListener("click", reveal);
-  document.getElementById("clearBtn").addEventListener("click", clearAll);
+  document.getElementById("hintBtn").addEventListener("click", hint);
+  document.getElementById("solveBtn").addEventListener("click", solution);
+  const muteBtn = document.getElementById("muteBtn");
+  if(muteBtn){
+    const paintMute = () => { muteBtn.textContent = muted ? "🔇" : "🔊"; muteBtn.setAttribute("aria-label", muted ? "Activer le son" : "Couper le son"); };
+    paintMute();
+    muteBtn.addEventListener("click", () => { muted = !muted; try{ localStorage.setItem("dd-mute", muted ? "1" : "0"); }catch(e){} paintMute(); });
+  }
   let relayoutTimer = null;
   window.addEventListener("resize", () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(layout, 60); });
   if(window.visualViewport) window.visualViewport.addEventListener("resize", () => setTimeout(layout, 60));
@@ -316,7 +367,15 @@ export function monterJeu(PUZZLE, opts = {}){
     wordHighlight: () => board.querySelectorAll(".cell.word").length,
     isSolved: () => solved,
     fillSolution: () => { for(const k in PUZZLE.solution) user[k] = PUZZLE.solution[k]; render(); checkSolved(); },
-    elapsedShown: () => document.getElementById("timer").textContent
+    elapsedShown: () => document.getElementById("timer").textContent,
+    hint: () => hint(),
+    solution: () => solution(),
+    hints: () => hintCount,
+    solutions: () => solutionCount,
+    givenCount: () => Object.keys(given).length,
+    okWordCount: () => okWords.size,
+    isOk: (r,c) => inOkWord(K(r,c)),
+    isGiven: (r,c) => !!given[K(r,c)]
   };
   window.__play = api;
   return api;

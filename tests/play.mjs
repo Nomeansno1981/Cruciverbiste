@@ -95,12 +95,33 @@ await check("le chrono se declenche a la premiere lettre", async () => {
   if (!/^\d+:\d\d$/.test(t)) throw new Error("chrono illisible : " + t);
 });
 
-await check("Verifier signale les cases fausses", async () => {
-  await page.evaluate(() => window.__play.selectClue("across", 9)); // RUNE
-  await page.keyboard.type("zzzz");
-  await page.click("#checkBtn");
-  const bad = await page.locator("#board .cell.bad").count();
-  if (bad < 1) throw new Error("aucune case signalee fausse");
+await check("un mot rempli correctement se valide (vert) et se verrouille", async () => {
+  // KOBOLD (A1) vient d'etre rempli correctement au controle precedent
+  if (!(await page.evaluate(() => window.__play.isOk(0, 2)))) throw new Error("le mot rempli correctement n'est pas valide");
+  if (await page.evaluate(() => window.__play.okWordCount()) < 1) throw new Error("aucun mot valide compte");
+  await page.evaluate(() => window.__play.selectClue("across", 1));
+  await page.keyboard.type("z");
+  const still = await page.evaluate(() => window.__play.letterAt(0, 2));
+  if (still !== "K") throw new Error("une case validee a ete ecrasee : " + still);
+});
+
+await check("Indice revele une lettre du mot selectionne, verrouillee", async () => {
+  await page.evaluate(() => window.__play.selectClue("across", 7)); // VAMPIRE, vide
+  const before = await page.evaluate(() => window.__play.hints());
+  await page.click("#hintBtn");
+  const after = await page.evaluate(() => window.__play.hints());
+  if (after !== before + 1) throw new Error("compteur d'indices : " + before + " -> " + after);
+  if (!(await page.evaluate(() => window.__play.isGiven(3, 3)))) throw new Error("lettre revelee non marquee donnee");
+  if (await page.evaluate(() => window.__play.letterAt(3, 3)) !== "V") throw new Error("mauvaise lettre revelee");
+});
+
+await check("Solution revele le mot selectionne en entier", async () => {
+  await page.evaluate(() => window.__play.selectClue("down", 6)); // MAGE, vide
+  await page.click("#solveBtn");
+  if (await page.evaluate(() => window.__play.solutions()) < 1) throw new Error("compteur de solutions non incremente");
+  const letters = await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
+  if (letters !== "MAGE") throw new Error("mot non revele en entier : " + letters);
+  if (!(await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].every(([r,c]) => window.__play.isGiven(r,c))))) throw new Error("cases non marquees donnees");
 });
 
 await check("completer la grille declenche la victoire", async () => {

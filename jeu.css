@@ -32,9 +32,11 @@ h1{font-size:19px; letter-spacing:-.02em; margin:0; font-weight:700; white-space
 .cell{position:absolute; background:var(--panel); display:flex; align-items:flex-end; justify-content:center; cursor:pointer; overflow:hidden}
 .cell .num{position:absolute; top:1px; left:2.5px; font-family:var(--mono); font-weight:600; color:var(--accent); line-height:1}
 .cell .ch{font-family:var(--mono); font-weight:600; color:var(--ink); line-height:1; padding-bottom:2px}
+.cell.given .ch{color:#C0392B; font-weight:700}
+.cell.ok{background:#EAF3E9}
+.cell.ok .ch{color:#1E7A43}
 .cell.word{background:var(--sun-weak)}
 .cell.here{background:var(--sun)}
-.cell.bad{background:#F7DEDE}
 .board.done .cell{background:#EAF3E9}
 .grid-svg{position:absolute; top:0; left:0; pointer-events:none}
 
@@ -138,7 +140,7 @@ button.tool:hover{border-color:#d8cfbe}
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
   .gridarea{flex:1; min-height:0}
   .aside{display:none}
-  .tools{display:none}
+  .tools{flex:none}
   .cluebar{flex:none}
   .kbd{display:flex; flex:none; padding-bottom:calc(4px + env(safe-area-inset-bottom))}
   .stamp{display:none}
