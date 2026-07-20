@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>verbicruciste · atelier de grilles</title>
+<title>Donjons &amp; Définitions · Atelier</title>
 <style>
   :root{
     --paper:#FAF9F5; --panel:#FFFFFF; --ink:#1C1B19; --muted:#74706A;
@@ -194,9 +194,10 @@
       <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
       <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
     </svg>
-    <h2>verbicruciste</h2>
-    <p class="gate-text">Vos listes, vos définitions et vos grilles sont enregistrées en ligne et synchronisées entre vos machines. Connectez-vous pour ouvrir votre atelier.</p>
+    <h2>Donjons &amp; Définitions</h2>
+    <p class="gate-text">Atelier de l'auteur : dictionnaire, création et publication des grilles. Connectez-vous avec le compte de l'auteur.</p>
     <button class="btn-primary" id="loginBtn" hidden>Se connecter avec Google</button>
+    <button class="btn-ghost" id="gateSignOut" hidden>Se déconnecter</button>
     <p class="gate-status" id="gateStatus">Vérification de la session…</p>
   </div>
 </div>
@@ -211,9 +212,9 @@
         <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
         <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
       </svg>
-      <h1>verbicruciste</h1>
+      <h1>Donjons &amp; Définitions</h1>
     </div>
-    <span class="sub">atelier de grilles &nbsp;·&nbsp; dictionnaire personnel &amp; générateur de mots croisés</span>
+    <span class="sub">Atelier de l'auteur &nbsp;·&nbsp; dictionnaire, création et publication des grilles</span>
     <span class="hstatus" id="hstatus"></span>
     <span class="account" id="accountBar" hidden><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
@@ -336,15 +337,18 @@ const CLOUD = !LOCAL_MODE;
 // En mode #emu (tests), le SDK est servi localement par le serveur de test.
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
 // Ce bloc identifie le projet Firebase; il n'est pas secret, la protection
-// vient des règles Firestore (chaque compte ne lit et n'écrit que ses données).
+// vient des règles Firestore (l'auteur seul publie; chaque compte ne lit et n'écrit que ses données).
 const firebaseConfig = {
-  apiKey: "AIzaSyC0MOc2BpRRs5IEDx1aF9bB6ezuHaZttL4",
-  authDomain: "verbicruciste-562f9.firebaseapp.com",
-  projectId: "verbicruciste-562f9",
-  storageBucket: "verbicruciste-562f9.firebasestorage.app",
-  messagingSenderId: "843269598276",
-  appId: "1:843269598276:web:cc2d6aed6221df1ce4a011"
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
 };
+// L'atelier est réservé au compte de l'auteur (les règles Firestore le vérifient aussi).
+const ADMIN_EMAIL = "nominesnow@gmail.com";
 
 /* =========================================================
    Persistance locale (IndexedDB)
@@ -533,7 +537,7 @@ async function bootCloud(){
     status.classList.add("warn");
     return;
   }
-  const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-verbicruciste" }) : firebaseConfig;
+  const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
   const app = m.initializeApp(cfg);
   const auth = m.getAuth(app);
   let db;
@@ -548,7 +552,7 @@ async function bootCloud(){
     status.textContent = "Connexion…"; status.classList.remove("warn");
     try{
       if(EMU_MODE){
-        const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "autrice-test", email: "autrice@example.com", email_verified: true }));
+        const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "auteur-test", email: ADMIN_EMAIL, email_verified: true }));
         await m.signInWithCredential(auth, cred);
       } else {
         await m.signInWithPopup(auth, new m.GoogleAuthProvider());
@@ -571,6 +575,18 @@ async function bootCloud(){
       gate.hidden = false;
       loginBtn.hidden = false;
       status.textContent = started ? "Session terminée. Reconnectez-vous." : "";
+      $("accountBar").hidden = true;
+      return;
+    }
+    const isAdmin = (user.email === ADMIN_EMAIL) && (user.providerData[0] && user.providerData[0].providerId === "google.com");
+    if(!isAdmin){
+      gate.hidden = false;
+      loginBtn.hidden = true;
+      const so = $("gateSignOut");
+      so.hidden = false;
+      so.onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+      status.textContent = "Cet espace est réservé à l'auteur. Déconnectez-vous, puis connectez-vous avec le compte de l'auteur.";
+      status.classList.add("warn");
       $("accountBar").hidden = true;
       return;
     }

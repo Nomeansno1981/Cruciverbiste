@@ -22,11 +22,12 @@ jobs:
           cp donjons.html _fire/donjons.html
           cp publier.html _fire/publier.html
           cp jouer.html _fire/jouer.html
+          cp index.html _fire/atelier.html
           cp jeu.js _fire/jeu.js
           cp jeu.css _fire/jeu.css
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
           tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
-          for f in index.html donjons.html publier.html jouer.html; do
+          for f in index.html donjons.html publier.html jouer.html atelier.html; do
             sed -i "s|version de travail|${tampon}|" "_fire/$f"
           done
 
