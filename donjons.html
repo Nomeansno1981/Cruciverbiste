@@ -38,7 +38,7 @@
 
 <div class="wrap">
   <header>
-    <div class="brand">
+    <a class="brand" href="accueil.html" title="Retour à l'accueil">
       <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
         <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
         <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
@@ -51,7 +51,7 @@
         <h1>Donjons &amp; Définitions</h1>
         <div class="date" id="date"></div>
       </div>
-    </div>
+    </a>
     <div class="spacer"></div>
     <div class="meta">
       <span class="streak" id="streak" hidden></span>
@@ -174,6 +174,15 @@ function parisDate(){
 function parisLabel(){
   try{ return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()); }
   catch(e){ return ""; }
+}
+// grille demandee via l'URL (?d=AAAA-MM-JJ), pour rejouer une grille precedente
+function requestedDate(){
+  const p = new URLSearchParams(location.search).get("d");
+  return (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) ? p : null;
+}
+function labelForKey(key){
+  try{ const [y, mo, da] = key.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }
+  catch(e){ return key; }
 }
 
 let m;
@@ -510,14 +519,25 @@ m.onAuthStateChanged(auth, async user => {
   mounted = true;
   info("Chargement de la grille du jour...");
 
-  const dateStr = parisDate();
+  const todayStr = parisDate();
+  const dateStr = requestedDate() || todayStr;   // grille du jour, ou grille precedente via ?d=
+  const isToday = dateStr === todayStr;
+  window.__ddef.playedDate = dateStr;
   const puzzle = await loadPuzzle(dateStr);
 
-  // serie affichee au chargement (avant meme d'avoir joue le jour)
+  // serie du joueur, affichee au chargement (independante de la grille jouee)
   try{
     const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak"));
-    setStreak(effectiveStreak(s.exists() ? s.data() : null, dateStr));
+    setStreak(effectiveStreak(s.exists() ? s.data() : null, todayStr));
   }catch(e){ /* pas de serie affichee */ }
+
+  // lien de retour vers l'accueil, ajoute a la banniere de victoire
+  const homeLink = () => {
+    const b = document.getElementById("banner");
+    if(b && b.classList.contains("show") && !b.querySelector(".banner-home")){
+      b.innerHTML += ' <a class="banner-home" href="accueil.html">Retour à l\'accueil</a>';
+    }
+  };
 
   const saveResult = async (seconds, stats = {}) => {
     try{
@@ -530,22 +550,25 @@ m.onAuthStateChanged(auth, async user => {
       const snap = await m.getDoc(ref);
       window.__ddef.result = snap.exists() ? snap.data() : null;
     }catch(e){ window.__ddef.resultError = String(e); }
-    // publie la fiche de classement mise a jour
+    // publie la fiche de classement mise a jour (toutes grilles confondues)
     await updateLeaderboard();
-    // met a jour la serie et l'affiche dans la banniere de reussite
-    try{
-      const sref = m.doc(db, "users", user.uid, "state", "streak");
-      const cur = await m.getDoc(sref);
-      const n = nextStreakCount(cur.exists() ? cur.data() : null, dateStr);
-      await m.setDoc(sref, { count: n, lastDate: dateStr, at: m.serverTimestamp() });
-      setStreak(n);
-      const b = document.getElementById("banner");
-      if(b && b.classList.contains("show")) b.innerHTML += ` Serie : ${n} jour${n > 1 ? "s" : ""}.`;
-    }catch(e){ window.__ddef.streakError = String(e); }
+    // la serie ne compte que la grille du jour ; une grille precedente ne la touche pas
+    if(isToday){
+      try{
+        const sref = m.doc(db, "users", user.uid, "state", "streak");
+        const cur = await m.getDoc(sref);
+        const n = nextStreakCount(cur.exists() ? cur.data() : null, todayStr);
+        await m.setDoc(sref, { count: n, lastDate: todayStr, at: m.serverTimestamp() });
+        setStreak(n);
+        const b = document.getElementById("banner");
+        if(b && b.classList.contains("show")) b.innerHTML += ` Serie : ${n} jour${n > 1 ? "s" : ""}.`;
+      }catch(e){ window.__ddef.streakError = String(e); }
+    }
+    homeLink();
   };
 
   gate.hidden = true;
-  monterJeu(puzzle, { onSolved: saveResult, dateText: parisLabel() });
+  monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr) });
   window.__ddef.ready = true;
 });
 </script>

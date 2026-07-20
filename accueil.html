@@ -1,0 +1,296 @@
+<!-- Donjons & Definitions : page d'accueil. Ecran de connexion partage, puis
+     tableau de bord du joueur : grille du jour, compte a rebours avant la
+     prochaine, serie, niveau, points, badges (a venir) et liste des grilles
+     precedentes (faites / pas faites). Le jeu lui-meme est sur donjons.html. -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Donjons &amp; Définitions</title>
+<link rel="stylesheet" href="jeu.css">
+</head>
+<body class="page-accueil">
+
+<div id="authGate">
+  <div class="gate-card">
+    <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+      <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
+      <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="19.6" y1="1" x2="19.6" y2="29" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="10.3" x2="29" y2="10.3" stroke="#211E17" stroke-width="1.2"/>
+      <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
+      <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
+    </svg>
+    <h2>Donjons &amp; Définitions</h2>
+    <p class="gate-text">La grille de mots croises du jour, sur le theme du jeu de role. Connectez-vous pour jouer et garder votre progression.</p>
+    <button class="gate-btn primary" id="gGoogle">Se connecter avec Google</button>
+    <div class="gate-sep">ou</div>
+    <input class="gate-field" id="gEmail" type="email" placeholder="Adresse e-mail" autocomplete="email">
+    <input class="gate-field" id="gPass" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <div class="gate-row">
+      <button class="gate-btn" id="gSignin">Se connecter</button>
+      <button class="gate-btn" id="gCreate">Creer un compte</button>
+    </div>
+    <p class="gate-status" id="gStatus">Verification de la session...</p>
+  </div>
+</div>
+
+<div class="wrap home" id="home" hidden>
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+        <rect x="1" y="1" width="28" height="28" rx="2" fill="none" stroke="#211E17" stroke-width="1.6"/>
+        <line x1="10.3" y1="1" x2="10.3" y2="29" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="19.6" y1="1" x2="19.6" y2="29" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="1" y1="10.3" x2="29" y2="10.3" stroke="#211E17" stroke-width="1.2"/>
+        <line x1="1" y1="19.6" x2="29" y2="19.6" stroke="#211E17" stroke-width="1.2"/>
+        <rect x="10.3" y="10.3" width="9.3" height="9.3" fill="#7C1D2E"/>
+      </svg>
+      <div>
+        <h1>Donjons &amp; Définitions</h1>
+        <div class="date" id="today"></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="streak" id="streak" hidden></span>
+      <span class="who" id="who"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-main">
+      <div class="hero-label">La grille du jour</div>
+      <div class="hero-date" id="heroDate"></div>
+      <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
+      <div class="hero-state" id="todayState"></div>
+    </div>
+    <div class="hero-count">
+      <div class="count-label">Prochaine grille dans</div>
+      <div class="count-val" id="countdown">--:--:--</div>
+    </div>
+  </section>
+
+  <section class="home-stats">
+    <div class="stat"><div class="stat-k">Série</div><div class="stat-v" id="statStreak">0</div><div class="stat-s" id="statStreakSub">jour</div></div>
+    <div class="stat"><div class="stat-k">Niveau</div><div class="stat-v" id="statLevel">1</div><div class="stat-s" id="statLevelSub">Roturier</div></div>
+    <div class="stat"><div class="stat-k">Points</div><div class="stat-v" id="statXp">0</div><div class="stat-s">XP au total</div></div>
+    <div class="stat"><div class="stat-k">Badges</div><div class="stat-v" id="statBadges">0</div><div class="stat-s">à venir</div></div>
+  </section>
+
+  <section class="archive">
+    <h2>Grilles précédentes</h2>
+    <ul class="grid-list" id="gridList"><li class="gl-empty">Chargement...</li></ul>
+  </section>
+
+  <div class="home-foot"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
+  <div class="stamp">version de travail</div>
+</div>
+
+<script type="module">
+import { niveauPourXp } from "./jeu.js";
+
+const EMU_MODE = location.hash.includes("emu");
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
+};
+
+window.__home = { ready: false };
+const $ = id => document.getElementById(id);
+const gate = $("authGate"), status = $("gStatus");
+function warn(msg){ status.textContent = msg; status.classList.add("warn"); }
+function info(msg){ status.textContent = msg; status.classList.remove("warn"); }
+
+// date du jour (heure de Paris) : cle des grilles
+function parisDate(d){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(d || new Date());
+}
+function labelFromKey(key){
+  try{ const [y, mo, da] = key.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }
+  catch(e){ return key; }
+}
+
+let m;
+try{
+  const [appM, authM, fsM] = await Promise.all([
+    import(FIREBASE_SDK + "/firebase-app.js"),
+    import(FIREBASE_SDK + "/firebase-auth.js"),
+    import(FIREBASE_SDK + "/firebase-firestore.js")
+  ]);
+  m = Object.assign({}, appM, authM, fsM);
+}catch(e){
+  warn("Impossible de charger le module de connexion. Verifiez votre connexion, puis rechargez la page.");
+  throw e;
+}
+
+const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
+const app = m.initializeApp(cfg);
+const auth = m.getAuth(app);
+let db;
+try{ db = m.initializeFirestore(app, { localCache: m.persistentLocalCache({ tabManager: m.persistentMultipleTabManager() }) }); }
+catch(e){ db = m.initializeFirestore(app, {}); }
+if(EMU_MODE){
+  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
+async function googleLogin(){
+  info("Connexion...");
+  try{
+    if(EMU_MODE){
+      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "joueur-test", email: "joueur@example.com", email_verified: true }));
+      await m.signInWithCredential(auth, cred);
+    } else {
+      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+    }
+  }catch(e){ authError(e); }
+}
+async function emailLogin(create){
+  const email = $("gEmail").value.trim(), pass = $("gPass").value;
+  if(!email || !pass){ warn("Renseignez une adresse e-mail et un mot de passe."); return; }
+  info(create ? "Creation du compte..." : "Connexion...");
+  try{
+    if(create) await m.createUserWithEmailAndPassword(auth, email, pass);
+    else await m.signInWithEmailAndPassword(auth, email, pass);
+  }catch(e){ authError(e); }
+}
+function authError(e){
+  const code = (e && e.code) || "";
+  if(code === "auth/popup-blocked") warn("La fenetre de connexion a ete bloquee. Autorisez les fenetres surgissantes, puis reessayez.");
+  else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") warn("Fenetre refermee avant la fin de la connexion. Reessayez.");
+  else if(code === "auth/operation-not-allowed") warn("Ce mode de connexion n'est pas active dans la console Firebase.");
+  else if(code === "auth/unauthorized-domain") warn("Ce domaine n'est pas autorise dans la console Firebase.");
+  else if(code === "auth/invalid-email") warn("Adresse e-mail invalide.");
+  else if(code === "auth/weak-password") warn("Mot de passe trop court (au moins 6 caracteres).");
+  else if(code === "auth/email-already-in-use") warn("Un compte existe deja avec cette adresse. Utilisez Se connecter.");
+  else if(code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") warn("Adresse ou mot de passe incorrect.");
+  else warn("Connexion impossible : " + (e && e.message ? e.message : e));
+}
+$("gGoogle").onclick = googleLogin;
+$("gSignin").onclick = () => emailLogin(false);
+$("gCreate").onclick = () => emailLogin(true);
+$("gPass").addEventListener("keydown", e => { if(e.key === "Enter") emailLogin(false); });
+$("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+
+// ---- serie ----
+function prevDate(ds){ const [y,mo,d] = ds.split("-").map(Number); const dt = new Date(Date.UTC(y, mo-1, d, 12, 0, 0)); dt.setUTCDate(dt.getUTCDate() - 1); return dt.toISOString().slice(0, 10); }
+function effectiveStreak(doc, today){ if(!doc || !doc.lastDate) return 0; if(doc.lastDate === today || doc.lastDate === prevDate(today)) return doc.count || 0; return 0; }
+const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2c.5 4-2.5 5.5-2.5 8.5A2.5 2.5 0 0 0 15 11c0-.6-.1-1 .3-1.6 1.4 1.6 2.7 3.5 2.7 6.1a6 6 0 1 1-12 0c0-4.8 6-7 7-13.5z"/></svg>';
+
+function initial(s){ return ((s || "?").trim().charAt(0) || "?").toUpperCase(); }
+function fillAvatar(el, av, txt){ if(av){ el.innerHTML = '<img alt="" src="' + av + '">'; } else { el.textContent = initial(txt); } }
+
+// ---- compte a rebours jusqu'a la prochaine grille (minuit, heure de Paris) ----
+function msToNextParisMidnight(){
+  const now = new Date();
+  const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+  const next = new Date(parisNow); next.setHours(24, 0, 0, 0);
+  return Math.max(0, next - parisNow);
+}
+function fmtCountdown(ms){
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), mi = Math.floor((s % 3600) / 60), se = s % 60;
+  const p = n => String(n).padStart(2, "0");
+  return p(h) + ":" + p(mi) + ":" + p(se);
+}
+let countTimer = null;
+function startCountdown(){
+  const tick = () => { $("countdown").textContent = fmtCountdown(msToNextParisMidnight()); };
+  tick(); if(countTimer) clearInterval(countTimer); countTimer = setInterval(tick, 1000);
+}
+
+async function buildHome(user){
+  const todayKey = parisDate();
+  $("today").textContent = labelFromKey(todayKey);
+  $("heroDate").textContent = labelFromKey(todayKey);
+  startCountdown();
+
+  // profil (pseudo, avatar) affiche dans l'entete
+  let profile = { pseudo: "", avatar: "" };
+  try{ const ps = await m.getDoc(m.doc(db, "users", user.uid, "state", "profile")); if(ps.exists()){ const d = ps.data(); profile = { pseudo: d.pseudo || "", avatar: d.avatar || "" }; } }catch(e){}
+  const name = profile.pseudo || (user.email ? user.email.split("@")[0] : "Joueur");
+  $("hdrPseudo").textContent = name;
+  fillAvatar($("hdrAvatar"), profile.avatar, name);
+
+  // resultats du joueur : dates faites + total d'XP
+  const done = new Set();
+  let totalXp = 0;
+  try{
+    const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
+    rs.forEach(ds => { const d = ds.data(); if(d && d.solved){ done.add(ds.id); if(typeof d.xp === "number") totalXp += d.xp; } });
+  }catch(e){}
+  window.__home.doneDates = Array.from(done);
+
+  // serie
+  let streak = 0;
+  try{ const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak")); streak = effectiveStreak(s.exists() ? s.data() : null, todayKey); }catch(e){}
+  const stEl = $("streak");
+  if(streak > 0){ stEl.innerHTML = FLAME + " " + streak; stEl.hidden = false; }
+  $("statStreak").textContent = streak;
+  $("statStreakSub").textContent = streak > 1 ? "jours" : "jour";
+
+  // niveau et points
+  const niv = niveauPourXp(totalXp);
+  $("statLevel").textContent = niv.niveau;
+  $("statLevelSub").textContent = niv.titre;
+  $("statXp").textContent = totalXp;
+  window.__home.stats = { streak, totalXp, niveau: niv.niveau, done: done.size };
+
+  // etat de la grille du jour
+  if(done.has(todayKey)){
+    $("playToday").textContent = "Revoir la grille du jour";
+    $("todayState").textContent = "Résolue. Revenez demain pour la prochaine.";
+    $("todayState").classList.add("ok");
+  } else {
+    $("playToday").textContent = "Jouer";
+    $("todayState").textContent = "";
+  }
+
+  // liste des grilles precedentes (publiees, hors aujourd'hui), faites / pas faites
+  const ul = $("gridList"); ul.innerHTML = "";
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "puzzles"), m.orderBy("date", "desc"), m.limit(60)));
+    let n = 0;
+    snap.forEach(ds => {
+      const key = ds.id;
+      if(key === todayKey || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return;   // aujourd'hui est en haut ; on ignore les cles techniques
+      n++;
+      const d = ds.data() || {};
+      const fait = done.has(key);
+      const li = document.createElement("li");
+      li.className = "gl-item " + (fait ? "done" : "todo");
+      const title = (d.title && String(d.title).trim()) ? String(d.title).trim() : "Grille du " + labelFromKey(key);
+      li.innerHTML = '<a href="donjons.html?d=' + encodeURIComponent(key) + '">'
+        + '<span class="gl-mark" aria-hidden="true">' + (fait ? "✓" : "○") + '</span>'
+        + '<span class="gl-txt"><span class="gl-title"></span><span class="gl-date"></span></span>'
+        + '<span class="gl-tag">' + (fait ? "Faite" : "À faire") + '</span></a>';
+      li.querySelector(".gl-title").textContent = title;
+      li.querySelector(".gl-date").textContent = labelFromKey(key);
+      ul.appendChild(li);
+    });
+    if(!n) ul.innerHTML = '<li class="gl-empty">Aucune grille précédente pour l\'instant.</li>';
+    window.__home.archiveCount = n;
+  }catch(e){ ul.innerHTML = '<li class="gl-empty">Liste indisponible pour l\'instant.</li>'; window.__home.archiveError = String(e); }
+
+  window.__home.ready = true;
+}
+
+let mounted = false;
+m.onAuthStateChanged(auth, async user => {
+  if(!user){ gate.hidden = false; $("home").hidden = true; if(!mounted) info(""); return; }
+  gate.hidden = true; $("home").hidden = false;
+  if(mounted) return; mounted = true;
+  try{ await buildHome(user); }catch(e){ window.__home.error = String(e); }
+});
+</script>
+</body>
+</html>

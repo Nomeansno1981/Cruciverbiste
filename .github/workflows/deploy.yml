@@ -22,6 +22,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html _site/index.html
+          cp accueil.html _site/accueil.html
           cp jouer.html _site/jouer.html
           cp donjons.html _site/donjons.html
           cp publier.html _site/publier.html
@@ -31,10 +32,9 @@ jobs:
           # d'oeil que le navigateur affiche bien la dernière version publiée
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
           tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
-          sed -i "s|version de travail|${tampon}|" _site/index.html
-          sed -i "s|version de travail|${tampon}|" _site/jouer.html
-          sed -i "s|version de travail|${tampon}|" _site/donjons.html
-          sed -i "s|version de travail|${tampon}|" _site/publier.html
+          for f in index.html accueil.html jouer.html donjons.html publier.html; do
+            sed -i "s|version de travail|${tampon}|" "_site/$f"
+          done
           touch _site/.nojekyll
 
       - name: Publier sur la branche gh-pages
