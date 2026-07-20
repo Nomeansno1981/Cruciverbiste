@@ -333,6 +333,7 @@
           <button class="btn-out" id="svgEmpty">SVG (grille vide)</button>
           <button class="btn-out" id="svgSolved">SVG (corrigé)</button>
           <button class="btn-out" id="copyClues">Copier les définitions</button>
+          <button class="btn-out" id="previewGame" title="Ouvrir cette grille dans le vrai moteur du jeu, dans un nouvel onglet">Prévisualiser dans le jeu</button>
           <button class="btn-primary" id="publishGame" title="Publier cette grille dans le jeu, à une date de parution">Publier au jeu</button>
           <button class="btn-out" id="printBtn">Imprimer / PDF</button>
         </div>
@@ -1861,6 +1862,15 @@ async function publishToGame(){
   }finally{ $("pubConfirm").disabled = false; }
 }
 
+// Aperçu : dépose la grille dans le stockage local et ouvre le vrai moteur du jeu.
+function previewGame(){
+  const p = puzzleForGame();
+  if(!p){ flash("Générez d'abord une grille.", true); return; }
+  try{ localStorage.setItem("dd-apercu", JSON.stringify(p)); }
+  catch(e){ flash("Aperçu impossible sur ce navigateur.", true); return; }
+  window.open("jouer.html", "_blank");
+}
+
 /* =========================================================
    Wire up
    ========================================================= */
@@ -1940,6 +1950,7 @@ function bind(){
   $("svgEmpty").onclick = () => { if(currentModel) download((slug()+"-grille.svg"), svgString(currentModel,false,false), "image/svg+xml"); };
   $("svgSolved").onclick = () => { if(currentModel) download((slug()+"-corrige.svg"), svgString(currentModel,true,false), "image/svg+xml"); };
   $("copyClues").onclick = copyClues;
+  $("previewGame").onclick = previewGame;
   $("publishGame").onclick = openPublish;
   $("pubConfirm").onclick = publishToGame;
   $("printBtn").onclick = () => window.print();
