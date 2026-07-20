@@ -73,9 +73,9 @@ await check("une grille se génère réellement (cellules SVG présentes)", asyn
   if (cells < 10) throw new Error("seulement " + cells + " cellules");
 });
 
-await check("les dimensions proposées par défaut sont 25 x 25", async () => {
+await check("les dimensions proposées par défaut sont 15 x 15 (format du jeu)", async () => {
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "25" || h !== "25") throw new Error("proposé : " + w + " x " + h);
+  if (w !== "15" || h !== "15") throw new Error("proposé : " + w + " x " + h);
 });
 
 await check("les définitions horizontales et verticales sont listées", async () => {
@@ -360,7 +360,7 @@ await check("boîte ferme : un mot plus long que la grille n'est pas utilisé", 
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "25" || h !== "25") throw new Error("dimensions retenues : " + w + " x " + h);
+  if (w !== "15" || h !== "15") throw new Error("dimensions retenues : " + w + " x " + h);
   const words = await page.locator(".clues .definebox input").evaluateAll(
     els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1]));
   if (words.some(x => x && x.length > 25)) throw new Error("mot trop long placé : " + words.join(", "));
