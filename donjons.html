@@ -113,6 +113,7 @@
     </div>
     <div class="hist">
       <h3>Vos grilles reussies</h3>
+      <div class="xp-summary" id="xpSummary" hidden><b id="xpTotal">0</b> points d'expérience</div>
       <ul id="histList"></ul>
     </div>
     <div style="text-align:center"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
@@ -304,18 +305,25 @@ function resizeImage(file, size){
 }
 async function renderHistory(){
   const ul = $("histList"); ul.innerHTML = "";
+  const summary = $("xpSummary");
+  if(summary) summary.hidden = true;
   try{
     const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc"), m.limit(60)));
     if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
+    let total = 0, anyXp = false;
     snap.forEach(ds => {
       const d = ds.data();
       let label = ds.id;
       try{ const [y, mo, da] = ds.id.split("-").map(Number); label = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }catch(e){}
       const t = (typeof d.seconds === "number") ? (Math.floor(d.seconds / 60) + ":" + String(d.seconds % 60).padStart(2, "0")) : "";
+      const hasXp = typeof d.xp === "number";
+      if(hasXp){ total += d.xp; anyXp = true; }
+      const right = (hasXp ? d.xp + " XP · " : "") + t;
       const li = document.createElement("li");
-      li.innerHTML = "<span>" + label + '</span><span class="t">' + t + "</span>";
+      li.innerHTML = "<span>" + label + '</span><span class="t">' + right + "</span>";
       ul.appendChild(li);
     });
+    if(summary && anyXp){ $("xpTotal").textContent = total; summary.hidden = false; }
   }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
 }
 function openProfile(){
@@ -386,10 +394,14 @@ m.onAuthStateChanged(auth, async user => {
     setStreak(effectiveStreak(s.exists() ? s.data() : null, dateStr));
   }catch(e){ /* pas de serie affichee */ }
 
-  const saveResult = async seconds => {
+  const saveResult = async (seconds, stats = {}) => {
     try{
       const ref = m.doc(db, "users", user.uid, "results", dateStr);
-      await m.setDoc(ref, { solved: true, seconds, date: dateStr, at: m.serverTimestamp() }, { merge: true });
+      const data = { solved: true, seconds, date: dateStr, at: m.serverTimestamp() };
+      for(const key of ["xp", "hints", "solutions", "words"]){
+        if(typeof stats[key] === "number") data[key] = stats[key];
+      }
+      await m.setDoc(ref, data, { merge: true });
       const snap = await m.getDoc(ref);
       window.__ddef.result = snap.exists() ? snap.data() : null;
     }catch(e){ window.__ddef.resultError = String(e); }

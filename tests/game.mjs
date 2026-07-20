@@ -105,12 +105,29 @@ await check("saisie au clavier", async () => {
   if (l !== "K") throw new Error("touche sans effet : " + l);
 });
 
-await check("resolution : le resultat du joueur est enregistre en ligne", async () => {
+await check("resolution : le resultat du joueur (avec XP) est enregistre en ligne", async () => {
   await page.evaluate(() => window.__play.fillSolution());
   await page.waitForFunction(() => window.__ddef && window.__ddef.result);
   const r = await page.evaluate(() => window.__ddef.result);
   if (!r || r.solved !== true) throw new Error("resultat non enregistre : " + JSON.stringify(r));
   if (typeof r.seconds !== "number") throw new Error("duree absente du resultat");
+  if (typeof r.xp !== "number" || r.xp < 20) throw new Error("XP absente ou invalide dans le resultat : " + JSON.stringify(r));
+  if (typeof r.words !== "number") throw new Error("nombre de mots absent du resultat");
+});
+
+await check("l'historique du profil affiche l'XP totale et le detail par grille", async () => {
+  await page.click("#profileBtn");
+  await page.waitForSelector("#profileModal:not([hidden])");
+  await page.waitForSelector("#histList li");
+  const info = await page.evaluate(() => {
+    const sum = document.getElementById("xpSummary");
+    const first = document.querySelector("#histList li .t");
+    return { sumHidden: sum.hidden, total: document.getElementById("xpTotal").textContent, line: first ? first.textContent : "" };
+  });
+  if (info.sumHidden) throw new Error("total d'XP masque dans le profil");
+  if (!/^\d+$/.test(info.total) || Number(info.total) < 20) throw new Error("total d'XP invalide : " + info.total);
+  if (!/XP/.test(info.line)) throw new Error("XP absente de la ligne d'historique : " + info.line);
+  await page.click("#closeProfile");
 });
 
 await check("la serie passe a 1 apres la premiere reussite", async () => {
