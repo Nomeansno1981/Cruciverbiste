@@ -512,12 +512,12 @@ m.onAuthStateChanged(auth, async user => {
     return;
   }
   CU = user;
+  gate.hidden = true;   // connecte : on masque l'ecran de connexion sans attendre le chargement de la grille
   $("profileBtn").hidden = false;
   $("boardBtn").hidden = false;
   loadProfile();
   if(mounted) return;
   mounted = true;
-  info("Chargement de la grille du jour...");
 
   const todayStr = parisDate();
   const dateStr = requestedDate() || todayStr;   // grille du jour, ou grille precedente via ?d=
@@ -567,7 +567,6 @@ m.onAuthStateChanged(auth, async user => {
     homeLink();
   };
 
-  gate.hidden = true;
   monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr) });
   window.__ddef.ready = true;
 });
