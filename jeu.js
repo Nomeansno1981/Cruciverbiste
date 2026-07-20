@@ -2,9 +2,30 @@
 // monterJeu(PUZZLE, opts) construit la grille interactive dans la page hote
 // (elements attendus par id : board, gridarea, cluebar, cluebarTxt, prevClue,
 // nextClue, hintBtn, solveBtn, muteBtn, kbd, acrossList, downList, timer,
-// banner, date). opts.onSolved(secondes, {hints, solutions}) a la resolution ;
-// opts.dateText remplace la date affichee. Renvoie une petite API de controle
-// (aussi exposee en window.__play pour les tests).
+// banner, date). opts.onSolved(secondes, {hints, solutions, words, xp}) a la
+// resolution ; opts.dateText remplace la date affichee. Renvoie une petite API
+// de controle (aussi exposee en window.__play pour les tests).
+
+// Score d'une grille resolue (XP), fonction pure et reutilisable (banniere,
+// historique, futurs classements) :
+//   - base fixe de 100 points pour la reussite ;
+//   - bonus de rapidite +60 / +30 / +10 sous 3 / 6 / 10 min, le temps etant
+//     d'abord ramene a une grille de 20 mots (une petite grille doit etre
+//     resolue proportionnellement plus vite pour le meme bonus) ;
+//   - bonus « sans aide » de +40 si ni indice ni solution ;
+//   - malus de 5 par indice et de 20 par mot revele en entier ;
+//   - plancher a 20 points.
+export function scoreXP({ seconds = 0, hints = 0, solutions = 0, words = 20 } = {}){
+  const w = words > 0 ? words : 20;
+  const normTime = seconds * 20 / w;
+  let speed = 0;
+  if(normTime < 180) speed = 60;
+  else if(normTime < 360) speed = 30;
+  else if(normTime < 600) speed = 10;
+  const clean = (hints === 0 && solutions === 0) ? 40 : 0;
+  const malus = hints * 5 + solutions * 20;
+  return Math.max(20, 100 + speed + clean - malus);
+}
 
 export function monterJeu(PUZZLE, opts = {}){
   const K = (r,c) => r + "," + c;
@@ -278,10 +299,12 @@ export function monterJeu(PUZZLE, opts = {}){
     board.classList.add("done");
     for(const k in cellEls) cellEls[k].classList.remove("here", "word");
     beep(660, 0.14); setTimeout(() => beep(988, 0.3), 150);
+    const secs = elapsed(), words = orderedClues.length;
+    const xp = scoreXP({ seconds: secs, hints: hintCount, solutions: solutionCount, words });
     const b = document.getElementById("banner");
-    b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(elapsed())}.`;
+    b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(secs)}. <b>+${xp} XP</b>`;
     b.classList.add("show");
-    if(opts.onSolved){ try{ opts.onSolved(elapsed(), { hints: hintCount, solutions: solutionCount }); }catch(e){ /* la page hote gere */ } }
+    if(opts.onSolved){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp }); }catch(e){ /* la page hote gere */ } }
   }
   // Indice : revele une lettre encore introuvable du mot selectionne. La lettre
   // donnee reste rouge (given) et verrouillee ; si elle complete le mot, celui-ci
