@@ -18,7 +18,8 @@ jobs:
       - name: Construire le contenu du jeu (dossier _fire)
         run: |
           mkdir -p _fire
-          cp donjons.html _fire/index.html
+          cp accueil.html _fire/index.html
+          cp accueil.html _fire/accueil.html
           cp donjons.html _fire/donjons.html
           cp publier.html _fire/publier.html
           cp jouer.html _fire/jouer.html
@@ -27,7 +28,7 @@ jobs:
           cp jeu.css _fire/jeu.css
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
           tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
-          for f in index.html donjons.html publier.html jouer.html atelier.html; do
+          for f in index.html accueil.html donjons.html publier.html jouer.html atelier.html; do
             sed -i "s|version de travail|${tampon}|" "_fire/$f"
           done
 
