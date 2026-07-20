@@ -147,6 +147,12 @@ await check("la liste des grilles precedentes montre l'ancienne, pas encore fait
   if (info.hrefs.some(h => h.includes(today))) throw new Error("la grille du jour ne devrait pas figurer dans les precedentes");
 });
 
+await check("depuis l'accueil connecte, la grille du jour s'ouvre sans redemander la connexion", async () => {
+  await player.goto(`${origin}/donjons.html#emu`);
+  await player.waitForSelector("#authGate", { state: "hidden", timeout: 8000 });
+  await player.waitForSelector("#board .cell");
+});
+
 await check("rejouer une grille precedente : donjons.html?d= monte la bonne grille", async () => {
   await player.goto(`${origin}/donjons.html?d=${pastDate}#emu`);
   await player.waitForSelector("#board .cell");
