@@ -152,14 +152,16 @@ await check("un mot complete avec un indice se valide (vert) tout en gardant l'i
   if (!(await page.evaluate(() => window.__play.isGiven(1, 9)))) throw new Error("la lettre d'indice n'est plus marquee donnee (rouge)");
 });
 
-await check("un mot valide vire au vert des la derniere lettre, meme encore selectionne", async () => {
+await check("un mot valide vire au vert et le jeu enchaine sur le mot suivant", async () => {
   await page.evaluate(() => window.__play.selectClue("across", 23)); // HEAUME, vide
   await page.keyboard.type("heaume");
   if (!(await page.evaluate(() => window.__play.isOk(14, 9)))) throw new Error("HEAUME non valide apres saisie");
-  if (await page.evaluate(() => window.__play.currentClue()) !== "A23") throw new Error("le mot n'est plus selectionne");
-  const first = await bgAt(14, 9), here = await bgAt(14, 14);
-  if (first !== VERT) throw new Error("premiere case pas verte alors que selectionnee : " + first);
-  if (here !== VERT) throw new Error("case active (derniere lettre) pas verte : " + here);
+  const first = await bgAt(14, 9), last = await bgAt(14, 14);
+  if (first !== VERT) throw new Error("premiere case pas verte apres validation : " + first);
+  if (last !== VERT) throw new Error("derniere case pas verte apres validation : " + last);
+  const cur = await page.evaluate(() => window.__play.currentClue());
+  if (!cur) throw new Error("aucun mot selectionne apres validation");
+  if (cur === "A23") throw new Error("le jeu n'a pas enchaine sur le mot suivant (toujours A23)");
 });
 
 await check("completer la grille declenche la victoire", async () => {
@@ -214,7 +216,7 @@ await check("ordinateur : clavier integre masque, listes visibles", async () => 
 });
 
 await check("apercu depuis l'atelier : jouer.html monte la grille passee par le stockage", async () => {
-  const custom = { title: "Apercu test", rows: 1, cols: 2, solution: { "0,0": "O", "0,1": "R" }, numbers: { "0,0": 1 }, bars: {}, across: [{ num: 1, clue: "Metal jaune.", cells: [[0,0],[0,1]] }], down: [] };
+  const custom = { title: "Apercu test", rows: 1, cols: 2, solution: { "0,0": "O", "0,1": "R" }, numbers: { "0,0": 1 }, bars: {}, across: [{ num: 1, clue: "Metal *jaune*.", cells: [[0,0],[0,1]] }], down: [] };
   await page.evaluate(p => localStorage.setItem("dd-apercu", JSON.stringify(p)), custom);
   await page.reload();
   await page.waitForSelector("#board .cell");
@@ -222,6 +224,9 @@ await check("apercu depuis l'atelier : jouer.html monte la grille passee par le 
   if (n !== 2) throw new Error("apercu non monte : " + n + " cases (attendu 2)");
   const left = await page.evaluate(() => localStorage.getItem("dd-apercu"));
   if (left !== null) throw new Error("le stockage d'apercu aurait du etre vide apres lecture");
+  // les asterisques de la definition sont rendues en italique
+  const clueHtml = await page.evaluate(() => document.getElementById("cluebarTxt").innerHTML);
+  if (!/<em>jaune<\/em>/.test(clueHtml)) throw new Error("asterisques non mises en italique : " + clueHtml);
 });
 
 await check("aucune erreur JavaScript", async () => {
