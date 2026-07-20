@@ -27,6 +27,43 @@ export function scoreXP({ seconds = 0, hints = 0, solutions = 0, words = 20 } = 
   return Math.max(20, 100 + speed + clean - malus);
 }
 
+// Echelle de progression facon jeu de role : titres et seuils d'XP cumulee.
+// Donnees volontairement isolees pour etre faciles a retoucher (renommer un
+// rang, ajuster un palier) sans toucher a la logique.
+export const NIVEAUX = [
+  { seuil: 0,     titre: "Roturier" },
+  { seuil: 150,   titre: "Apprenti" },
+  { seuil: 450,   titre: "Aventurier" },
+  { seuil: 900,   titre: "Éclaireur" },
+  { seuil: 1600,  titre: "Vétéran" },
+  { seuil: 2600,  titre: "Chevalier" },
+  { seuil: 4000,  titre: "Héros" },
+  { seuil: 6000,  titre: "Champion" },
+  { seuil: 8500,  titre: "Maître" },
+  { seuil: 12000, titre: "Grand Maître" },
+  { seuil: 17000, titre: "Légende" },
+  { seuil: 25000, titre: "Mythe" }
+];
+
+// Niveau atteint pour une XP cumulee : renvoie le rang (1..N), son titre, le
+// seuil courant, le seuil du rang suivant (null au maximum) et la progression
+// (0..1) vers ce rang suivant. Fonction pure, testable et reutilisable.
+export function niveauPourXp(xpTotal){
+  const xp = Math.max(0, xpTotal || 0);
+  let i = 0;
+  for(let k = 0; k < NIVEAUX.length; k++){ if(xp >= NIVEAUX[k].seuil) i = k; }
+  const cur = NIVEAUX[i], next = NIVEAUX[i + 1] || null;
+  return {
+    niveau: i + 1,
+    titre: cur.titre,
+    seuil: cur.seuil,
+    prochain: next ? next.seuil : null,
+    titreProchain: next ? next.titre : null,
+    max: !next,
+    progression: next ? (xp - cur.seuil) / (next.seuil - cur.seuil) : 1
+  };
+}
+
 export function monterJeu(PUZZLE, opts = {}){
   const K = (r,c) => r + "," + c;
   const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);

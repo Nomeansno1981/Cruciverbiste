@@ -132,8 +132,18 @@ button.tool:hover{border-color:#d8cfbe}
 .hist li{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-family:var(--serif); font-size:14px}
 .hist li .t{font-family:var(--mono); color:var(--muted); font-size:12.5px; flex:none}
 .hist .empty{color:var(--muted); font-style:italic; font-family:var(--serif); font-size:13.5px}
-.xp-summary{font-family:var(--mono); font-size:12.5px; color:var(--muted); margin:0 0 9px}
-.xp-summary b{color:var(--accent-ink); font-size:15px; font-weight:700}
+/* ---- niveau (profil), echelle facon jeu de role ---- */
+.level{border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:linear-gradient(180deg,#ffffff,#fbf6ef); margin-bottom:4px}
+.level[hidden]{display:none}
+.level-head{display:flex; align-items:center; gap:11px}
+.level-rank{flex:none; width:38px; height:38px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:16px}
+.level-txt{min-width:0}
+.level-title{font-family:var(--serif); font-size:16px; font-weight:700; color:var(--accent-ink); line-height:1.15}
+.level-xp{font-family:var(--mono); font-size:12px; color:var(--muted)}
+.level-xp b{color:var(--accent-ink); font-weight:700; font-size:13px}
+.level-bar{height:8px; border-radius:999px; background:var(--accent-weak); overflow:hidden; margin:10px 0 6px}
+.level-fill{height:100%; background:var(--accent); border-radius:999px; transition:width .4s ease}
+.level-next{font-family:var(--serif); font-size:12.5px; color:var(--muted)}
 
 /* ---- mobile : trois zones fixes, aucune barre systeme, aucun defilement ---- */
 @media (max-width:859px){
