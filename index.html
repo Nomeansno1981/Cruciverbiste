@@ -35,6 +35,23 @@
   /* ---- layout ---- */
   .cols{display:grid; grid-template-columns:minmax(0,0.82fr) minmax(0,1.18fr); gap:20px; margin-top:20px}
   @media (max-width:900px){ .cols{grid-template-columns:1fr} }
+
+  /* ---- onglets ---- */
+  .tabs{display:flex; gap:2px; margin-top:22px; border-bottom:1px solid var(--line)}
+  .tab{background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); font-size:14px; font-weight:600; padding:10px 15px 11px; margin-bottom:-1px; border-radius:0; cursor:pointer}
+  .tab:hover{color:var(--ink)}
+  .tab.is-active{color:var(--accent); border-bottom-color:var(--accent)}
+  .tabpane{margin-top:20px}
+  .tabpane[hidden]{display:none}
+
+  /* ---- liste des grilles publiées ---- */
+  .plist{list-style:none; margin:8px 0 0; padding:0}
+  .plist li{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line-2); font-size:14px}
+  .plist li .d{font-family:var(--mono); font-size:12.5px; color:var(--accent); min-width:96px}
+  .plist li .t{flex:1; min-width:0; font-family:var(--serif); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .plist .pub-del{font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer}
+  .plist .pub-del:hover{border-color:#cfccc4; background:#fbfaf7}
+  .plist .pub-empty{color:var(--muted); border:none; font-family:var(--serif)}
   .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); overflow:hidden}
   .panel-h{display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-2)}
   .eyebrow{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
@@ -219,7 +236,13 @@
     <span class="account" id="accountBar" hidden><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
 
-  <div class="cols">
+  <nav class="tabs" role="tablist" aria-label="Sections de l'atelier">
+    <button class="tab is-active" id="tabDict" role="tab" aria-selected="true" data-pane="paneDict">Dictionnaire</button>
+    <button class="tab" id="tabGrids" role="tab" aria-selected="false" data-pane="paneGrids">Grilles</button>
+    <button class="tab" id="tabPub" role="tab" aria-selected="false" data-pane="panePub">Grilles publiées</button>
+  </nav>
+
+  <div class="tabpane" id="paneDict" role="tabpanel" aria-labelledby="tabDict">
     <!-- ============ DICTIONNAIRE ============ -->
     <section class="panel" aria-label="Dictionnaire">
       <div class="panel-h">
@@ -264,7 +287,9 @@
         </div>
       </div>
     </section>
+  </div>
 
+  <div class="tabpane" id="paneGrids" role="tabpanel" aria-labelledby="tabGrids" hidden>
     <!-- ============ GRILLE ============ -->
     <section class="panel" aria-label="Grille">
       <div class="panel-h">
@@ -320,6 +345,19 @@
       </div>
     </section>
   </div>
+
+  <div class="tabpane" id="panePub" role="tabpanel" aria-labelledby="tabPub" hidden>
+    <section class="panel" aria-label="Grilles publiées">
+      <div class="panel-h">
+        <span class="eyebrow">Grilles publiées</span>
+        <span class="count" id="pubCount"></span>
+      </div>
+      <div class="body">
+        <p class="fineprint" id="pubHint">Les grilles déjà en ligne dans le jeu, par date de parution. Vous pouvez en supprimer.</p>
+        <ul class="plist" id="pubList"></ul>
+      </div>
+    </section>
+  </div>
   <footer class="stamp">version de travail</footer>
 </div>
 
@@ -332,6 +370,7 @@
    ========================================================= */
 const LOCAL_MODE = location.hash.includes("local");
 const EMU_MODE = location.hash.includes("emu");
+const FLAT_MODE = location.hash.includes("flat");   // tests : toutes les sections visibles, sans onglets
 const CLOUD = !LOCAL_MODE;
 
 // En mode #emu (tests), le SDK est servi localement par le serveur de test.
@@ -595,6 +634,7 @@ async function bootCloud(){
     cloud = { db, uid: user.uid,
               doc: m.doc, setDoc: m.setDoc, deleteDoc: m.deleteDoc,
               writeBatch: m.writeBatch, serverTimestamp: m.serverTimestamp,
+              collection: m.collection, query: m.query, orderBy: m.orderBy, limit: m.limit, getDocs: m.getDocs,
               dictRef: m.doc(db, "users", user.uid, "data", "dict") };
     $("accountMail").textContent = user.email || "";
     $("accountBar").hidden = false;
@@ -1713,6 +1753,50 @@ function disarmDelete(){
 }
 
 /* =========================================================
+   Onglets : Dictionnaire · Grilles · Grilles publiées
+   ========================================================= */
+function showPane(id){
+  for(const p of ["paneDict", "paneGrids", "panePub"]) $(p).hidden = (p !== id);
+  for(const t of ["tabDict", "tabGrids", "tabPub"]){
+    const on = $(t).dataset.pane === id;
+    $(t).classList.toggle("is-active", on);
+    $(t).setAttribute("aria-selected", on ? "true" : "false");
+  }
+  // le plateau ne se dimensionne bien qu'une fois visible : on le redessine
+  if(id === "paneGrids" && currentModel) renderGrid(false);
+  if(id === "panePub") loadPublished();
+}
+
+// Liste des grilles déjà publiées dans le jeu (collection « puzzles »),
+// avec suppression. Réservée à l'auteur par les règles Firestore.
+async function loadPublished(){
+  const ul = $("pubList"), cnt = $("pubCount");
+  if(!ul) return;
+  if(!cloud || !cloud.getDocs){ ul.innerHTML = '<li class="pub-empty">Disponible une fois connecté.</li>'; cnt.textContent = ""; return; }
+  ul.innerHTML = '<li class="pub-empty">Chargement…</li>';
+  try{
+    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(80)));
+    ul.innerHTML = "";
+    cnt.textContent = snap.size ? (snap.size + (snap.size > 1 ? " grilles" : " grille")) : "";
+    if(!snap.size){ ul.innerHTML = '<li class="pub-empty">Aucune grille publiée pour l\'instant.</li>'; return; }
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const li = document.createElement("li");
+      const d = document.createElement("span"); d.className = "d"; d.textContent = docSnap.id;
+      const t = document.createElement("span"); t.className = "t"; t.textContent = data.title || "Sans titre";
+      const del = document.createElement("button"); del.className = "pub-del"; del.textContent = "Supprimer";
+      del.onclick = async () => {
+        if(!confirm("Retirer du jeu la grille du " + docSnap.id + " ?")) return;
+        try{ await cloud.deleteDoc(cloud.doc(cloud.db, "puzzles", docSnap.id)); loadPublished(); flash("Grille du " + docSnap.id + " retirée du jeu."); }
+        catch(e){ flash("Suppression impossible : " + ((e && e.code) || e), true); }
+      };
+      li.appendChild(d); li.appendChild(t); li.appendChild(del);
+      ul.appendChild(li);
+    });
+  }catch(e){ ul.innerHTML = '<li class="pub-empty">Lecture impossible : ' + ((e && e.code) || e) + "</li>"; cnt.textContent = ""; }
+}
+
+/* =========================================================
    Wire up
    ========================================================= */
 function bind(){
@@ -1793,6 +1877,16 @@ function bind(){
   $("copyClues").onclick = copyClues;
   $("copyGame").onclick = copyGamePuzzle;
   $("printBtn").onclick = () => window.print();
+
+  if(FLAT_MODE){
+    // mode test : toutes les sections dépliées, la barre d'onglets masquée
+    for(const p of ["paneDict", "paneGrids", "panePub"]) $(p).hidden = false;
+    const nav = document.querySelector(".tabs"); if(nav) nav.hidden = true;
+  } else {
+    $("tabDict").onclick = () => showPane("paneDict");
+    $("tabGrids").onclick = () => showPane("paneGrids");
+    $("tabPub").onclick = () => showPane("panePub");
+  }
 }
 function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "grille"; }
 
