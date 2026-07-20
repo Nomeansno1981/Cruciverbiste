@@ -147,6 +147,7 @@
   .definebox input{flex:1; font-family:var(--serif); font-size:14px; padding:5px 8px}
   .definebox .btn-primary{padding:5px 11px; font-size:12.5px}
   .clue-select{font-family:var(--serif); font-size:13.5px; padding:5px 8px}
+  .clue-word{font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.02em; margin-right:8px; white-space:nowrap}
   .print-fallback{display:none}
 
   /* ---- saved grids ---- */
@@ -1100,9 +1101,9 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  // les champs vides se préremplissent au défaut ferme : 25 x 25
-  if(!$("maxW").value) $("maxW").value = "25";
-  if(!$("maxH").value) $("maxH").value = "25";
+  // les champs vides se préremplissent au défaut ferme : 15 x 15 (format du jeu)
+  if(!$("maxW").value) $("maxW").value = "15";
+  if(!$("maxH").value) $("maxH").value = "15";
 }
 
 // Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
@@ -1327,10 +1328,15 @@ function renderClueBody(body, it, mode){
     return;
   }
 
-  // Affichage simple du texte (ou mention à compléter si le mot a quitté le dictionnaire).
+  // Affichage : le mot (toujours visible pour l'auteur), sa définition courante,
+  // puis les outils (modifier, choisir parmi les définitions, en ajouter une).
+  const w = document.createElement("span");
+  w.className = "clue-word"; w.textContent = it.word;
+  body.appendChild(w);
+
   const txt = document.createElement("span");
   if(it.clue){ txt.innerHTML = fmtClue(it.clue); }
-  else { txt.className = "miss"; txt.textContent = "(définition à compléter : " + it.word + ")"; }
+  else { txt.className = "miss"; txt.textContent = "(définition à compléter)"; }
   body.appendChild(txt);
 
   if(entry){
@@ -1342,7 +1348,8 @@ function renderClueBody(body, it, mode){
     if(entry.clues.length > 1){
       tools.appendChild(iconBtn("⇅", "Choisir la définition (" + entry.clues.length + ")", () => renderClueBody(body, it, "choose")));
     }
-    if(tools.children.length) body.appendChild(tools);
+    tools.appendChild(iconBtn("＋", "Ajouter une définition (ajoutée aussi au dictionnaire)", () => renderClueBody(body, it, "new")));
+    body.appendChild(tools);
   }
 }
 
@@ -1443,10 +1450,10 @@ function doGenerate(){
     currentModel = null; renderGrid(false); return;
   }
   // dimensions (bounding box). Empty or too-small fields fall back to the
-  // default: 25 x 25 ferme; un mot plus long que la boîte n'est pas utilisé
+  // default: 15 x 15 ferme (format du jeu); un mot plus long que la boîte n'est pas utilisé
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
-  if(!W || W < 2){ W = 25; $("maxW").value = "25"; }
-  if(!H || H < 2){ H = 25; $("maxH").value = "25"; }
+  if(!W || W < 2){ W = 15; $("maxW").value = "15"; }
+  if(!H || H < 2){ H = 15; $("maxH").value = "15"; }
   const { pool, rotated } = selectPool(out, W, H);
   const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
   // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
