@@ -52,6 +52,15 @@
   .plist .pub-del{font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer}
   .plist .pub-del:hover{border-color:#cfccc4; background:#fbfaf7}
   .plist .pub-empty{color:var(--muted); border:none; font-family:var(--serif)}
+
+  /* ---- publier au jeu ---- */
+  .pub-box{margin-top:12px; padding:14px 16px; background:var(--accent-weak); border:1px solid var(--line); border-radius:var(--r)}
+  .pub-form{display:flex; gap:10px; align-items:end; flex-wrap:wrap}
+  .pub-form input[type=date]{width:auto}
+  .pub-form .grow{flex:1 1 180px; min-width:0}
+  .pub-msg{margin:10px 0 0; font-family:var(--serif); font-size:13.5px; min-height:1.1em}
+  .pub-msg.ok{color:#2c5a2a}
+  .pub-msg.warn{color:var(--accent)}
   .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); overflow:hidden}
   .panel-h{display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-2)}
   .eyebrow{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
@@ -324,8 +333,17 @@
           <button class="btn-out" id="svgEmpty">SVG (grille vide)</button>
           <button class="btn-out" id="svgSolved">SVG (corrigé)</button>
           <button class="btn-out" id="copyClues">Copier les définitions</button>
-          <button class="btn-out" id="copyGame" title="Copier la grille au format du jeu Donjons &amp; Définitions, à coller dans la page de publication">Copier pour le jeu</button>
+          <button class="btn-primary" id="publishGame" title="Publier cette grille dans le jeu, à une date de parution">Publier au jeu</button>
           <button class="btn-out" id="printBtn">Imprimer / PDF</button>
+        </div>
+
+        <div class="disclosure pub-box" id="publishBox" hidden>
+          <div class="pub-form">
+            <div><label class="f" for="pubDate">Date de parution</label><input type="date" id="pubDate"></div>
+            <div class="grow"><label class="f" for="pubTitle">Titre (optionnel)</label><input type="text" id="pubTitle" placeholder="Jeu de rôle"></div>
+            <button class="btn-primary" id="pubConfirm">Confirmer la publication</button>
+          </div>
+          <p class="pub-msg" id="pubMsg"></p>
         </div>
 
         <div class="clues" id="clues" hidden>
@@ -1804,6 +1822,46 @@ async function loadPublished(){
 }
 
 /* =========================================================
+   Publication directe d'une grille dans le jeu (collection puzzles)
+   ========================================================= */
+function parisDate(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function openPublish(){
+  if(!cloud || !cloud.setDoc){ flash("Connectez-vous pour publier au jeu.", true); return; }
+  if(!currentModel){ flash("Générez d'abord une grille.", true); return; }
+  const box = $("publishBox");
+  box.hidden = !box.hidden;
+  if(!box.hidden){
+    if(!$("pubDate").value) $("pubDate").value = parisDate();
+    $("pubTitle").placeholder = currentList().name || "Jeu de rôle";
+    $("pubMsg").textContent = ""; $("pubMsg").className = "pub-msg";
+    $("pubDate").focus();
+  }
+}
+async function publishToGame(){
+  const msg = $("pubMsg"); msg.className = "pub-msg";
+  const p = puzzleForGame();
+  if(!p){ msg.textContent = "Générez d'abord une grille."; msg.classList.add("warn"); return; }
+  const date = $("pubDate").value;
+  if(!date){ msg.textContent = "Choisissez une date de parution."; msg.classList.add("warn"); return; }
+  const title = ($("pubTitle").value || currentList().name || "").trim();
+  const undef = p.across.concat(p.down).filter(x => !x.clue).length;
+  $("pubConfirm").disabled = true; msg.textContent = "Publication…";
+  try{
+    // la grille est stockée en chaîne JSON : Firestore refuse les tableaux imbriqués (les cases)
+    await cloud.setDoc(cloud.doc(cloud.db, "puzzles", date), { date, title, puzzle: JSON.stringify(p), publishedAt: cloud.serverTimestamp() });
+    msg.classList.add("ok");
+    msg.textContent = "Grille publiée pour le " + date + (undef ? " (" + undef + " définition(s) manquante(s))" : "") + ".";
+    flash("Grille publiée au jeu pour le " + date + ".");
+    loadPublished();
+  }catch(e){
+    msg.classList.add("warn");
+    msg.textContent = "Publication refusée : " + ((e && e.code) || (e && e.message) || e);
+  }finally{ $("pubConfirm").disabled = false; }
+}
+
+/* =========================================================
    Wire up
    ========================================================= */
 function bind(){
@@ -1882,7 +1940,8 @@ function bind(){
   $("svgEmpty").onclick = () => { if(currentModel) download((slug()+"-grille.svg"), svgString(currentModel,false,false), "image/svg+xml"); };
   $("svgSolved").onclick = () => { if(currentModel) download((slug()+"-corrige.svg"), svgString(currentModel,true,false), "image/svg+xml"); };
   $("copyClues").onclick = copyClues;
-  $("copyGame").onclick = copyGamePuzzle;
+  $("publishGame").onclick = openPublish;
+  $("pubConfirm").onclick = publishToGame;
   $("printBtn").onclick = () => window.print();
 
   if(FLAT_MODE){
