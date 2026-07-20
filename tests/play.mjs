@@ -58,6 +58,18 @@ async function check(name, fn){
   try { await fn(); console.log("ok     " + name); }
   catch (err) { failures.push(name); console.log("ÉCHEC  " + name + " : " + (err && err.message ? err.message : err)); }
 }
+// couleur de fond calculee d'une case reperee par (ligne, colonne)
+async function bgAt(r, c){
+  return await page.evaluate(([r, c]) => {
+    for (const el of document.querySelectorAll("#board .cell")){
+      const w = parseFloat(el.style.width);
+      if (Math.round(parseFloat(el.style.top) / w) === r && Math.round(parseFloat(el.style.left) / w) === c)
+        return getComputedStyle(el).backgroundColor;
+    }
+    return null;
+  }, [r, c]);
+}
+const VERT = "rgb(234, 243, 233)", ROUGE = "rgb(247, 222, 222)";
 
 await page.goto(base);
 await page.waitForSelector("#board .cell");
@@ -125,6 +137,10 @@ await check("Solution revele le mot en entier (rouge, jamais valide)", async () 
   if (letters !== "MAGE") throw new Error("mot non revele en entier : " + letters);
   if (!(await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].every(([r,c]) => window.__play.isSolvedCell(r,c))))) throw new Error("cases non marquees comme donnees par Solution");
   if (await page.evaluate(() => [[2,4],[3,4],[4,4],[5,4]].some(([r,c]) => window.__play.isOk(r,c)))) throw new Error("un mot donne par Solution est marque valide (vert)");
+  // le mot doit virer au rouge tout de suite, alors qu'il est encore selectionne
+  if (await page.evaluate(() => window.__play.currentClue()) !== "D6") throw new Error("le mot donne n'est plus selectionne");
+  const bg = await bgAt(2, 4);
+  if (bg !== ROUGE) throw new Error("mot donne pas rouge alors qu'encore selectionne : " + bg);
 });
 
 await check("un mot complete avec un indice se valide (vert) tout en gardant l'indice rouge", async () => {
@@ -134,6 +150,16 @@ await check("un mot complete avec un indice se valide (vert) tout en gardant l'i
   if (!(await page.evaluate(() => window.__play.isOk(1, 10)))) throw new Error("le mot complete avec indice n'est pas valide");
   if (!(await page.evaluate(() => window.__play.isOk(1, 9)))) throw new Error("la case d'indice n'appartient pas au mot valide");
   if (!(await page.evaluate(() => window.__play.isGiven(1, 9)))) throw new Error("la lettre d'indice n'est plus marquee donnee (rouge)");
+});
+
+await check("un mot valide vire au vert des la derniere lettre, meme encore selectionne", async () => {
+  await page.evaluate(() => window.__play.selectClue("across", 23)); // HEAUME, vide
+  await page.keyboard.type("heaume");
+  if (!(await page.evaluate(() => window.__play.isOk(14, 9)))) throw new Error("HEAUME non valide apres saisie");
+  if (await page.evaluate(() => window.__play.currentClue()) !== "A23") throw new Error("le mot n'est plus selectionne");
+  const first = await bgAt(14, 9), here = await bgAt(14, 14);
+  if (first !== VERT) throw new Error("premiere case pas verte alors que selectionnee : " + first);
+  if (here !== VERT) throw new Error("case active (derniere lettre) pas verte : " + here);
 });
 
 await check("completer la grille declenche la victoire", async () => {
