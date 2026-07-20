@@ -32,14 +32,17 @@ h1{font-size:19px; letter-spacing:-.02em; margin:0; font-weight:700; white-space
 .cell{position:absolute; background:var(--panel); display:flex; align-items:flex-end; justify-content:center; cursor:pointer; overflow:hidden}
 .cell .num{position:absolute; top:1px; left:2.5px; font-family:var(--mono); font-weight:600; color:var(--accent); line-height:1}
 .cell .ch{font-family:var(--mono); font-weight:600; color:var(--ink); line-height:1; padding-bottom:2px}
-/* fonds : solved (mot donne) < ok (mot valide) < word (mot courant) < here (case active) */
+/* fonds, du moins prioritaire au plus prioritaire : word (mot courant) puis
+   here (case active), puis solved (mot donne) et ok (mot valide). Ainsi un mot
+   valide vire au vert (et un mot donne au rouge) des la derniere lettre, meme
+   s'il est encore selectionne. */
+.cell.word{background:var(--sun-weak)}
+.cell.here{background:var(--sun)}
 .cell.solved{background:#F7DEDE}
 .cell.ok{background:#EAF3E9}
 .cell.ok .ch{color:#1E7A43}
 /* lettre donnee (indice ou solution) : rouge, prioritaire sur le vert d'un mot valide */
 .cell.given .ch{color:#C0392B; font-weight:700}
-.cell.word{background:var(--sun-weak)}
-.cell.here{background:var(--sun)}
 .board.done .cell{background:#EAF3E9}
 .grid-svg{position:absolute; top:0; left:0; pointer-events:none}
 
