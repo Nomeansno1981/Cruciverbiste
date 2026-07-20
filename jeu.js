@@ -120,6 +120,7 @@ export function monterJeu(PUZZLE, opts = {}){
   const svgNS = "http://www.w3.org/2000/svg";
   const cellEls = {};
   let latticeSvg = null;
+  const HATCH = 0.82;   // marge autour de la grille (en cases) reservee a la bande de hachures
 
   function buildBoard(){
     board.innerHTML = "";
@@ -144,15 +145,17 @@ export function monterJeu(PUZZLE, opts = {}){
     const mobile = window.innerWidth < 860;
     const cap = mobile ? 40 : 46;
     const availW = (gridarea.clientWidth || 700) - 2;
-    let c = Math.min(cap, Math.floor(availW / PUZZLE.cols));
+    // on reserve la bande de hachures (HATCH case de chaque cote) dans le calcul
+    let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*HATCH)));
     if(mobile){
       const availH = gridarea.clientHeight - 2;
-      if(availH > 0) c = Math.min(c, Math.floor(availH / PUZZLE.rows));
+      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*HATCH)));
     }
     cell = Math.max(16, c);
     const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
     board.style.width = W + "px";
     board.style.height = H + "px";
+    board.style.margin = Math.round(cell * HATCH) + "px";   // espace pour la bande de hachures
     for(const k in cellEls){
       const [r,c2] = k.split(",").map(Number);
       const el = cellEls[k];
@@ -164,33 +167,91 @@ export function monterJeu(PUZZLE, opts = {}){
     drawLattice(W, H);
   }
 
+  // Rendu facon plan de donjon dessine (methode Dyson Logos) :
+  //  - bords interieurs en pointilles ;
+  //  - murs exterieurs epais ;
+  //  - portes a la place des anciens diamants (frontieres entre mots) ;
+  //  - bande de hachures pavee en tuiles : chaque tuile est remplie de traits
+  //    paralleles (une direction), les tuiles voisines changent d'angle et se
+  //    rejoignent bord a bord sans se croiser, sans laisser de vide.
+  // Motif deterministe (indexe sur la case) : stable d'un affichage a l'autre.
   function drawLattice(W, H){
-    // marge d'1 px : sans elle, le trait exterieur (centre sur le bord) voit sa
-    // moitie externe rognee par la limite du SVG et parait deux fois plus fin
-    const M = 1;
+    const M = Math.round(cell * HATCH);
     latticeSvg.setAttribute("width", W + 2*M); latticeSvg.setAttribute("height", H + 2*M);
     latticeSvg.setAttribute("viewBox", `${-M} ${-M} ${W + 2*M} ${H + 2*M}`);
     latticeSvg.style.left = -M + "px"; latticeSvg.style.top = -M + "px";
     const has = (r,c) => filled(K(r,c));
-    let d = "";
+    const bars = PUZZLE.bars || {};
+    const rnd = (a,b) => { const s = Math.sin(a*12.9898 + b*78.233) * 43758.5453; return s - Math.floor(s); };
+    const clip = (x1,y1,x2,y2, xmin,ymin,xmax,ymax) => {
+      let t0=0, t1=1; const dx=x2-x1, dy=y2-y1;
+      const p=[-dx,dx,-dy,dy], q=[x1-xmin,xmax-x1,y1-ymin,ymax-y1];
+      for(let i=0;i<4;i++){ if(p[i]===0){ if(q[i]<0) return null; } else { const rr=q[i]/p[i]; if(p[i]<0){ if(rr>t1) return null; if(rr>t0) t0=rr; } else { if(rr<t0) return null; if(rr<t1) t1=rr; } } }
+      return [x1+t0*dx, y1+t0*dy, x1+t1*dx, y1+t1*dy];
+    };
+    const EDGES = [ {ei:0,dr:-1,dc:0,nx:0,ny:-1}, {ei:1,dr:1,dc:0,nx:0,ny:1}, {ei:2,dr:0,dc:-1,nx:-1,ny:0}, {ei:3,dr:0,dc:1,nx:1,ny:0} ];
+    const pts = (r,c,e) => {
+      const x=c*cell, y=r*cell;
+      if(e.dr===-1) return [x,y, x+cell,y];
+      if(e.dr===1)  return [x,y+cell, x+cell,y+cell];
+      if(e.dc===-1) return [x,y, x,y+cell];
+      return [x+cell,y, x+cell,y+cell];
+    };
+    const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
+    const small = cell < 26;                          // allege les hachures quand les cases sont petites (mobile)
+    const TILES = small ? 1 : 2, GAP = small ? 0.13 : 0.095, HD = small ? 0.40 : 0.46, HDV = small ? 0.24 : 0.32;
+    let interior="", outer="", hatch="", doors="";
+    // Bande de hachures pavee le long de chaque mur : chaque tuile est remplie de
+    // traits paralleles (une direction), tuiles voisines a angles differents,
+    // se rejoignant bord a bord sans se croiser ni laisser de vide (methode Dyson).
     for(let r=0;r<PUZZLE.rows;r++) for(let c=0;c<PUZZLE.cols;c++){
       if(!has(r,c)) continue;
-      const x=c*cell, y=r*cell;
-      d += `M ${x} ${y} H ${x+cell} `;
-      if(!has(r+1,c)) d += `M ${x} ${y+cell} H ${x+cell} `;
-      d += `M ${x} ${y} V ${y+cell} `;
-      if(!has(r,c+1)) d += `M ${x+cell} ${y} V ${y+cell} `;
+      for(const e of EDGES){
+        const [x0,y0,x1,y1] = pts(r,c,e);
+        const isBar = barAt(r,c,e);
+        if(has(r+e.dr, c+e.dc) && !isBar){
+          if(e.dr===-1 || e.dc===-1) interior += `M ${x0} ${y0} L ${x1} ${y1} `;   // bord interieur (une seule fois)
+          continue;
+        }
+        if(isBar){
+          const mx=(x0+x1)/2, my=(y0+y1)/2, tx=(x1-x0)/cell, ty=(y1-y0)/cell;
+          const g=cell*0.30, jx=e.nx*cell*0.16, jy=e.ny*cell*0.16;
+          doors += `M ${x0} ${y0} L ${mx-tx*g} ${my-ty*g} M ${mx+tx*g} ${my+ty*g} L ${x1} ${y1} `;
+          doors += `M ${mx-tx*g} ${my-ty*g} l ${jx} ${jy} M ${mx+tx*g} ${my+ty*g} l ${jx} ${jy} `;
+          doors += `M ${mx-tx*g+jx} ${my-ty*g+jy} L ${mx+tx*g+jx} ${my+ty*g+jy} `;
+          continue;
+        }
+        outer += `M ${x0} ${y0} L ${x1} ${y1} `;
+        const utx=(x1-x0)/cell, uty=(y1-y0)/cell;
+        const L = cell/TILES, gap = cell*GAP;
+        for(let ti=0; ti<TILES; ti++){
+          const u0=ti*L, u1=(ti+1)*L;
+          const hc = rnd(r*7 + c*13 + e.ei*3 + ti*29 + 1, c*5 + r*11 + ti*17 + e.ei*23 + 1);
+          const hd = rnd(r*3 + c*19 + e.ei*11 + ti*7 + 2, c*29 + r*5 + ti*13 + 2);
+          const D = cell*(HD + HDV*hd);
+          const phi = Math.PI*0.5 + (hc-0.5)*1.8;
+          const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
+          let sMin=Infinity, sMax=-Infinity;
+          for(const cc of [[u0,0],[u1,0],[u0,D],[u1,D]]){ const s=cc[0]*perp[0]+cc[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
+          const BIG=L+D+10;
+          for(let s=sMin+gap*0.5; s<sMax; s+=gap){
+            const bx=s*perp[0], by=s*perp[1];
+            const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,0,u1,D);
+            if(!cl) continue;
+            const w1x=x0+utx*cl[0]+e.nx*cl[1], w1y=y0+uty*cl[0]+e.ny*cl[1];
+            const w2x=x0+utx*cl[2]+e.nx*cl[3], w2y=y0+uty*cl[2]+e.ny*cl[3];
+            hatch += `M ${w1x.toFixed(1)} ${w1y.toFixed(1)} L ${w2x.toFixed(1)} ${w2y.toFixed(1)} `;
+          }
+        }
+      }
     }
-    let s = `<path d="${d.trim()}" fill="none" stroke="#211E17" stroke-width="1.5" stroke-linecap="square"/>`;
-    const D = Math.max(4, cell*0.17);
-    const dia = (cx,cy) => `<path d="M ${cx} ${cy-D} L ${cx+D} ${cy} L ${cx} ${cy+D} L ${cx-D} ${cy} Z" fill="#211E17"/>`;
-    for(const kk in (PUZZLE.bars||{})){
-      const [r,c] = kk.split(",").map(Number);
-      if(!has(r,c)) continue;
-      if(PUZZLE.bars[kk].left) s += dia(c*cell, r*cell + cell/2);
-      if(PUZZLE.bars[kk].top) s += dia(c*cell + cell/2, r*cell);
-    }
-    latticeSvg.innerHTML = s;
+    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032);
+    const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
+    latticeSvg.innerHTML =
+      `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` +
+      `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
+      `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
 
   function currentWord(){
