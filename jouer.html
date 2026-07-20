@@ -65,7 +65,14 @@
 
 <script type="module">
 import { monterJeu, DEMO_PUZZLE } from "./jeu.js";
-monterJeu(DEMO_PUZZLE);
+// Apercu depuis l'atelier : une grille peut etre deposee dans le stockage local
+// (cle dd-apercu), lue une seule fois. Sinon, grille de demonstration.
+let puzzle = null;
+try {
+  const raw = localStorage.getItem("dd-apercu");
+  if(raw){ puzzle = JSON.parse(raw); localStorage.removeItem("dd-apercu"); }
+} catch(e){ puzzle = null; }
+monterJeu(puzzle || DEMO_PUZZLE, puzzle ? { dateText: "Aperçu · " + (puzzle.title || "votre grille") } : {});
 </script>
 </body>
 </html>

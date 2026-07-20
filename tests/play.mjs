@@ -154,6 +154,17 @@ await check("ordinateur : clavier integre masque, listes visibles", async () => 
   if (aside === "none") throw new Error("listes masquees sur ordinateur");
 });
 
+await check("apercu depuis l'atelier : jouer.html monte la grille passee par le stockage", async () => {
+  const custom = { title: "Apercu test", rows: 1, cols: 2, solution: { "0,0": "O", "0,1": "R" }, numbers: { "0,0": 1 }, bars: {}, across: [{ num: 1, clue: "Metal jaune.", cells: [[0,0],[0,1]] }], down: [] };
+  await page.evaluate(p => localStorage.setItem("dd-apercu", JSON.stringify(p)), custom);
+  await page.reload();
+  await page.waitForSelector("#board .cell");
+  const n = await page.locator("#board .cell").count();
+  if (n !== 2) throw new Error("apercu non monte : " + n + " cases (attendu 2)");
+  const left = await page.evaluate(() => localStorage.getItem("dd-apercu"));
+  if (left !== null) throw new Error("le stockage d'apercu aurait du etre vide apres lecture");
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });
