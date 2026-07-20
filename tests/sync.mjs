@@ -96,7 +96,7 @@ await check("premier navigateur : connexion et reprise de la liste d'exemple", a
 
 await check("le compte connecté est affiché dans l'entête", async () => {
   const mail = await pageA.locator("#accountMail").innerText();
-  if (!mail.includes("autrice@example.com")) throw new Error("compte affiché : " + mail);
+  if (!mail.includes("nominesnow@gmail.com")) throw new Error("compte affiché : " + mail);
 });
 
 await check("ajout d'un mot sur le premier navigateur", async () => {
