@@ -214,9 +214,13 @@ export function monterJeu(PUZZLE, opts = {}){
     if(isLocked(k)){ advance(1); render(); return; }   // case verrouillee : on n'ecrit pas
     user[k] = ch.toUpperCase();
     startTimer();
+    const w = currentWord();            // mot en cours de saisie
     advance(1);
     checkWords();
-    render();
+    // si ce mot vient d'etre valide, filer directement au mot suivant a remplir
+    let advanced = false;
+    if(w && okWords.has(w.id) && !solved) advanced = gotoNextUnfinished(w);
+    if(!advanced) render();
     checkSolved();
   }
   function erase(){
@@ -253,6 +257,18 @@ export function monterJeu(PUZZLE, opts = {}){
     i = (i + delta + orderedClues.length) % orderedClues.length;
     gotoClue(orderedClues[i], true);
   }
+  // va au prochain mot non termine (ni valide ni donne), dans l'ordre des
+  // definitions, en se posant sur sa premiere case vide. Renvoie false si tout
+  // est resolu.
+  function gotoNextUnfinished(fromWord){
+    const n = orderedClues.length;
+    const i = fromWord ? orderedClues.findIndex(x => x.id === fromWord.id) : -1;
+    for(let s = 1; s <= n; s++){
+      const w = orderedClues[((i + s) % n + n) % n];
+      if(!okWords.has(w.id) && !solvedWords.has(w.id)){ gotoClue(w, true); return true; }
+    }
+    return false;
+  }
   function toggleDir(){
     if(!sel) return;
     const cw = cellWord[K(sel.r,sel.c)] || {};
@@ -284,7 +300,7 @@ export function monterJeu(PUZZLE, opts = {}){
     if(cw){
       const label = cw.dir === "across" ? "Horizontal" : "Vertical";
       document.getElementById("cluebarTxt").innerHTML =
-        `<span class="dir">${cw.num} ${label}</span>${escapeHtml(cw.clue || "Definition a venir")}`;
+        `<span class="dir">${cw.num} ${label}</span>${formatClue(cw.clue)}`;
     }
   }
 
@@ -294,7 +310,7 @@ export function monterJeu(PUZZLE, opts = {}){
       for(const w of arr){
         const li = document.createElement("li");
         li.id = "li-" + w.id;
-        li.innerHTML = `<span class="ln">${w.num}</span><span>${escapeHtml(w.clue || "Definition a venir")}</span>`;
+        li.innerHTML = `<span class="ln">${w.num}</span><span>${formatClue(w.clue)}</span>`;
         li.addEventListener("click", () => gotoClue(w, true));
         ol.appendChild(li);
       }
@@ -379,6 +395,9 @@ export function monterJeu(PUZZLE, opts = {}){
   }
 
   function escapeHtml(s){ return (s||"").replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
+  // Rendu d'une definition : on echappe le HTML, puis on met en italique les
+  // segments places entre asterisques par l'auteur (*mot* devient <em>mot</em>).
+  function formatClue(s){ return escapeHtml(s || "Definition a venir").replace(/\*([^*]+)\*/g, "<em>$1</em>"); }
   function elapsed(){ return started ? Math.floor((Date.now() - started)/1000) : 0; }
   function fmt(s){ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
   function startTimer(){ if(started) return; started = Date.now(); tick = setInterval(() => { document.getElementById("timer").textContent = fmt(elapsed()); }, 1000); }
