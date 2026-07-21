@@ -313,12 +313,13 @@ export function monterJeu(PUZZLE, opts = {}){
       return [x+cell,y, x+cell,y+cell];
     };
     const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
-    const small = cell < 26;                          // allege les hachures quand les cases sont petites (mobile)
-    const TILES = small ? 1 : 2, GAP = small ? 0.13 : 0.095, HD = small ? 0.40 : 0.46, HDV = small ? 0.24 : 0.32;
-    let interior="", outer="", hatch="", doors="";
-    // Bande de hachures pavee le long de chaque mur : chaque tuile est remplie de
-    // traits paralleles (une direction), tuiles voisines a angles differents,
-    // se rejoignant bord a bord sans se croiser ni laisser de vide (methode Dyson).
+    const small = cell < 26;                          // allege le rendu quand les cases sont petites (mobile)
+    const BD = cell * HATCH;                           // profondeur de la bande de rocher hachuree
+    let interior="", outer="", hatch="", doors="", grey="", pebbles="";
+    // Bande de rocher le long de chaque mur exterieur : un fond gris (zone
+    // excavee), puis des hachures en petites tuiles — chaque tuile est remplie de
+    // traits courts a un angle propre, les tuiles voisines changeant de sens, et
+    // quelques cailloux epars. Motif deterministe (indexe sur la case).
     for(let r=0;r<PUZZLE.rows;r++) for(let c=0;c<PUZZLE.cols;c++){
       if(!has(r,c)) continue;
       for(const e of EDGES){
@@ -328,42 +329,55 @@ export function monterJeu(PUZZLE, opts = {}){
           if(e.dr===-1 || e.dc===-1) interior += `M ${x0} ${y0} L ${x1} ${y1} `;   // bord interieur (une seule fois)
           continue;
         }
+        const tx=(x1-x0)/cell, ty=(y1-y0)/cell;   // direction unitaire le long du bord
         if(isBar){
-          const mx=(x0+x1)/2, my=(y0+y1)/2, tx=(x1-x0)/cell, ty=(y1-y0)/cell;
-          const g=cell*0.30, jx=e.nx*cell*0.16, jy=e.ny*cell*0.16;
-          doors += `M ${x0} ${y0} L ${mx-tx*g} ${my-ty*g} M ${mx+tx*g} ${my+ty*g} L ${x1} ${y1} `;
-          doors += `M ${mx-tx*g} ${my-ty*g} l ${jx} ${jy} M ${mx+tx*g} ${my+ty*g} l ${jx} ${jy} `;
-          doors += `M ${mx-tx*g+jx} ${my-ty*g+jy} L ${mx+tx*g+jx} ${my+ty*g+jy} `;
+          // porte facon plan de donjon (grimrock) : une ouverture au milieu du mur,
+          // encadree par un petit cadre rectangulaire a cheval sur le mur.
+          const mx=(x0+x1)/2, my=(y0+y1)/2, half=cell*0.20, d=cell*0.11;
+          const ax=mx-tx*half, ay=my-ty*half, bx=mx+tx*half, by=my+ty*half;
+          doors += `M ${x0} ${y0} L ${ax.toFixed(1)} ${ay.toFixed(1)} M ${bx.toFixed(1)} ${by.toFixed(1)} L ${x1} ${y1} `;   // mur de part et d'autre de l'ouverture
+          doors += `M ${(ax+e.nx*d).toFixed(1)} ${(ay+e.ny*d).toFixed(1)} L ${(bx+e.nx*d).toFixed(1)} ${(by+e.ny*d).toFixed(1)} L ${(bx-e.nx*d).toFixed(1)} ${(by-e.ny*d).toFixed(1)} L ${(ax-e.nx*d).toFixed(1)} ${(ay-e.ny*d).toFixed(1)} Z `;   // cadre de la porte
           continue;
         }
+        // mur exterieur
         outer += `M ${x0} ${y0} L ${x1} ${y1} `;
-        const utx=(x1-x0)/cell, uty=(y1-y0)/cell;
-        const L = cell/TILES, gap = cell*GAP;
-        for(let ti=0; ti<TILES; ti++){
-          const u0=ti*L, u1=(ti+1)*L;
-          const hc = rnd(r*7 + c*13 + e.ei*3 + ti*29 + 1, c*5 + r*11 + ti*17 + e.ei*23 + 1);
-          const hd = rnd(r*3 + c*19 + e.ei*11 + ti*7 + 2, c*29 + r*5 + ti*13 + 2);
-          const D = cell*(HD + HDV*hd);
-          const phi = Math.PI*0.5 + (hc-0.5)*1.8;
+        const toWorld = (u,v) => [x0 + tx*u + e.nx*v, y0 + ty*u + e.ny*v];
+        // fond gris sous les hachures (zone excavee, facon grimrock)
+        const [gx1,gy1]=toWorld(0,BD), [gx0,gy0]=toWorld(cell,BD);
+        grey += `M ${x0} ${y0} L ${x1} ${y1} L ${gx0.toFixed(1)} ${gy0.toFixed(1)} L ${gx1.toFixed(1)} ${gy1.toFixed(1)} Z `;
+        // hachures : petites tuiles (nU x nV), chacune remplie de traits courts a un angle propre
+        const nU = small ? 2 : 3, nV = small ? 2 : 3, gap = cell * (small ? 0.13 : 0.10);
+        for(let iu=0; iu<nU; iu++) for(let iv=0; iv<nV; iv++){
+          const u0=iu*cell/nU, u1=(iu+1)*cell/nU, v0=iv*BD/nV, v1=(iv+1)*BD/nV;
+          const phi = rnd(r*7 + c*13 + e.ei*5 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + e.ei*3 + 1) * Math.PI;
           const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
           let sMin=Infinity, sMax=-Infinity;
-          for(const cc of [[u0,0],[u1,0],[u0,D],[u1,D]]){ const s=cc[0]*perp[0]+cc[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
-          const BIG=L+D+10;
+          for(const cc of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=cc[0]*perp[0]+cc[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
+          const BIG=cell*2;
           for(let s=sMin+gap*0.5; s<sMax; s+=gap){
             const bx=s*perp[0], by=s*perp[1];
-            const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,0,u1,D);
+            const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,v0,u1,v1);
             if(!cl) continue;
-            const w1x=x0+utx*cl[0]+e.nx*cl[1], w1y=y0+uty*cl[0]+e.ny*cl[1];
-            const w2x=x0+utx*cl[2]+e.nx*cl[3], w2y=y0+uty*cl[2]+e.ny*cl[3];
+            const [w1x,w1y]=toWorld(cl[0],cl[1]), [w2x,w2y]=toWorld(cl[2],cl[3]);
             hatch += `M ${w1x.toFixed(1)} ${w1y.toFixed(1)} L ${w2x.toFixed(1)} ${w2y.toFixed(1)} `;
           }
         }
+        // caillou occasionnel dans la bande
+        if(rnd(r*3 + c*29 + e.ei*7 + 91, c*13 + r*23 + e.ei*11 + 91) > 0.72){
+          const pu=(0.25 + 0.5*rnd(r*5+c*7+e.ei+3, c*3+r*9+e.ei+3))*cell;
+          const pv=(0.35 + 0.4*rnd(r*9+c*3+e.ei+5, c*7+r*5+e.ei+5))*BD;
+          const [px,py]=toWorld(pu,pv);
+          const rx=cell*(0.055 + 0.035*rnd(r+c+e.ei+7, c+r+e.ei+7)), ryv=rx*(0.68 + 0.3*rnd(r*2+c+e.ei, c*2+r+e.ei));
+          pebbles += `M ${(px-rx).toFixed(1)} ${py.toFixed(1)} a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(2*rx).toFixed(1)} 0 a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(-2*rx).toFixed(1)} 0 `;
+        }
       }
     }
-    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032);
+    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032), pebbleW = Math.max(0.6, cell*0.03);
     const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
     latticeSvg.innerHTML =
+      `<path d="${grey.trim()}" fill="#e5ddca" stroke="none"/>` +
       `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` +
+      `<path d="${pebbles.trim()}" fill="#efe9db" stroke="#2c271f" stroke-width="${pebbleW.toFixed(2)}"/>` +
       `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
       `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
       `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
