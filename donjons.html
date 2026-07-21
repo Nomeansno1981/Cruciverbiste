@@ -58,7 +58,6 @@
       <span class="mode">Mode detente</span>
       <span class="timer" id="timer">0:00</span>
       <a class="hdr-btn hdr-admin" id="atelierLink" href="atelier.html" hidden title="Ouvrir l'atelier (auteur)"><span aria-hidden="true">🛠️</span><span class="hdr-btn-txt">Atelier</span></a>
-      <button class="hdr-btn" id="boardBtn" hidden title="Classement" aria-label="Classement"><span aria-hidden="true">🏆</span><span class="hdr-btn-txt">Classement</span></button>
       <button class="acct-btn" id="profileBtn" hidden><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
     </div>
   </header>
@@ -130,19 +129,6 @@
       <ul id="histList"></ul>
     </div>
     <div style="text-align:center"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
-  </div>
-</div>
-
-<div id="boardModal" hidden>
-  <div class="lb-card">
-    <h2>Classement</h2>
-    <div class="lb-tabs">
-      <button class="lb-tab on" id="lbTabMonth" type="button">Ce mois-ci</button>
-      <button class="lb-tab" id="lbTabAll" type="button">Depuis toujours</button>
-    </div>
-    <ol class="lb-list" id="lbList"></ol>
-    <p class="lb-status" id="lbStatus"></p>
-    <div class="profile-row"><button class="gate-btn" id="closeBoard" type="button">Fermer</button></div>
   </div>
 </div>
 
@@ -398,9 +384,8 @@ async function renderHistory(){
   }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
 }
 
-// ---- classement (mensuel + cumule) ----
-function escapeHtml(s){ return (s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
-function monthKeyNow(){ return parisDate().slice(0, 7); }
+// ---- classement : publication de la fiche du joueur ----
+// (le tableau se consulte desormais sur l'accueil, plus depuis le jeu)
 // publie la fiche de classement du joueur : pseudo, XP totale et XP par mois,
 // recalculees a partir de toutes ses grilles reussies (robuste aux reprises).
 async function updateLeaderboard(){
@@ -421,52 +406,6 @@ async function updateLeaderboard(){
       await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() });
     }
   }catch(e){ window.__ddef.leaderboardError = String(e); }
-}
-let lbCache = null, lbTab = "month";
-async function openBoard(){
-  if(!CU) return;
-  $("boardModal").hidden = false;
-  $("lbStatus").textContent = "Chargement du classement...";
-  $("lbList").innerHTML = "";
-  try{
-    const snap = await m.getDocs(m.query(m.collection(db, "leaderboard"), m.orderBy("total", "desc"), m.limit(500)));
-    lbCache = [];
-    snap.forEach(ds => { const d = ds.data(); lbCache.push({ uid: ds.id, pseudo: d.pseudo || "Joueur", total: d.total || 0, months: d.months || {} }); });
-    renderBoard();
-  }catch(e){ window.__ddef.boardError = String(e); $("lbStatus").textContent = "Classement indisponible pour l'instant."; }
-}
-function closeBoard(){ $("boardModal").hidden = true; }
-function setLbTab(tab){
-  lbTab = tab;
-  $("lbTabMonth").classList.toggle("on", tab === "month");
-  $("lbTabAll").classList.toggle("on", tab === "all");
-  if(lbCache) renderBoard();
-}
-function renderBoard(){
-  const mk = monthKeyNow();
-  const rows = (lbCache || [])
-    .map(e => ({ uid: e.uid, pseudo: e.pseudo, val: lbTab === "month" ? (e.months[mk] || 0) : e.total }))
-    .filter(e => e.val > 0)
-    .sort((a, b) => b.val - a.val);
-  const ol = $("lbList"); ol.innerHTML = "";
-  if(!rows.length){
-    ol.innerHTML = '<li class="lb-empty">' + (lbTab === "month" ? "Aucun score ce mois-ci." : "Personne au classement pour l'instant.") + "</li>";
-    $("lbStatus").textContent = "";
-    window.__ddef.board = [];
-    return;
-  }
-  rows.slice(0, 100).forEach((e, i) => {
-    const li = document.createElement("li");
-    if(e.uid === CU.uid) li.className = "me";
-    li.innerHTML = '<span class="lb-rank">' + (i + 1) + '</span>'
-      + '<span class="avatar lb-av">' + escapeHtml(initial(e.pseudo)) + '</span>'
-      + '<span class="lb-name">' + escapeHtml(e.pseudo) + '</span>'
-      + '<span class="lb-xp">' + e.val + ' XP</span>';
-    ol.appendChild(li);
-  });
-  const myIdx = rows.findIndex(e => e.uid === CU.uid);
-  $("lbStatus").textContent = myIdx >= 0 ? ("Vous êtes " + (myIdx + 1) + (myIdx === 0 ? "er" : "e") + " sur " + rows.length + ".") : "";
-  window.__ddef.board = rows.map(r => ({ uid: r.uid, pseudo: r.pseudo, val: r.val }));
 }
 function openProfile(){
   if(!CU) return;
@@ -509,11 +448,6 @@ $("closeProfile").onclick = closeProfile;
 $("saveProfile").onclick = saveProfile;
 $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
 $("profileModal").addEventListener("click", e => { if(e.target === $("profileModal")) closeProfile(); });
-$("boardBtn").onclick = openBoard;
-$("closeBoard").onclick = closeBoard;
-$("lbTabMonth").onclick = () => setLbTab("month");
-$("lbTabAll").onclick = () => setLbTab("all");
-$("boardModal").addEventListener("click", e => { if(e.target === $("boardModal")) closeBoard(); });
 $("pickAvatar").onclick = () => $("avatarInput").click();
 $("removeAvatar").onclick = () => { pendingAvatar = ""; fillAvatar($("pAvatar"), "", $("pseudoInput").value || "J"); };
 $("avatarInput").onchange = async e => {
@@ -530,15 +464,13 @@ m.onAuthStateChanged(auth, async user => {
   if(!user){
     gate.hidden = false;
     $("profileBtn").hidden = true;
-    $("boardBtn").hidden = true;
-    closeProfile(); closeBoard();
+    closeProfile();
     if(!mounted) info("");
     return;
   }
   CU = user;
   gate.hidden = true;   // connecte : on masque l'ecran de connexion sans attendre le chargement de la grille
   $("profileBtn").hidden = false;
-  $("boardBtn").hidden = false;
   if(isAdmin(user)) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
   loadProfile();
   if(mounted) return;

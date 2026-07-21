@@ -151,28 +151,9 @@ await check("classement : la fiche du joueur est publiee (total et mois courant)
   if (b.months[mk] !== r.xp) throw new Error("XP du mois courant absente du classement : " + JSON.stringify(b.months) + " (mois " + mk + ")");
 });
 
-await check("classement : le joueur figure au tableau (mensuel puis cumule), mis en avant", async () => {
-  const vis = await page.evaluate(() => { const b = document.getElementById("boardBtn"); return !!b && !b.hidden; });
-  if (!vis) throw new Error("le bouton Classement est absent ou masque");
-  await page.evaluate(() => document.getElementById("boardBtn").click());
-  await page.waitForSelector("#boardModal:not([hidden])", { timeout: 5000 });
-  await page.waitForSelector("#lbList li", { timeout: 5000 });
-  const month = await page.evaluate(() => {
-    const me = document.querySelector("#lbList li.me");
-    return { onMonth: document.getElementById("lbTabMonth").classList.contains("on"), meText: me ? me.textContent : "", status: document.getElementById("lbStatus").textContent };
-  });
-  if (!month.onMonth) throw new Error("l'onglet mensuel n'est pas actif par defaut");
-  if (!month.meText) throw new Error("le joueur n'est pas mis en avant dans le classement mensuel");
-  if (!/XP/.test(month.meText)) throw new Error("XP absente de la ligne du joueur : " + month.meText);
-  if (!/\d/.test(month.status)) throw new Error("rang du joueur non indique : " + month.status);
-  await page.evaluate(() => document.getElementById("lbTabAll").click());
-  await page.waitForFunction(() => document.getElementById("lbTabAll").classList.contains("on"), null, { timeout: 5000 });
-  const allMe = await page.evaluate(() => { const me = document.querySelector("#lbList li.me"); return me ? me.textContent : ""; });
-  if (!allMe) throw new Error("le joueur n'est pas mis en avant dans le classement cumule");
-  const closed = await page.evaluate(() => { document.getElementById("closeBoard").click(); return document.getElementById("boardModal").hidden; });
-  if (closed !== true) throw new Error("le bouton Fermer n'a pas masque la fenetre de classement");
-});
-
+// L'affichage du tableau de classement (onglets mois/cumul, joueur mis en avant)
+// est verifie sur l'accueil : voir tests/accueil.mjs. Ici on garde la publication
+// de la fiche (ci-dessus) et les regles de securite (ci-dessous).
 await check("classement : regles de securite (lecture d'autrui permise, ecriture refusee)", async () => {
   const probe = await page.evaluate(() => window.__ddef.lbProbe());
   if (probe.read !== "ok") throw new Error("la lecture du classement d'un autre joueur a ete refusee : " + probe.read);

@@ -147,6 +147,38 @@ await check("la liste des grilles precedentes montre l'ancienne, pas encore fait
   if (info.hrefs.some(h => h.includes(today))) throw new Error("la grille du jour ne devrait pas figurer dans les precedentes");
 });
 
+await check("le classement est affiche sur l'accueil, le joueur mis en avant (mois puis cumul)", async () => {
+  await player.waitForSelector("#lbList li.me", { timeout: 8000 });
+  const month = await player.evaluate(() => {
+    const me = document.querySelector("#lbList li.me");
+    return { onMonth: document.getElementById("lbTabMonth").classList.contains("on"), meText: me ? me.textContent : "", status: document.getElementById("lbStatus").textContent };
+  });
+  if (!month.onMonth) throw new Error("l'onglet mensuel n'est pas actif par defaut");
+  if (!month.meText) throw new Error("le joueur n'est pas mis en avant dans le classement mensuel");
+  if (!/XP/.test(month.meText)) throw new Error("XP absente de la ligne du joueur : " + month.meText);
+  if (!/\d/.test(month.status)) throw new Error("rang du joueur non indique : " + month.status);
+  await player.evaluate(() => document.getElementById("lbTabAll").click());
+  await player.waitForFunction(() => document.getElementById("lbTabAll").classList.contains("on"), null, { timeout: 5000 });
+  const allMe = await player.evaluate(() => { const me = document.querySelector("#lbList li.me"); return me ? me.textContent : ""; });
+  if (!allMe) throw new Error("le joueur n'est pas mis en avant dans le classement cumule");
+  await player.evaluate(() => document.getElementById("lbTabMonth").click());   // on revient au mois pour la suite
+});
+
+await check("le profil s'ouvre depuis l'entete, affiche le niveau et enregistre le pseudo", async () => {
+  await player.click("#who");
+  await player.waitForSelector("#profileModal:not([hidden])");
+  await player.waitForSelector("#histList li");
+  const boxHidden = await player.evaluate(() => document.getElementById("levelBox").hidden);
+  if (boxHidden) throw new Error("bloc de niveau masque dans le profil");
+  await player.fill("#pseudoInput", "Rolista");
+  await player.click("#saveProfile");
+  await player.waitForFunction(() => window.__home.profile && window.__home.profile.pseudo === "Rolista");
+  const hp = await player.evaluate(() => document.getElementById("hdrPseudo").textContent);
+  if (hp !== "Rolista") throw new Error("pseudo entete apres enregistrement : " + hp);
+  const closed = await player.evaluate(() => { document.getElementById("closeProfile").click(); return document.getElementById("profileModal").hidden; });
+  if (closed !== true) throw new Error("le bouton Fermer n'a pas masque la fenetre de profil");
+});
+
 await check("depuis l'accueil connecte, la grille du jour s'ouvre sans redemander la connexion", async () => {
   await player.goto(`${origin}/donjons.html#emu`);
   await player.waitForSelector("#authGate", { state: "hidden", timeout: 8000 });
