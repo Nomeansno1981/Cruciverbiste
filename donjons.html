@@ -146,7 +146,7 @@
 </div>
 
 <script type="module">
-import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, rendreBadges, compterBadges } from "./jeu.js";
+import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, badgesRetroactifs, rendreBadges, compterBadges } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -517,6 +517,37 @@ async function claimFirst(dateStr){
   }catch(e){ window.__ddef.firstError = String(e); return false; }
 }
 
+// Rattrapage des badges deja merites avant l'arrivee du systeme (ou gagnes sur
+// un autre appareil) : on lit l'historique et la serie, et on decerne en silence
+// les badges manquants — sans fenetre, ce ne sont pas des nouveautes de la
+// session. Les badges « de l'instant » (premier, sur le fil, necromant) restent
+// hors rattrapage : ils ne se meritent qu'au moment de l'action.
+async function reconcileBadges(){
+  if(!CU) return;
+  try{
+    const earned = badgesCache || await loadBadges();
+    const [rs, ss] = await Promise.all([
+      m.getDocs(m.collection(db, "users", CU.uid, "results")),
+      m.getDoc(m.doc(db, "users", CU.uid, "state", "streak"))
+    ]);
+    const results = []; rs.forEach(ds => results.push(ds.data()));
+    const streak = effectiveStreak(ss.exists() ? ss.data() : null, parisDate());
+    const manquants = badgesRetroactifs(results, streak).filter(id => !earned[id]);
+    if(manquants.length){
+      const today = parisDate();
+      for(const id of manquants) earned[id] = today;
+      badgesCache = earned;
+      await m.setDoc(m.doc(db, "users", CU.uid, "state", "badges"), { earned }, { merge: true });
+      window.__ddef.badges = earned;
+    }
+    window.__ddef.reconciled = manquants;
+  }catch(e){ window.__ddef.reconcileError = String(e); }
+}
+if(EMU_MODE){
+  // test seulement : vider ses propres badges pour verifier le rattrapage
+  window.__ddef.clearBadges = async () => { try{ await m.deleteDoc(m.doc(db, "users", CU.uid, "state", "badges")); badgesCache = {}; window.__ddef.badges = {}; }catch(e){ window.__ddef.clearError = String(e); } };
+}
+
 window.__ddef.resize = resizeImage;
 window.__ddef.setPendingAvatar = d => { pendingAvatar = d; };
 // sonde des regles du classement : lecture d'autrui autorisee, ecriture refusee
@@ -656,6 +687,8 @@ m.onAuthStateChanged(auth, async user => {
     rb.hidden = false;
     rb.onclick = () => { play.replay(); };
   }
+  // rattrapage des badges deja merites (grilles faites avant les badges, etc.)
+  await reconcileBadges();
   window.__ddef.ready = true;
 });
 </script>

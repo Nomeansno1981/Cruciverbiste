@@ -107,6 +107,7 @@ await check("saisie au clavier", async () => {
 });
 
 await check("resolution : le resultat du joueur (avec XP) est enregistre en ligne", async () => {
+  await page.waitForFunction(() => window.__ddef && window.__ddef.ready);   // rattrapage des badges termine avant de resoudre
   await page.evaluate(() => window.__play.fillSolution());
   await page.waitForFunction(() => window.__ddef && window.__ddef.result);
   const r = await page.evaluate(() => window.__ddef.result);
@@ -260,6 +261,22 @@ await check("profil : l'historique liste la grille reussie", async () => {
   const rows = await page.locator("#histList li:not(.empty)").count();
   if (rows < 1) throw new Error("historique vide alors qu'une grille a ete reussie");
   await page.click("#closeProfile");
+});
+
+await check("badges : rattrapage retroactif au rechargement (grilles faites avant le systeme)", async () => {
+  // on vide les badges pour simuler un joueur d'avant leur introduction, puis on
+  // recharge : le rattrapage doit re-decerner les badges calculables par l'historique.
+  await page.evaluate(() => window.__ddef.clearBadges());
+  await page.reload();
+  if (await page.locator("#gGoogle").isVisible().catch(() => false)) await page.click("#gGoogle").catch(() => {});
+  await page.waitForFunction(() => window.__ddef && Array.isArray(window.__ddef.reconciled));
+  const badges = await page.evaluate(() => window.__ddef.badges || {});
+  // la demo a ete resolue vite et sans aide : au minimum 1re grille, rapidite, puriste
+  for (const id of ["grilles-1", "vitesse-3", "puriste"]) {
+    if (!badges[id]) throw new Error("badge non rattrape : " + id + " — obtenus : " + JSON.stringify(Object.keys(badges)));
+  }
+  // les badges « de l'instant » ne se rattrapent pas retroactivement
+  if (badges["premier"]) throw new Error("« Aux aguets » ne devrait pas etre rattrape retroactivement");
 });
 
 await check("aucune erreur JavaScript", async () => {

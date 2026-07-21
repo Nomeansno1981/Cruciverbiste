@@ -142,7 +142,7 @@
 </div>
 
 <script type="module">
-import { niveauPourXp, BADGES, rendreBadges, compterBadges } from "./jeu.js";
+import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -480,12 +480,13 @@ async function buildHome(user){
   window.__home.profile = { pseudo: profile.pseudo, avatar: profile.avatar };
   setHeaderProfile();
 
-  // resultats du joueur : dates faites + total d'XP
+  // resultats du joueur : dates faites, total d'XP, et historique complet (rattrapage badges)
   const done = new Set();
+  const allResults = [];
   let totalXp = 0;
   try{
     const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
-    rs.forEach(ds => { const d = ds.data(); if(d && d.solved){ done.add(ds.id); if(typeof d.xp === "number") totalXp += d.xp; } });
+    rs.forEach(ds => { const d = ds.data(); allResults.push(d); if(d && d.solved){ done.add(ds.id); if(typeof d.xp === "number") totalXp += d.xp; } });
   }catch(e){}
   window.__home.doneDates = Array.from(done);
 
@@ -504,9 +505,19 @@ async function buildHome(user){
   $("statXp").textContent = totalXp;
   window.__home.stats = { streak, totalXp, niveau: niv.niveau, done: done.size };
 
-  // badges obtenus : compteur « Badges » de l'accueil (le détail est au profil)
+  // badges obtenus : compteur « Badges » de l'accueil (le détail est au profil).
+  // Au passage, rattrapage silencieux des badges déjà mérités par l'historique
+  // (grilles faites avant les badges, meilleur temps, sans-aide, série courante).
   try{
     await loadBadges();
+    const manquants = badgesRetroactifs(allResults, streak).filter(id => !badgesCache[id]);
+    if(manquants.length){
+      const today = parisDate();
+      for(const id of manquants) badgesCache[id] = today;
+      window.__home.badges = badgesCache;
+      try{ await m.setDoc(m.doc(db, "users", user.uid, "state", "badges"), { earned: badgesCache }, { merge: true }); }catch(e){}
+    }
+    window.__home.reconciled = manquants;
     $("statBadges").textContent = compterBadges(badgesCache);
     const sub = $("statBadges").parentElement.querySelector(".stat-s");
     if(sub) sub.textContent = "sur " + BADGES.length;

@@ -1,6 +1,6 @@
 // Test du bareme d'experience (scoreXP) et de l'echelle de niveaux
 // (niveauPourXp), fonctions pures sans DOM. A lancer via : npm run test:score
-import { scoreXP, niveauPourXp, NIVEAUX } from "../jeu.js";
+import { scoreXP, niveauPourXp, NIVEAUX, badgesRetroactifs } from "../jeu.js";
 
 const cases = [
   { in: { seconds: 120, hints: 0, solutions: 0, words: 20 }, out: 200, label: "clean et rapide (20 mots, 2 min) : maximum" },
@@ -56,6 +56,25 @@ nv("XP negatif : plancher au niveau 1", nNeg.niveau === 1, nNeg);
 
 nv("les seuils de niveaux sont strictement croissants", NIVEAUX.every((x, i) => i === 0 || x.seuil > NIVEAUX[i - 1].seuil));
 nv("le niveau ne recule jamais quand l'XP augmente", [0, 100, 150, 500, 3000, 12000, 30000].every((x, i, a) => i === 0 || niveauPourXp(x).niveau >= niveauPourXp(a[i - 1]).niveau));
+
+// ---- rattrapage retroactif des badges (badgesRetroactifs) ----
+function br(name, cond, got){ if(cond){ console.log("ok     " + name); } else { failures++; console.log("ÉCHEC  " + name + (got !== undefined ? " : " + JSON.stringify(got) : "")); } }
+const setOf = (res, st) => new Set(badgesRetroactifs(res, st));
+const solved = (o) => Object.assign({ solved: true, seconds: 800, hints: 1, solutions: 0 }, o);
+
+br("aucun resultat : aucun badge", setOf([], 0).size === 0);
+const rUne = setOf([solved({})], 0);
+br("une grille lente avec aide : seulement « premiere grille »", rUne.has("grilles-1") && !rUne.has("vitesse-10") && !rUne.has("puriste"), [...rUne]);
+const rDix = setOf(Array.from({ length: 10 }, () => solved({})), 0);
+br("dix grilles : « premiere grille » + « dix grilles », pas « cent »", rDix.has("grilles-1") && rDix.has("grilles-10") && !rDix.has("grilles-100"), [...rDix]);
+const rRapide = setOf([solved({ seconds: 800 }), solved({ seconds: 120, hints: 0, solutions: 0 })], 0);
+br("meilleur temps < 3 min : les trois badges de rapidite", rRapide.has("vitesse-10") && rRapide.has("vitesse-5") && rRapide.has("vitesse-3"), [...rRapide]);
+br("une reussite sans aide dans l'historique : « puriste »", rRapide.has("puriste"), [...rRapide]);
+const rSerie = setOf([solved({})], 55);
+br("serie courante 55 : « braise » et « flamme », pas « brasier »", rSerie.has("serie-10") && rSerie.has("serie-50") && !rSerie.has("serie-100"), [...rSerie]);
+const rMoment = setOf([solved({ seconds: 60, hints: 0, solutions: 0 })], 100);
+br("les badges de l'instant ne se rattrapent pas (premier/dernier/necromant)", !rMoment.has("premier") && !rMoment.has("dernier") && !rMoment.has("necromant"), [...rMoment]);
+br("un resultat non resolu est ignore", setOf([{ solved: false, seconds: 10, hints: 0, solutions: 0 }], 0).size === 0);
 
 if (failures) { console.error("\n" + failures + " controle(s) en echec."); process.exit(1); }
 console.log("\nBareme d'experience et echelle de niveaux verifies : tous les controles passent.");
