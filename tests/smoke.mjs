@@ -552,6 +552,39 @@ await check("maillage dense sans épine : ~14 mots, tous croisant ≥ 2 réponse
   if (/peu ancré/.test(stat)) throw new Error("mot peu ancré publié malgré l'élagage : " + stat);
 });
 
+await check("jamais deux mots superposés dans le même sens (MAGICIEN ⊂ MAGICIENNES)", async () => {
+  // un mot préfixe d'un autre (MAGICIEN dans MAGICIENNES) pouvait se poser
+  // par-dessus lui, dans le même sens : les lettres coïncidant, canPlace les
+  // comptait à tort comme des croisements. Résultat : deux réponses au même
+  // numéro, sur les mêmes cases. On génère plusieurs fois et on exige qu'aucune
+  // case ne soit couverte par deux mots d'un même sens.
+  await page.click("#newList");
+  await page.click("#toggleImport");
+  await page.fill("#pasteArea",
+    "magicien ; magiciennes ; chat ; chaton ; art ; artiste\n" +
+    "dragon ; grimoire ; nain ; orque ; sortilege ; taverne ; scene ; cite ; niche ; racine");
+  await page.click("#parseBtn");
+  await page.fill("#maxW", "14");
+  await page.fill("#maxH", "14");
+  for (let t = 0; t < 8; t++) {
+    await page.click("#genBtn");
+    await page.waitForSelector("#board svg g.cell");
+    const p = await page.evaluate(() => window.__vcGamePuzzle());
+    for (const [dir, list] of [["horizontal", p.across], ["vertical", p.down]]) {
+      const cover = new Map();       // case -> mots du même sens qui la couvrent
+      for (const w of list) for (const [r, c] of w.cells) {
+        const k = r + "," + c; cover.set(k, (cover.get(k) || 0) + 1);
+        if (cover.get(k) > 1) throw new Error("case " + k + " couverte par deux mots " + dir + "aux (tirage " + t + ")");
+      }
+    }
+    // et aucun numéro en double dans un même sens
+    for (const list of [p.across, p.down]) {
+      const nums = list.map(w => w.num);
+      if (new Set(nums).size !== nums.length) throw new Error("numéro dupliqué dans un même sens : " + nums.join(","));
+    }
+  }
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
