@@ -372,6 +372,7 @@ export function monterJeu(PUZZLE, opts = {}){
       return REACH + AMP*fbm(wx, wy) + jit;
     };
     const nT = small ? 3 : 4, gap = cell*(small ? 0.15 : 0.115);
+    const WASH = false;                                 // fond gris : true = degrade confine, false = supprime
     for(let r=-winCells;r<PUZZLE.rows+winCells;r++) for(let c=-winCells;c<PUZZLE.cols+winCells;c++){
       if(has(r,c)) continue;                            // case pleine = salle jouable
       const x=c*cell, y=r*cell;
@@ -380,8 +381,9 @@ export function monterJeu(PUZZLE, opts = {}){
         const u0=iu*cell/nT, u1=(iu+1)*cell/nT, v0=iv*cell/nT, v1=(iv+1)*cell/nT;
         const cx=x+(u0+u1)/2, cy=y+(v0+v1)/2, dG=distGrid(cx,cy);
         if(dG >= CORE && dG > contourAt(cx/cell, cy/cell, c*nT+iu, r*nT+iv)) continue;   // page ou poche interne
-        const op = Math.max(0.10, Math.min(0.9, 0.95 - 0.42*dG));   // gris opaque au mur, transparent au loin
-        greyRects += `<rect x="${(x+u0).toFixed(1)}" y="${(y+v0).toFixed(1)}" width="${(u1-u0).toFixed(1)}" height="${(v1-v0).toFixed(1)}" fill="#e5ddca" fill-opacity="${op.toFixed(2)}"/>`;
+        // fond gris confine pres des murs, degrade fort : nul des ~1 case -> plus de tuiles isolees au bord
+        const op = WASH ? 0.9*(1 - dG/1.05) : 0;
+        if(op > 0.05) greyRects += `<rect x="${(x+u0).toFixed(1)}" y="${(y+v0).toFixed(1)}" width="${(u1-u0).toFixed(1)}" height="${(v1-v0).toFixed(1)}" fill="#e5ddca" fill-opacity="${op.toFixed(2)}"/>`;
         // hachures : traits courts a un angle propre a la tuile
         const phi = rnd(r*7 + c*13 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + 1) * Math.PI;
         const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
