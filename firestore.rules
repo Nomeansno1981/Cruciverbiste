@@ -32,5 +32,16 @@ service cloud.firestore {
         && request.resource.data.total is number
         && request.resource.data.total >= 0;
     }
+
+    // Premier a terminer la grille d'une date : un verrou « premier arrive »
+    // (badge « Aux aguets »). Chaque joueur connecte peut tenter de le poser sur
+    // sa propre fiche (create, uid == auteur), mais une fois pose il est fige :
+    // ni modification ni suppression, de sorte que le premier reste le premier.
+    match /premiers/{date} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }
