@@ -549,6 +549,16 @@ m.onAuthStateChanged(auth, async user => {
   window.__ddef.playedDate = dateStr;
   const puzzle = await loadPuzzle(dateStr);
 
+  // grille déjà résolue par ce joueur : on la propose en revue (lecture seule),
+  // les cases dévoilées en rouge. L'auteur peut en sortir via « Rejouer ».
+  let review = null;
+  try{
+    const rs = await m.getDoc(m.doc(db, "users", user.uid, "results", dateStr));
+    const r = rs.exists() ? rs.data() : null;
+    if(r && r.solved) review = { given: r.given || [], solvedWords: r.solvedWords || [], seconds: r.seconds };
+  }catch(e){ /* pas de revue : la grille se joue normalement */ }
+  window.__ddef.review = !!review;
+
   // serie du joueur, affichee au chargement (independante de la grille jouee)
   try{
     const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak"));
@@ -570,6 +580,9 @@ m.onAuthStateChanged(auth, async user => {
       for(const key of ["xp", "hints", "solutions", "words"]){
         if(typeof stats[key] === "number") data[key] = stats[key];
       }
+      // cases dévoilées, pour la revue en lecture seule (indice = lettre, solution = mot)
+      if(Array.isArray(stats.given)) data.given = stats.given;
+      if(Array.isArray(stats.solvedWords)) data.solvedWords = stats.solvedWords;
       await m.setDoc(ref, data, { merge: true });
       const snap = await m.getDoc(ref);
       window.__ddef.result = snap.exists() ? snap.data() : null;
@@ -591,7 +604,7 @@ m.onAuthStateChanged(auth, async user => {
     homeLink();
   };
 
-  const play = monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr) });
+  const play = monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr), review });
   // Rejouer (auteur seul) : remet la grille à zéro pour la retester, sans rien enregistrer
   if(isAdmin(user)){
     const rb = $("replayBtn");
