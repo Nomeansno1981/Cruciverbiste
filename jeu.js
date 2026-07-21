@@ -77,7 +77,7 @@ export function monterJeu(PUZZLE, opts = {}){
     if(b) b.innerHTML = '<p class="board-empty">Grille indisponible pour cette date.</p>';
     for(const id of ["acrossList", "downList"]){ const el = document.getElementById(id); if(el) el.innerHTML = ""; }
     const dateEl = document.getElementById("date"); if(dateEl){ try{ dateEl.textContent = opts.dateText || ""; }catch(e){} }
-    return { isSolved: () => false, elapsedShown: () => "0:00", type(){}, tapKey(){}, hint(){}, solution(){}, selectClue(){}, fillSolution(){}, replay(){} };
+    return { isSolved: () => false, isReview: () => false, elapsedShown: () => "0:00", type(){}, tapKey(){}, hint(){}, solution(){}, selectClue(){}, fillSolution(){}, replay(){} };
   }
   const K = (r,c) => r + "," + c;
   const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);
@@ -96,7 +96,7 @@ export function monterJeu(PUZZLE, opts = {}){
   let hintCount = 0, solutionCount = 0;
   let muted = false; try{ muted = localStorage.getItem("dd-mute") === "1"; }catch(e){}
   let audioCtx = null;
-  let sel = null, solved = false, started = 0, tick = null, cell = 30, noSave = false;
+  let sel = null, solved = false, started = 0, tick = null, cell = 30, noSave = false, readonly = false;
 
   const correct = k => norm(user[k]) === norm(PUZZLE.solution[k]);
   const wordsAt = k => { const cw = cellWord[k]; return cw ? [cw.across, cw.down].filter(Boolean) : []; };
@@ -284,7 +284,7 @@ export function monterJeu(PUZZLE, opts = {}){
   }
 
   function place(ch){
-    if(solved || !sel) return;
+    if(readonly || solved || !sel) return;
     const k = K(sel.r, sel.c);
     if(isLocked(k)){ advance(1); render(); return; }   // case verrouillee : on n'ecrit pas
     user[k] = ch.toUpperCase();
@@ -299,7 +299,7 @@ export function monterJeu(PUZZLE, opts = {}){
     checkSolved();
   }
   function erase(){
-    if(solved || !sel) return;
+    if(readonly || solved || !sel) return;
     const k = K(sel.r, sel.c);
     if(isLocked(k)){ advance(-1); render(); return; }   // case verrouillee : on n'efface pas
     if(user[k]){ delete user[k]; }
@@ -444,13 +444,14 @@ export function monterJeu(PUZZLE, opts = {}){
     const b = document.getElementById("banner");
     b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(secs)}. <b>+${xp} XP</b>`;
     b.classList.add("show");
-    if(opts.onSolved && !noSave){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp }); }catch(e){ /* la page hote gere */ } }
+    if(opts.onSolved && !noSave){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp, given: Object.keys(given), solvedWords: [...solvedWords] }); }catch(e){ /* la page hote gere */ } }
   }
   // Rejouer (outil d'auteur) : remet la grille a zero pour la retester. On
   // n'enregistre plus de resultat ensuite — un essai ne doit pas ecraser le
   // vrai resultat du jour ni toucher au classement.
   function replay(){
     noSave = true;
+    readonly = false;                          // sort d'une éventuelle revue : la grille redevient jouable
     for(const k in user) delete user[k];
     for(const k in given) delete given[k];
     okWords.clear(); solvedWords.clear();
@@ -460,14 +461,33 @@ export function monterJeu(PUZZLE, opts = {}){
     started = 0;
     const t = document.getElementById("timer"); if(t) t.textContent = "0:00";
     board.classList.remove("done");
+    const kb = document.getElementById("kbd"); if(kb) kb.style.display = "";           // le clavier redevient piloté par le CSS
+    for(const id of ["hintBtn", "solveBtn"]){ const el = document.getElementById(id); if(el) el.hidden = false; }
     const b = document.getElementById("banner"); if(b){ b.classList.remove("show"); b.innerHTML = ""; }
     gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
+  }
+  // Revue en lecture seule (joueur ayant résolu la grille) : la grille complétée,
+  // les cases dévoilées par Indice/Solution en rouge, le reste (trouvé par le
+  // joueur) en vert. Aucune saisie, ni indice, ni clavier — juste la navigation
+  // entre définitions pour se relire.
+  function enterReview(rv){
+    readonly = true;
+    for(const k in PUZZLE.solution) user[k] = PUZZLE.solution[k];
+    for(const k of (rv.given || [])) given[k] = true;
+    for(const id of (rv.solvedWords || [])) solvedWords.add(id);
+    for(const w of orderedClues) if(!solvedWords.has(w.id)) okWords.add(w.id);
+    const kb = document.getElementById("kbd"); if(kb) kb.style.display = "none";
+    for(const id of ["hintBtn", "solveBtn"]){ const el = document.getElementById(id); if(el) el.hidden = true; }
+    const t = document.getElementById("timer"); if(t && rv.seconds != null) t.textContent = fmt(rv.seconds);
+    const bn = document.getElementById("banner");
+    if(bn){ bn.innerHTML = 'Grille résolue. <b>En rouge</b>, les cases que vous avez dévoilées (indice ou solution).'; bn.classList.add("show"); }
+    render();
   }
   // Indice : revele une lettre encore introuvable du mot selectionne. La lettre
   // donnee reste rouge (given) et verrouillee ; si elle complete le mot, celui-ci
   // se valide (vert) tout en gardant sa lettre d'indice rouge.
   function hint(){
-    if(solved) return;
+    if(readonly || solved) return;
     const w = currentWord(); if(!w) return;
     const t = w.cells.find(([r,c]) => !given[K(r,c)] && !correct(K(r,c)));
     if(!t) return;
@@ -478,7 +498,7 @@ export function monterJeu(PUZZLE, opts = {}){
   // Solution : revele le mot selectionne en entier. Le mot est marque solvedWords
   // (rouge, verrouille) et n'est jamais compte comme valide.
   function solution(){
-    if(solved) return;
+    if(readonly || solved) return;
     const w = currentWord(); if(!w) return;
     if(okWords.has(w.id) || solvedWords.has(w.id)) return;   // deja resolu
     for(const [r,c] of w.cells){ const k = K(r,c); user[k] = PUZZLE.solution[k]; }
@@ -545,6 +565,7 @@ export function monterJeu(PUZZLE, opts = {}){
   buildLists();
   buildKeyboard();
   gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
+  if(opts.review) enterReview(opts.review);   // grille déjà résolue : revue en lecture seule
   requestAnimationFrame(layout);
 
   const api = {
@@ -555,6 +576,7 @@ export function monterJeu(PUZZLE, opts = {}){
     currentClue: () => { const w = currentWord(); return w ? w.id : null; },
     wordHighlight: () => board.querySelectorAll(".cell.word").length,
     isSolved: () => solved,
+    isReview: () => readonly,
     replay: () => replay(),
     fillSolution: () => { for(const k in PUZZLE.solution) user[k] = PUZZLE.solution[k]; render(); checkSolved(); },
     elapsedShown: () => document.getElementById("timer").textContent,
