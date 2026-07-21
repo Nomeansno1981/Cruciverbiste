@@ -957,6 +957,42 @@ function crossStats(res){
   }
   return { spurs, isolated };
 }
+// N'expose que du bien croisé : retire itérativement les mots à moins de deux
+// croisements (le « 2-core » du graphe des mots) jusqu'à stabilité. Une épine —
+// dont les lettres non croisées ne se déduisent d'aucun autre mot — n'est jamais
+// publiée : elle repart en réserve. Deux mots ne pouvant de toute façon pas
+// croiser davantage, ou un cœur qui s'effondrerait entièrement (grille en arbre),
+// on garde la grille telle quelle.
+function corePrune(res){
+  const cellsOf = p => { const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0, a=[];
+    for(let k=0;k<p.letters.length;k++) a.push(keyOf(p.r+dr*k, p.c+dc*k)); return a; };
+  let survivors = res.placed.slice();
+  for(;;){
+    if(!survivors.length) break;
+    const count = new Map();
+    for(const p of survivors) for(const kk of cellsOf(p)) count.set(kk, (count.get(kk)||0)+1);
+    const keep = [];
+    for(const p of survivors){
+      let deg = 0; for(const kk of cellsOf(p)) if(count.get(kk) >= 2) deg++;
+      if(deg >= 2) keep.push(p);
+    }
+    if(keep.length === survivors.length) break;     // stable : chaque mot croise ≥ 2 réponses
+    survivors = keep;
+  }
+  // cœur trop maigre (moins de deux mots) ou grille déjà propre : on ne touche à rien
+  if(survivors.length < 2 || survivors.length === res.placed.length) return res;
+  const kept = new Set(survivors);
+  const dropped = res.placed.filter(p => !kept.has(p));
+  const grid = new Map();
+  for(const p of survivors) put(grid, p, p.r, p.c, p.dir);
+  const bb = bbox(grid);
+  res.grid = grid; res.placed = survivors;
+  res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
+  let sumLen = 0; for(const p of survivors) sumLen += p.letters.length;
+  res.crossings = sumLen - res.filled;
+  res.unplaced = (res.unplaced || []).concat(dropped);
+  return res;
+}
 // Construit une grille dense visant « target » mots à l'intérieur d'une boîte
 // maxW x maxH. Glouton global : à chaque tour on place le meilleur (mot,
 // position) de toute la réserve, en privilégiant les croisements. On s'arrête à
@@ -1003,6 +1039,7 @@ function generate(entries, maxW, maxH, attempts, target){
   let best = null;
   for(let i=0;i<attempts;i++){
     const res = generateOnce(entries, maxW, maxH, target);
+    corePrune(res);                       // on juge et retient la grille telle qu'elle sera publiée : sans épine
     const pc = res.placed.length;
     if(pc < 1) continue;
     let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
@@ -1522,9 +1559,10 @@ function doGenerate(){
   if(!H || H < 2){ H = 14; $("maxH").value = "14"; }
   const { pool, rotated } = selectPool(out, W, H);
   const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
-  // cible de mots : ~14 sur une 14×14, adaptable à la taille de la boîte et au
-  // nombre de mots disponibles. Une grille aérée mais au maillage serré.
-  const target = Math.max(6, Math.min(pool.length, Math.round((W * H) / 14)));
+  // cible de mots avant élagage : ~16 sur une 14×14 (aire/12). L'élagage des
+  // épines en retire deux ou trois, la grille publiée tombe autour de 14 mots
+  // tous bien croisés. Adaptable à la taille de la boîte et au vivier disponible.
+  const target = Math.max(6, Math.min(pool.length, Math.round((W * H) / 12)));
   // le glouton global est plus lourd par tirage : on module le nombre de tirages
   const attempts = Math.max(pool.length > 60 ? 40 : 60, Math.min(140, Math.round(2600 / pool.length)));
 
@@ -1544,6 +1582,7 @@ function doGenerate(){
         .sort((a,b) => a.u - b.u || a.r - b.r).map(x => x.e);
       extended = extendGrid(best, extras, W, H, target);
     }
+    corePrune(best);            // la densification a pu réintroduire une épine : dernier passage avant publication
     currentModel = buildModel(best);
     const eligible = out.length - tooLong.length;
     currentModel.sampled = pool.length < eligible ? { total: eligible, rotated, extended } : null;
