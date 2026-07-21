@@ -235,7 +235,9 @@ export function monterJeu(PUZZLE, opts = {}){
   const svgNS = "http://www.w3.org/2000/svg";
   const cellEls = {};
   let latticeSvg = null;
-  const HATCH = 1.1;   // marge autour de la grille (en cases) reservee a la bande de hachures
+  // marge autour de la grille (en cases) reservee a la bande de rocher : plus large
+  // sur ordinateur (bord organique ample) que sur mobile (on preserve la place de jeu).
+  const bandCells = () => (window.innerWidth < 860 ? 1.55 : 2.4);
 
   function buildBoard(){
     board.innerHTML = "";
@@ -260,17 +262,18 @@ export function monterJeu(PUZZLE, opts = {}){
     const mobile = window.innerWidth < 860;
     const cap = mobile ? 40 : 46;
     const availW = (gridarea.clientWidth || 700) - 2;
-    // on reserve la bande de hachures (HATCH case de chaque cote) dans le calcul
-    let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*HATCH)));
+    // on reserve la bande de rocher (bandCells() cases de chaque cote) dans le calcul
+    const band = bandCells();
+    let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*band)));
     if(mobile){
       const availH = gridarea.clientHeight - 2;
-      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*HATCH)));
+      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*band)));
     }
     cell = Math.max(16, c);
     const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
     board.style.width = W + "px";
     board.style.height = H + "px";
-    board.style.margin = Math.round(cell * HATCH) + "px";   // espace pour la bande de hachures
+    board.style.margin = Math.round(cell * bandCells()) + "px";   // espace pour la bande de rocher
     for(const k in cellEls){
       const [r,c2] = k.split(",").map(Number);
       const el = cellEls[k];
@@ -286,11 +289,11 @@ export function monterJeu(PUZZLE, opts = {}){
   //  - bords interieurs en pointilles ;
   //  - murs exterieurs epais ;
   //  - portes a la place des anciens diamants (frontieres entre mots) ;
-  //  - bande de rocher hachuree : on hachure les CASES VIDES au contact de la
-  //    grille (jamais les murs deux fois), coins compris, avec un bord exterieur
-  //    ronge case par case et un fond gris qui s'estompe en s'eloignant du mur.
+  //  - bande de rocher hachuree : tout l'espace vide est de la roche ; son bord
+  //    exterieur suit un champ de distance a la grille module par un bruit lisse
+  //    (cote organique, non aligne sur les cases) et le gris s'estompe au loin.
   function drawLattice(W, H){
-    const M = Math.round(cell * HATCH);
+    const M = Math.round(cell * bandCells());
     latticeSvg.setAttribute("width", W + 2*M); latticeSvg.setAttribute("height", H + 2*M);
     latticeSvg.setAttribute("viewBox", `${-M} ${-M} ${W + 2*M} ${H + 2*M}`);
     latticeSvg.style.left = -M + "px"; latticeSvg.style.top = -M + "px";
@@ -337,39 +340,72 @@ export function monterJeu(PUZZLE, opts = {}){
         outer += `M ${x0} ${y0} L ${x1} ${y1} `;   // mur exterieur
       }
     }
-    // 2) bande de rocher : parcours des cases VIDES au contact de la grille.
-    //    Chaque case vide voisine (meme en diagonale) d'une case pleine est hachuree
-    //    une seule fois -> pas de superposition, et les coins sont pleins (plus de
-    //    trous blancs dans les angles). Le contour exterieur est ronge case par case
-    //    (decoupe aleatoire du cote qui s'eloigne du donjon) pour un bord irregulier,
-    //    et le fond gris s'estompe a mesure qu'il s'eloigne du mur.
-    //    Motif deterministe (indexe sur la case) : stable d'un affichage a l'autre.
-    const dist = (r,c) => { let b=3; for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){ if(has(r+dr,c+dc)){ const d=Math.max(Math.abs(dr),Math.abs(dc)); if(d<b) b=d; } } return b; };
-    const nT = small ? 2 : 3, gap = cell*(small ? 0.14 : 0.11);
-    for(let r=-1;r<=PUZZLE.rows;r++) for(let c=-1;c<=PUZZLE.cols;c++){
-      if(has(r,c) || dist(r,c)!==1) continue;         // seulement l'anneau au contact des murs
-      // decoupe raggee des cotes tournes vers l'exterieur (voisin vide plus loin du donjon)
-      let ax0=0, ay0=0, ax1=cell, ay1=cell;
-      if(!has(r,c-1) && dist(r,c-1)>1) ax0 =        rnd(r*7+c*3+11, c*5+r*2+11)*0.42*cell;
-      if(!has(r,c+1) && dist(r,c+1)>1) ax1 = cell - rnd(r*3+c*7+13, c*2+r*5+13)*0.42*cell;
-      if(!has(r-1,c) && dist(r-1,c)>1) ay0 =        rnd(r*5+c*2+17, c*7+r*3+17)*0.42*cell;
-      if(!has(r+1,c) && dist(r+1,c)>1) ay1 = cell - rnd(r*2+c*5+19, c*3+r*7+19)*0.42*cell;
-      if(ax1-ax0 < cell*0.15 || ay1-ay0 < cell*0.15) continue;
-      const x=c*cell, y=r*cell;
-      // centres des cases pleines voisines -> profondeur dans la roche (estompe du gris)
-      const fc=[]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) if(has(r+dr,c+dc)) fc.push([(dc+0.5)*cell,(dr+0.5)*cell]);
-      for(let iu=0; iu<nT; iu++) for(let iv=0; iv<nT; iv++){
-        const u0=ax0+(ax1-ax0)*iu/nT, u1=ax0+(ax1-ax0)*(iu+1)/nT;
-        const v0=ay0+(ay1-ay0)*iv/nT, v1=ay0+(ay1-ay0)*(iv+1)/nT;
-        const ucx=(u0+u1)/2, vcy=(v0+v1)/2;
-        let dm=9; for(const f of fc){ const dd=Math.hypot(ucx-f[0], vcy-f[1])/cell; if(dd<dm) dm=dd; }
-        const op = Math.max(0.12, Math.min(0.88, 1.18 - 0.72*dm));   // gris opaque au mur, transparent au loin
+    // 2) bande de rocher : tout l'espace vide (interstices + pourtour) est de la
+    //    roche hachuree. Le CONTOUR EXTERIEUR (roche <-> page) suit un champ de
+    //    distance a la grille module par un bruit lisse -> cote ondulant, organique
+    //    (facon Dyson Logos). Pour ne creuser QUE depuis l'exterieur, on inonde la
+    //    page depuis le bord du cadre : tout vide encercle par la roche redevient
+    //    roche (aucun trou interne). Deterministe (en coordonnees de cases).
+    const bandN = cell ? M/cell : 2;
+    const winCells = Math.ceil(bandN) + 1;
+    const REACH = small ? 0.95 : 1.25, AMP = small ? 0.42 : 0.82, FLOOR = 0.5;
+    const noise = (X,Y) => 0.55*Math.sin(X*1.9 + Y*1.1 + 0.5)
+                         + 0.28*Math.sin(X*1.1 - Y*2.3 + 2.4)
+                         + 0.18*Math.sin((X+Y)*3.1 + 4.1)
+                         + 0.12*Math.sin(X*4.7 - Y*2.9 + 1.7);
+    const NMAX = 1.13;                                  // borne du bruit (somme des amplitudes)
+    const distGrid = (px,py) => {
+      let best = Infinity;
+      const cc = Math.floor(px/cell), cr = Math.floor(py/cell);
+      for(let r=cr-winCells; r<=cr+winCells; r++) for(let c=cc-winCells; c<=cc+winCells; c++){
+        if(!has(r,c)) continue;
+        const dx = Math.max(c*cell - px, 0, px - (c+1)*cell), dy = Math.max(r*cell - py, 0, py - (r+1)*cell);
+        const d = dx*dx + dy*dy; if(d<best) best=d;
+      }
+      return Math.sqrt(best)/cell;
+    };
+    const nT = small ? 3 : 4, gap = cell*(small ? 0.15 : 0.115);
+    // pavage en tuiles (nT par case) sur la boite elargie : etats ROOM/ROCK/MAYBE/PAGE
+    const RR0=-winCells, CC0=-winCells, RN=PUZZLE.rows+2*winCells, CN=PUZZLE.cols+2*winCells;
+    const TR=RN*nT, TC=CN*nT, ROOM=0, ROCK=1, MAYBE=2, PAGE=3;
+    const st=new Uint8Array(TR*TC), dGA=new Float32Array(TR*TC);
+    for(let r=RR0;r<RR0+RN;r++) for(let c=CC0;c<CC0+CN;c++){
+      if(has(r,c)) continue;                            // case pleine = salle jouable (etat ROOM par defaut)
+      const baseTi=(r-RR0)*nT, baseTj=(c-CC0)*nT;
+      if(distGrid((c+0.5)*cell,(r+0.5)*cell) - 0.72 > REACH + AMP*NMAX){   // case entierement hors de portee
+        for(let iv=0;iv<nT;iv++) for(let iu=0;iu<nT;iu++){ const id=(baseTi+iv)*TC+(baseTj+iu); st[id]=MAYBE; dGA[id]=9; }
+        continue;
+      }
+      for(let iv=0;iv<nT;iv++) for(let iu=0;iu<nT;iu++){
+        const cx=(c+(iu+0.5)/nT)*cell, cy=(r+(iv+0.5)/nT)*cell, id=(baseTi+iv)*TC+(baseTj+iu);
+        const dG=distGrid(cx,cy); dGA[id]=dG;
+        st[id]= dG <= Math.max(FLOOR, REACH + AMP*noise(cx/cell, cy/cell)) ? ROCK : MAYBE;
+      }
+    }
+    // inondation de la PAGE depuis le bord du cadre, a travers les tuiles MAYBE
+    const stack=[];
+    for(let tj=0;tj<TC;tj++){ stack.push(tj); stack.push((TR-1)*TC+tj); }
+    for(let ti=0;ti<TR;ti++){ stack.push(ti*TC); stack.push(ti*TC+TC-1); }
+    while(stack.length){
+      const id=stack.pop(); if(st[id]!==MAYBE) continue; st[id]=PAGE;
+      const ti=(id/TC)|0, tj=id-ti*TC;
+      if(ti>0) stack.push(id-TC); if(ti<TR-1) stack.push(id+TC);
+      if(tj>0) stack.push(id-1); if(tj<TC-1) stack.push(id+1);
+    }   // MAYBE restant = vide encercle -> reste de la roche (pas de trou)
+    // rendu des tuiles de roche (ROCK ou MAYBE encercle)
+    for(let r=RR0;r<RR0+RN;r++) for(let c=CC0;c<CC0+CN;c++){
+      if(has(r,c)) continue;
+      const baseTi=(r-RR0)*nT, baseTj=(c-CC0)*nT, x=c*cell, y=r*cell;
+      for(let iv=0;iv<nT;iv++) for(let iu=0;iu<nT;iu++){
+        const id=(baseTi+iv)*TC+(baseTj+iu); if(st[id]===PAGE || st[id]===ROOM) continue;
+        const u0=iu*cell/nT, u1=(iu+1)*cell/nT, v0=iv*cell/nT, v1=(iv+1)*cell/nT;
+        const op = Math.max(0.10, Math.min(0.9, 0.95 - 0.42*dGA[id]));   // gris opaque au mur, transparent au loin
         greyRects += `<rect x="${(x+u0).toFixed(1)}" y="${(y+v0).toFixed(1)}" width="${(u1-u0).toFixed(1)}" height="${(v1-v0).toFixed(1)}" fill="#e5ddca" fill-opacity="${op.toFixed(2)}"/>`;
         // hachures : traits courts a un angle propre a la tuile
         const phi = rnd(r*7 + c*13 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + 1) * Math.PI;
         const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
         let sMin=Infinity, sMax=-Infinity;
-        for(const cc of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=cc[0]*perp[0]+cc[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
+        for(const q of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=q[0]*perp[0]+q[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
         const BIG=cell*2;
         for(let s=sMin+gap*0.5; s<sMax; s+=gap){
           const bx=s*perp[0], by=s*perp[1];
@@ -378,14 +414,16 @@ export function monterJeu(PUZZLE, opts = {}){
           hatch += `M ${(x+cl[0]).toFixed(1)} ${(y+cl[1]).toFixed(1)} L ${(x+cl[2]).toFixed(1)} ${(y+cl[3]).toFixed(1)} `;
         }
       }
-      // caillou occasionnel, cale dans la zone rongee
-      if(rnd(r*3+c*29+91, c*13+r*23+91) > 0.74){
-        const pu=ax0+(ax1-ax0)*(0.3+0.4*rnd(r*5+c*7+3, c*3+r*9+3));
-        const pv=ay0+(ay1-ay0)*(0.3+0.4*rnd(r*9+c*3+5, c*7+r*5+5));
-        const px=x+pu, py=y+pv;
-        const rx=cell*(0.05+0.03*rnd(r+c+7, c+r+7)), ryv=rx*(0.68+0.3*rnd(r*2+c, c*2+r));
-        pebbles += `M ${(px-rx).toFixed(1)} ${py.toFixed(1)} a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(2*rx).toFixed(1)} 0 a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(-2*rx).toFixed(1)} 0 `;
-      }
+    }
+    // gros cailloux epars, poses sur une tuile de roche (jamais dans une salle ni la page)
+    for(let r=RR0;r<RR0+RN;r++) for(let c=CC0;c<CC0+CN;c++){
+      if(has(r,c) || rnd(r*3+c*29+91, c*13+r*23+91) <= 0.72) continue;
+      const mid=nT>>1, id=((r-RR0)*nT+mid)*TC + (c-CC0)*nT+mid, s=st[id];
+      if(s===ROOM || s===PAGE) continue;
+      const cgx=(c+0.5)*cell, cgy=(r+0.5)*cell;
+      const px=cgx + (rnd(r*5+c*7+3, c*3+r*9+3)-0.5)*cell*0.4, py=cgy + (rnd(r*9+c*3+5, c*7+r*5+5)-0.5)*cell*0.4;
+      const rx=cell*(0.10+0.06*rnd(r+c+7, c+r+7)), ryv=rx*(0.72+0.24*rnd(r*2+c, c*2+r));
+      pebbles += `M ${(px-rx).toFixed(1)} ${py.toFixed(1)} a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(2*rx).toFixed(1)} 0 a ${rx.toFixed(1)} ${ryv.toFixed(1)} 0 1 0 ${(-2*rx).toFixed(1)} 0 `;
     }
     const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032), pebbleW = Math.max(0.8, cell*0.045);
     const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
