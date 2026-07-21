@@ -349,11 +349,11 @@ export function monterJeu(PUZZLE, opts = {}){
     const winCells = Math.ceil(bandN) + 1;
     const REACH = small ? 0.85 : 1.05, AMP = small ? 0.42 : 0.72, CORE = 0.5, JIT = small ? 0.3 : 0.5;
     // bruit multi-echelle (grandes ondes -> details fins) en coordonnees de cases
-    const fbm = (X,Y) => 0.55*Math.sin(X*1.7 + Y*1.0 + 0.5)
-                       + 0.30*Math.sin(X*1.0 - Y*2.1 + 2.4)
-                       + 0.22*Math.sin((X+Y)*3.4 + 4.1)
-                       + 0.15*Math.sin(X*5.1 - Y*3.7 + 1.1)
-                       + 0.10*Math.sin(X*7.3 + Y*6.1 + 2.7);
+    const fbm = (X,Y) => 0.34*Math.sin(X*1.4 + Y*0.9 + 0.5)      // ondes larges (variation lente)
+                       + 0.38*Math.sin(X*2.8 - Y*1.8 + 2.4)      // festons principaux (~2 cases)
+                       + 0.32*Math.sin(X*1.7 + Y*3.2 + 4.1)      // festons transverses
+                       + 0.18*Math.sin((X - Y)*4.6 + 1.1)        // detail
+                       + 0.10*Math.sin(X*7.1 + Y*6.0 + 2.7);     // grain fin
     const NMAX = 1.32, maxReach = REACH + AMP*NMAX + JIT*0.5;
     const distGrid = (px,py) => {
       let best = Infinity;
