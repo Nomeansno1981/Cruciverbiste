@@ -110,6 +110,33 @@ export function evaluerBadges(ctx = {}){
   return g;
 }
 
+// Badges rattrapables a posteriori depuis l'historique du joueur : grilles
+// terminees (compte), meilleur temps (rapidite), une reussite sans aide
+// (puriste) et la serie courante. Les badges « de l'instant » (premier a finir,
+// sur le fil, necromant) ne se decernent qu'au moment voulu, pas retroactivement.
+export function badgesRetroactifs(results, streakCount){
+  const g = [];
+  const solved = (results || []).filter(r => r && r.solved);
+  const n = solved.length;
+  if(n >= 1)   g.push("grilles-1");
+  if(n >= 10)  g.push("grilles-10");
+  if(n >= 100) g.push("grilles-100");
+  let minSec = Infinity, sansAide = false;
+  for(const r of solved){
+    if(typeof r.seconds === "number") minSec = Math.min(minSec, r.seconds);
+    if(r.hints === 0 && r.solutions === 0) sansAide = true;   // champs presents = reussite enregistree
+  }
+  if(minSec < 600) g.push("vitesse-10");
+  if(minSec < 300) g.push("vitesse-5");
+  if(minSec < 180) g.push("vitesse-3");
+  if(sansAide) g.push("puriste");
+  const s = streakCount || 0;
+  if(s >= 10)  g.push("serie-10");
+  if(s >= 50)  g.push("serie-50");
+  if(s >= 100) g.push("serie-100");
+  return g;
+}
+
 // Nombre de badges valides reellement acquis (ignore les cles inconnues).
 export function compterBadges(earned){
   return Object.keys(earned || {}).filter(id => BADGE_IDS.has(id)).length;
