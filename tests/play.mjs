@@ -172,6 +172,24 @@ await check("completer la grille declenche la victoire", async () => {
   if (shown !== 1) throw new Error("banniere de victoire absente");
 });
 
+await check("Rejouer : remet la grille à zéro (grille vidée, chrono et victoire annulés)", async () => {
+  // la grille vient d'etre resolue au controle precedent ; on la rejoue
+  await page.evaluate(() => window.__play.replay());
+  if (await page.evaluate(() => window.__play.isSolved())) throw new Error("grille encore marquee resolue");
+  if (await page.evaluate(() => window.__play.elapsedShown()) !== "0:00") throw new Error("chrono non remis a zero");
+  const filled = await page.evaluate(() => [[0,2],[0,3],[0,4],[0,5],[0,6],[0,7]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
+  if (filled !== "") throw new Error("des lettres subsistent apres Rejouer : « " + filled + " »");
+  if (await page.evaluate(() => window.__play.okWordCount()) !== 0) throw new Error("des mots restent valides");
+  if (await page.evaluate(() => window.__play.solvedWordCount()) !== 0) throw new Error("des mots restent donnes");
+  if (await page.evaluate(() => window.__play.hints()) !== 0) throw new Error("compteur d'indices non remis a zero");
+  if (await page.evaluate(() => window.__play.solutions()) !== 0) throw new Error("compteur de solutions non remis a zero");
+  if (await page.locator("#banner.show").count() !== 0) throw new Error("banniere de victoire encore visible");
+  // la grille repond de nouveau a la saisie
+  await page.evaluate(() => window.__play.selectClue("across", 1));
+  await page.keyboard.type("kobold");
+  if (await page.evaluate(() => window.__play.letterAt(0, 2)) !== "K") throw new Error("saisie impossible apres Rejouer");
+});
+
 await check("mobile : clavier integre visible, listes masquees, touche active", async () => {
   await page.setViewportSize({ width: 390, height: 780 });
   await page.reload();

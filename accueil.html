@@ -54,6 +54,7 @@
     </div>
     <div class="spacer"></div>
     <div class="meta">
+      <a class="atelier-link" id="atelierLink" href="atelier.html" hidden title="Ouvrir l'atelier (auteur)"><span aria-hidden="true">🛠️</span> Atelier</a>
       <span class="streak" id="streak" hidden></span>
       <span class="who" id="who"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></span>
     </div>
@@ -93,6 +94,9 @@ import { niveauPourXp } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+// Compte auteur : accès direct à l'atelier réservé (affichage seul ; la
+// sécurité de publication reste côté règles Firestore).
+const ADMIN_EMAIL = "nominesnow@gmail.com";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
@@ -147,7 +151,9 @@ async function googleLogin(){
   info("Connexion...");
   try{
     if(EMU_MODE){
-      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "joueur-test", email: "joueur@example.com", email_verified: true }));
+      // en test, #emu-admin simule le compte auteur (lien atelier réservé)
+      const asAdmin = location.hash.includes("admin");
+      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: asAdmin ? "admin-test" : "joueur-test", email: asAdmin ? ADMIN_EMAIL : "joueur@example.com", email_verified: true }));
       await m.signInWithCredential(auth, cred);
     } else {
       await m.signInWithPopup(auth, new m.GoogleAuthProvider());
@@ -288,6 +294,7 @@ let mounted = false;
 m.onAuthStateChanged(auth, async user => {
   if(!user){ gate.hidden = false; $("home").hidden = true; if(!mounted) info(""); return; }
   gate.hidden = true; $("home").hidden = false;
+  if(user.email === ADMIN_EMAIL) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
   if(mounted) return; mounted = true;
   try{ await buildHome(user); }catch(e){ window.__home.error = String(e); }
 });
