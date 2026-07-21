@@ -65,6 +65,20 @@ export function niveauPourXp(xpTotal){
 }
 
 export function monterJeu(PUZZLE, opts = {}){
+  // Grille absente ou malformee (document vide, sans cases ni mots) : on affiche
+  // un message clair au lieu d'une page blanche, et on ne monte pas le reste.
+  const jouable = !!(PUZZLE && PUZZLE.solution && typeof PUZZLE.solution === "object"
+    && Object.keys(PUZZLE.solution).length
+    && Array.isArray(PUZZLE.across) && Array.isArray(PUZZLE.down)
+    && (PUZZLE.across.length + PUZZLE.down.length)
+    && PUZZLE.rows > 0 && PUZZLE.cols > 0);
+  if(!jouable){
+    const b = document.getElementById("board");
+    if(b) b.innerHTML = '<p class="board-empty">Grille indisponible pour cette date.</p>';
+    for(const id of ["acrossList", "downList"]){ const el = document.getElementById(id); if(el) el.innerHTML = ""; }
+    const dateEl = document.getElementById("date"); if(dateEl){ try{ dateEl.textContent = opts.dateText || ""; }catch(e){} }
+    return { isSolved: () => false, elapsedShown: () => "0:00", type(){}, tapKey(){}, hint(){}, solution(){}, selectClue(){}, fillSolution(){} };
+  }
   const K = (r,c) => r + "," + c;
   const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);
   const norm = ch => (ch||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");

@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node tests/smoke.mjs",
     "test:play": "node tests/play.mjs",
+    "test:indisponible": "node tests/grille-indisponible.mjs",
     "test:score": "node tests/score.mjs",
     "test:tabs": "node tests/tabs.mjs",
     "test:sync": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/sync.mjs\"",

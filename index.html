@@ -153,6 +153,8 @@
   .clues .cluebody{flex:1; min-width:0}
   .clues .ctools{display:inline-flex; gap:2px; margin-left:6px; opacity:0; transition:opacity .12s; vertical-align:baseline}
   .clues li:hover .ctools, .clues li:focus-within .ctools{opacity:1}
+  /* écrans tactiles : pas de survol, on garde les boutons (modifier / ajouter) visibles, comme le dictionnaire */
+  @media (hover: none){ .clues .ctools{opacity:.55} }
   .clues .ctools .icon-btn{padding:1px 5px; font-size:13px}
   .definebox{display:flex; gap:6px}
   .definebox input{flex:1; font-family:var(--serif); font-size:14px; padding:5px 8px}
