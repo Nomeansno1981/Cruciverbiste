@@ -489,8 +489,10 @@ export function monterJeu(PUZZLE, opts = {}){
   function hint(){
     if(readonly || solved) return;
     const w = currentWord(); if(!w) return;
-    const t = w.cells.find(([r,c]) => !given[K(r,c)] && !correct(K(r,c)));
-    if(!t) return;
+    // une lettre AU HASARD parmi celles encore introuvables (ni déjà donnée, ni déjà correcte)
+    const cands = w.cells.filter(([r,c]) => !given[K(r,c)] && !correct(K(r,c)));
+    if(!cands.length) return;
+    const t = cands[Math.floor(Math.random() * cands.length)];
     const k = K(t[0], t[1]);
     user[k] = PUZZLE.solution[k]; given[k] = true; hintCount++;
     startTimer(); checkWords(); render(); checkSolved();
