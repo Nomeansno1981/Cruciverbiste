@@ -26,6 +26,7 @@ jobs:
           cp index.html _fire/atelier.html
           cp jeu.js _fire/jeu.js
           cp jeu.css _fire/jeu.css
+          cp -r icones _fire/icones
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
           tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
           for f in index.html accueil.html donjons.html publier.html jouer.html atelier.html; do

@@ -35,6 +35,7 @@ const server = http.createServer(async (req, res) => {
     const type = file.endsWith(".html") ? "text/html; charset=utf-8"
       : file.endsWith(".js") ? "text/javascript; charset=utf-8"
       : file.endsWith(".css") ? "text/css; charset=utf-8"
+      : file.endsWith(".svg") ? "image/svg+xml"
       : "application/octet-stream";
     res.writeHead(200, { "content-type": type });
     res.end(data);
@@ -163,13 +164,20 @@ await check("badges : le profil affiche les badges gagnes (couleur) et a debloqu
   await page.click("#profileBtn");
   await page.waitForSelector("#profileModal:not([hidden])");
   await page.waitForSelector("#badgeGrid .badge");
+  // les 13 icones SVG doivent effectivement se charger (chemins corrects, fichiers presents)
+  await page.waitForFunction(() => {
+    const imgs = document.querySelectorAll("#badgeGrid .badge img.badge-img");
+    return imgs.length === 13 && Array.from(imgs).every(im => im.complete);
+  }, null, { timeout: 5000 });
   const info = await page.evaluate(() => ({
     total: document.querySelectorAll("#badgeGrid .badge").length,
     gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
-    compteur: document.getElementById("badgesCount").textContent
+    compteur: document.getElementById("badgesCount").textContent,
+    imgCasses: Array.from(document.querySelectorAll("#badgeGrid .badge img.badge-img")).filter(im => im.naturalWidth === 0).length
   }));
   if (info.total !== 13) throw new Error("grille de badges incomplete : " + info.total + " (attendu 13)");
   if (info.gagnes < 3) throw new Error("badges gagnes non mis en couleur : " + info.gagnes);
+  if (info.imgCasses > 0) throw new Error(info.imgCasses + " icone(s) de badge ne se chargent pas (chemin ou fichier manquant)");
   if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
   await page.click("#closeProfile");
 });

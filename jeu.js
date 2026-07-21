@@ -69,19 +69,19 @@ export function niveauPourXp(xpTotal){
 // provisoire, en attendant les icones fournies ; `icon` (chemin/URL), s'il est
 // present, le remplace a l'affichage. `cat` regroupe les badges sur le profil.
 export const BADGES = [
-  { id: "grilles-1",   nom: "Touriste des catacombes",    cat: "Grilles terminées", emoji: "🗺️", desc: "Terminer une première grille." },
-  { id: "grilles-10",  nom: "Explorateur des profondeurs", cat: "Grilles terminées", emoji: "🏮", desc: "Terminer dix grilles." },
-  { id: "grilles-100", nom: "Maître des ténèbres",         cat: "Grilles terminées", emoji: "👑", desc: "Terminer cent grilles." },
-  { id: "vitesse-10",  nom: "Lame preste",        cat: "Rapidité", emoji: "🗡️", desc: "Terminer une grille en moins de 10 minutes." },
-  { id: "vitesse-5",   nom: "Vif comme l'éclair",  cat: "Rapidité", emoji: "⚡", desc: "Terminer une grille en moins de 5 minutes." },
-  { id: "vitesse-3",   nom: "Foudre de guerre",   cat: "Rapidité", emoji: "🌩️", desc: "Terminer une grille en moins de 3 minutes." },
-  { id: "premier",     nom: "Aux aguets", cat: "Rang du jour", emoji: "👁️", desc: "Être le premier à terminer la grille du jour." },
-  { id: "dernier",     nom: "Sur le fil", cat: "Rang du jour", emoji: "🌙", desc: "Terminer la grille du jour après 23 h 50." },
-  { id: "serie-10",  nom: "Braise ardente",  cat: "Série", emoji: "🔥", desc: "Atteindre une série de dix jours." },
-  { id: "serie-50",  nom: "Flamme vivace",   cat: "Série", emoji: "🎆", desc: "Atteindre une série de cinquante jours." },
-  { id: "serie-100", nom: "Brasier éternel", cat: "Série", emoji: "🌋", desc: "Atteindre une série de cent jours." },
-  { id: "puriste",     nom: "Puriste",     cat: "Talent", emoji: "💎", desc: "Terminer une grille sans aucun indice ni solution." },
-  { id: "archeologue", nom: "Archéologue", cat: "Talent", emoji: "🏺", desc: "Terminer une grille des archives (une grille précédente)." }
+  { id: "grilles-1",   nom: "Touriste des catacombes",    cat: "Grilles terminées", icon: "icones/grilles-1.svg",   emoji: "🗺️", desc: "Terminer une première grille." },
+  { id: "grilles-10",  nom: "Explorateur des profondeurs", cat: "Grilles terminées", icon: "icones/grilles-10.svg",  emoji: "🏮", desc: "Terminer dix grilles." },
+  { id: "grilles-100", nom: "Maître des ténèbres",         cat: "Grilles terminées", icon: "icones/grilles-100.svg", emoji: "👑", desc: "Terminer cent grilles." },
+  { id: "vitesse-10",  nom: "Lame preste",        cat: "Rapidité", icon: "icones/vitesse-10.svg", emoji: "🗡️", desc: "Terminer une grille en moins de 10 minutes." },
+  { id: "vitesse-5",   nom: "Vif comme l'éclair",  cat: "Rapidité", icon: "icones/vitesse-5.svg",  emoji: "⚡", desc: "Terminer une grille en moins de 5 minutes." },
+  { id: "vitesse-3",   nom: "Foudre de guerre",   cat: "Rapidité", icon: "icones/vitesse-3.svg",  emoji: "🌩️", desc: "Terminer une grille en moins de 3 minutes." },
+  { id: "premier",     nom: "Aux aguets", cat: "Rang du jour", icon: "icones/premier.svg", emoji: "👁️", desc: "Être le premier à terminer la grille du jour." },
+  { id: "dernier",     nom: "Sur le fil", cat: "Rang du jour", icon: "icones/dernier.svg", emoji: "🌙", desc: "Terminer la grille du jour après 23 h 50." },
+  { id: "serie-10",  nom: "Braise ardente",  cat: "Série", icon: "icones/serie-10.svg",  emoji: "🔥", desc: "Atteindre une série de dix jours." },
+  { id: "serie-50",  nom: "Flamme vivace",   cat: "Série", icon: "icones/serie-50.svg",  emoji: "🎆", desc: "Atteindre une série de cinquante jours." },
+  { id: "serie-100", nom: "Brasier éternel", cat: "Série", icon: "icones/serie-100.svg", emoji: "🌋", desc: "Atteindre une série de cent jours." },
+  { id: "puriste",   nom: "Puriste",   cat: "Talent", icon: "icones/puriste.svg",   emoji: "💎", desc: "Terminer une grille sans aucun indice ni solution." },
+  { id: "necromant", nom: "Nécromant", cat: "Talent", icon: "icones/necromant.svg", emoji: "💀", desc: "Ranimer une grille d'archive (terminer une grille précédente)." }
 ];
 const BADGE_IDS = new Set(BADGES.map(b => b.id));
 
@@ -104,7 +104,7 @@ export function evaluerBadges(ctx = {}){
   if(st >= 50)  g.push("serie-50");
   if(st >= 100) g.push("serie-100");
   if(ctx.noAid)        g.push("puriste");
-  if(ctx.isArchive)    g.push("archeologue");
+  if(ctx.isArchive)    g.push("necromant");
   if(ctx.lateFinish)   g.push("dernier");
   if(ctx.isFirstOfDay) g.push("premier");
   return g;
