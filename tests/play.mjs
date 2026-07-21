@@ -117,14 +117,20 @@ await check("un mot rempli correctement se valide (vert) et se verrouille", asyn
   if (still !== "K") throw new Error("une case validee a ete ecrasee : " + still);
 });
 
-await check("Indice revele une lettre du mot selectionne, verrouillee", async () => {
-  await page.evaluate(() => window.__play.selectClue("across", 7)); // VAMPIRE, vide
+await check("Indice revele une lettre (au hasard) du mot selectionne, verrouillee", async () => {
+  await page.evaluate(() => window.__play.selectClue("across", 7)); // VAMPIRE [3,3..3,9] = V A M P I R E, vide
+  const cells = [[3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9]];
+  const sol = { "3,3":"V","3,4":"A","3,5":"M","3,6":"P","3,7":"I","3,8":"R","3,9":"E" };
   const before = await page.evaluate(() => window.__play.hints());
   await page.click("#hintBtn");
   const after = await page.evaluate(() => window.__play.hints());
   if (after !== before + 1) throw new Error("compteur d'indices : " + before + " -> " + after);
-  if (!(await page.evaluate(() => window.__play.isGiven(3, 3)))) throw new Error("lettre revelee non marquee donnee");
-  if (await page.evaluate(() => window.__play.letterAt(3, 3)) !== "V") throw new Error("mauvaise lettre revelee");
+  // exactement une case du mot est révélée (donnée), n'importe laquelle, et c'est la bonne lettre
+  const given = await page.evaluate((cs) => cs.filter(([r,c]) => window.__play.isGiven(r,c)), cells);
+  if (given.length !== 1) throw new Error("attendu 1 case révélée, obtenu " + given.length);
+  const [r, c] = given[0];
+  const l = await page.evaluate(([r,c]) => window.__play.letterAt(r,c), [r,c]);
+  if (l !== sol[r+","+c]) throw new Error("mauvaise lettre révélée en " + r+","+c + " : " + l);
 });
 
 await check("Solution revele le mot en entier (rouge, jamais valide)", async () => {
@@ -144,12 +150,16 @@ await check("Solution revele le mot en entier (rouge, jamais valide)", async () 
 });
 
 await check("un mot complete avec un indice se valide (vert) tout en gardant l'indice rouge", async () => {
-  await page.evaluate(() => window.__play.selectClue("across", 5)); // SIRENE, vide
-  await page.click("#hintBtn");                                     // revele S en [1,9], rouge
-  await page.keyboard.type("sirene");                              // complete IRENE
+  const cells = [[1,9],[1,10],[1,11],[1,12],[1,13],[1,14]]; // SIRENE
+  await page.evaluate(() => window.__play.selectClue("across", 5)); // sel = première case, mot vide
+  await page.click("#hintBtn");                                     // révèle une case au hasard (rouge), sel inchangé
+  const hinted = await page.evaluate((cs) => cs.filter(([r,c]) => window.__play.isGiven(r,c)), cells);
+  if (hinted.length !== 1) throw new Error("indice non posé");
+  await page.keyboard.type("sirene");                              // complète depuis la 1re case (la case d'indice est sautée)
   if (!(await page.evaluate(() => window.__play.isOk(1, 10)))) throw new Error("le mot complete avec indice n'est pas valide");
-  if (!(await page.evaluate(() => window.__play.isOk(1, 9)))) throw new Error("la case d'indice n'appartient pas au mot valide");
-  if (!(await page.evaluate(() => window.__play.isGiven(1, 9)))) throw new Error("la lettre d'indice n'est plus marquee donnee (rouge)");
+  const [hr, hc] = hinted[0];
+  if (!(await page.evaluate(([r,c]) => window.__play.isOk(r,c), [hr,hc]))) throw new Error("la case d'indice n'appartient pas au mot valide");
+  if (!(await page.evaluate(([r,c]) => window.__play.isGiven(r,c), [hr,hc]))) throw new Error("la lettre d'indice n'est plus marquee donnee (rouge)");
 });
 
 await check("un mot valide vire au vert et le jeu enchaine sur le mot suivant", async () => {
