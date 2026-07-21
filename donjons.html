@@ -247,6 +247,15 @@ $("gSignin").onclick = () => emailLogin(false);
 $("gCreate").onclick = () => emailLogin(true);
 $("gPass").addEventListener("keydown", e => { if(e.key === "Enter") emailLogin(false); });
 
+// Une grille est jouable seulement si elle a des cases ET des mots ET des
+// dimensions : un simple champ solution ne suffit pas (un document vide ou
+// malforme passait, puis faisait planter le moteur sur une page blanche).
+function grilleJouable(p){
+  return !!(p && typeof p === "object"
+    && p.solution && typeof p.solution === "object" && Object.keys(p.solution).length
+    && Array.isArray(p.across) && Array.isArray(p.down) && (p.across.length + p.down.length)
+    && p.rows > 0 && p.cols > 0);
+}
 async function loadPuzzle(dateStr){
   try{
     const snap = await m.getDoc(m.doc(db, "puzzles", dateStr));
@@ -255,9 +264,14 @@ async function loadPuzzle(dateStr){
       // la grille est stockee en chaine JSON (Firestore refuse les tableaux imbriques)
       let p = data && data.puzzle;
       if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){ p = null; } }
-      if(p && p.solution){ window.__ddef.source = "firestore"; return p; }
+      if(grilleJouable(p)){ window.__ddef.source = "firestore"; return p; }
+      // le document existe mais la grille est vide ou malformee : message clair
+      // (le moteur affiche « Grille indisponible »), plutot que la demonstration
+      window.__ddef.source = "invalide";
+      return null;
     }
-  }catch(e){ /* base verrouillee ou hors-ligne : on joue la demonstration */ }
+  }catch(e){ window.__ddef.source = "erreur"; return DEMO_PUZZLE; }
+  // aucune grille publiee pour cette date : repli sur la demonstration
   window.__ddef.source = "demo";
   return DEMO_PUZZLE;
 }
