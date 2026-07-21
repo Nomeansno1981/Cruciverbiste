@@ -388,11 +388,18 @@ export function monterJeu(PUZZLE, opts = {}){
         let sMin=Infinity, sMax=-Infinity;
         for(const q of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=q[0]*perp[0]+q[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
         const BIG=cell*2;
+        let si=0;
         for(let s=sMin+gap*0.5; s<sMax; s+=gap){
           const bx=s*perp[0], by=s*perp[1];
           const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,v0,u1,v1);
           if(!cl) continue;
-          hatch += `M ${(x+cl[0]).toFixed(1)} ${(y+cl[1]).toFixed(1)} L ${(x+cl[2]).toFixed(1)} ${(y+cl[3]).toFixed(1)} `;
+          // longueur irreguliere : on rogne chaque extremite d'une fraction aleatoire
+          const t0=rnd(r*3+c*5+iu+iv*2+si*7+1, c*3+r*5+iu*2+iv+si*11+1)*0.34;
+          const t1=1 - rnd(r*5+c*3+iu*3+iv+si*13+2, c*7+r+iu+iv*3+si*5+2)*0.34;
+          const ax=cl[0]+(cl[2]-cl[0])*t0, ay=cl[1]+(cl[3]-cl[1])*t0;
+          const zx=cl[0]+(cl[2]-cl[0])*t1, zy=cl[1]+(cl[3]-cl[1])*t1;
+          hatch += `M ${(x+ax).toFixed(1)} ${(y+ay).toFixed(1)} L ${(x+zx).toFixed(1)} ${(y+zy).toFixed(1)} `;
+          si++;
         }
       }
       // gros caillou de forme irreguliere (polygone a rayons varies), bien dans la roche
@@ -414,7 +421,7 @@ export function monterJeu(PUZZLE, opts = {}){
     latticeSvg.innerHTML =
       greyRects +
       `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` +
-      `<path d="${pebbles.trim()}" fill="#efe9db" stroke="#1a1712" stroke-width="${pebbleW.toFixed(2)}" stroke-linejoin="round"/>` +
+      `<path d="${pebbles.trim()}" fill="#fff" stroke="#1a1712" stroke-width="${pebbleW.toFixed(2)}" stroke-linejoin="round"/>` +
       `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
       `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
       `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
