@@ -24,7 +24,7 @@
   .wrap{max-width:1240px; margin:0 auto; padding:22px 22px 60px}
 
   /* ---- header ---- */
-  header{display:flex; align-items:baseline; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--line); flex-wrap:wrap}
+  header{display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--line); flex-wrap:wrap}
   .mark{width:26px; height:26px; align-self:center; flex:0 0 auto}
   .brand{display:flex; align-items:center; gap:11px}
   h1{font-size:22px; letter-spacing:-.02em; font-weight:700; margin:0}
@@ -186,8 +186,6 @@
   .account{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted)}
   .account[hidden]{display:none}
   .account .btn-ghost{padding:4px 8px; font-size:12px}
-  .account .game-link{text-decoration:none; color:var(--accent); font-weight:700}
-  .account .game-link:hover{color:var(--accent); background:var(--accent-weak)}
   #authGate{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:24px}
   #authGate[hidden]{display:none}
   .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); padding:36px 40px; max-width:440px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px}
@@ -199,6 +197,12 @@
 
   /* ---- tampon de version (rempli au déploiement) ---- */
   .stamp{margin:26px 0 4px; text-align:center; font-size:11.5px; color:var(--muted); letter-spacing:.02em}
+
+  /* ---- mobile : barre du haut réduite comme le jeu (icône + lien + compte) ---- */
+  @media (max-width:859px){
+    header h1{display:none}                 /* ne garder que l'icône du titre, comme le jeu et l'accueil */
+    #accountMail{display:none}              /* l'adresse e-mail n'est pas essentielle sur mobile */
+  }
 
   /* ---- print ---- */
   @media print{
@@ -250,7 +254,6 @@
       </svg>
       <h1>Donjons &amp; Définitions</h1>
     </div>
-    <span class="sub">Atelier de l'auteur &nbsp;·&nbsp; dictionnaire, création et publication des grilles</span>
     <span class="hstatus" id="hstatus"></span>
     <span class="account" id="accountBar" hidden><a class="game-link" id="gameLink" href="accueil.html" title="Aller au jeu"><span aria-hidden="true">🎲</span><span>Jeu</span></a><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
