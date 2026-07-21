@@ -235,7 +235,9 @@ export function monterJeu(PUZZLE, opts = {}){
   const svgNS = "http://www.w3.org/2000/svg";
   const cellEls = {};
   let latticeSvg = null;
-  const HATCH = 0.82;   // marge autour de la grille (en cases) reservee a la bande de hachures
+  // marge autour de la grille (en cases) reservee a la bande de rocher : plus large
+  // sur ordinateur (bord organique ample) que sur mobile (on preserve la place de jeu).
+  const bandCells = () => (window.innerWidth < 860 ? 1.7 : 2.5);
 
   function buildBoard(){
     board.innerHTML = "";
@@ -260,17 +262,18 @@ export function monterJeu(PUZZLE, opts = {}){
     const mobile = window.innerWidth < 860;
     const cap = mobile ? 40 : 46;
     const availW = (gridarea.clientWidth || 700) - 2;
-    // on reserve la bande de hachures (HATCH case de chaque cote) dans le calcul
-    let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*HATCH)));
+    // on reserve la bande de rocher (bandCells() cases de chaque cote) dans le calcul
+    const band = bandCells();
+    let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*band)));
     if(mobile){
       const availH = gridarea.clientHeight - 2;
-      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*HATCH)));
+      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*band)));
     }
     cell = Math.max(16, c);
     const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
     board.style.width = W + "px";
     board.style.height = H + "px";
-    board.style.margin = Math.round(cell * HATCH) + "px";   // espace pour la bande de hachures
+    board.style.margin = Math.round(cell * bandCells()) + "px";   // espace pour la bande de rocher
     for(const k in cellEls){
       const [r,c2] = k.split(",").map(Number);
       const el = cellEls[k];
@@ -286,12 +289,11 @@ export function monterJeu(PUZZLE, opts = {}){
   //  - bords interieurs en pointilles ;
   //  - murs exterieurs epais ;
   //  - portes a la place des anciens diamants (frontieres entre mots) ;
-  //  - bande de hachures pavee en tuiles : chaque tuile est remplie de traits
-  //    paralleles (une direction), les tuiles voisines changent d'angle et se
-  //    rejoignent bord a bord sans se croiser, sans laisser de vide.
-  // Motif deterministe (indexe sur la case) : stable d'un affichage a l'autre.
+  //  - bande de rocher hachuree : tout l'espace vide est de la roche ; son bord
+  //    exterieur suit un champ de distance a la grille module par un bruit lisse
+  //    (cote organique, non aligne sur les cases) et le gris s'estompe au loin.
   function drawLattice(W, H){
-    const M = Math.round(cell * HATCH);
+    const M = Math.round(cell * bandCells());
     latticeSvg.setAttribute("width", W + 2*M); latticeSvg.setAttribute("height", H + 2*M);
     latticeSvg.setAttribute("viewBox", `${-M} ${-M} ${W + 2*M} ${H + 2*M}`);
     latticeSvg.style.left = -M + "px"; latticeSvg.style.top = -M + "px";
@@ -313,12 +315,9 @@ export function monterJeu(PUZZLE, opts = {}){
       return [x+cell,y, x+cell,y+cell];
     };
     const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
-    const small = cell < 26;                          // allege les hachures quand les cases sont petites (mobile)
-    const TILES = small ? 1 : 2, GAP = small ? 0.13 : 0.095, HD = small ? 0.40 : 0.46, HDV = small ? 0.24 : 0.32;
-    let interior="", outer="", hatch="", doors="";
-    // Bande de hachures pavee le long de chaque mur : chaque tuile est remplie de
-    // traits paralleles (une direction), tuiles voisines a angles differents,
-    // se rejoignant bord a bord sans se croiser ni laisser de vide (methode Dyson).
+    const small = cell < 26;                          // allege le rendu quand les cases sont petites (mobile)
+    let interior="", outer="", doors="", hatch="", greyRects="", pebbles="";
+    // 1) murs exterieurs epais, bords interieurs pointilles et portes : parcours des cases pleines.
     for(let r=0;r<PUZZLE.rows;r++) for(let c=0;c<PUZZLE.cols;c++){
       if(!has(r,c)) continue;
       for(const e of EDGES){
@@ -329,41 +328,102 @@ export function monterJeu(PUZZLE, opts = {}){
           continue;
         }
         if(isBar){
-          const mx=(x0+x1)/2, my=(y0+y1)/2, tx=(x1-x0)/cell, ty=(y1-y0)/cell;
-          const g=cell*0.30, jx=e.nx*cell*0.16, jy=e.ny*cell*0.16;
-          doors += `M ${x0} ${y0} L ${mx-tx*g} ${my-ty*g} M ${mx+tx*g} ${my+ty*g} L ${x1} ${y1} `;
-          doors += `M ${mx-tx*g} ${my-ty*g} l ${jx} ${jy} M ${mx+tx*g} ${my+ty*g} l ${jx} ${jy} `;
-          doors += `M ${mx-tx*g+jx} ${my-ty*g+jy} L ${mx+tx*g+jx} ${my+ty*g+jy} `;
+          // porte facon plan de donjon (grimrock) : une ouverture au milieu du mur,
+          // encadree par un petit cadre rectangulaire a cheval sur le mur.
+          const tx=(x1-x0)/cell, ty=(y1-y0)/cell;
+          const mx=(x0+x1)/2, my=(y0+y1)/2, half=cell*0.20, d=cell*0.11;
+          const ax=mx-tx*half, ay=my-ty*half, bx=mx+tx*half, by=my+ty*half;
+          doors += `M ${x0} ${y0} L ${ax.toFixed(1)} ${ay.toFixed(1)} M ${bx.toFixed(1)} ${by.toFixed(1)} L ${x1} ${y1} `;   // mur de part et d'autre de l'ouverture
+          doors += `M ${(ax+e.nx*d).toFixed(1)} ${(ay+e.ny*d).toFixed(1)} L ${(bx+e.nx*d).toFixed(1)} ${(by+e.ny*d).toFixed(1)} L ${(bx-e.nx*d).toFixed(1)} ${(by-e.ny*d).toFixed(1)} L ${(ax-e.nx*d).toFixed(1)} ${(ay-e.ny*d).toFixed(1)} Z `;   // cadre de la porte
           continue;
         }
-        outer += `M ${x0} ${y0} L ${x1} ${y1} `;
-        const utx=(x1-x0)/cell, uty=(y1-y0)/cell;
-        const L = cell/TILES, gap = cell*GAP;
-        for(let ti=0; ti<TILES; ti++){
-          const u0=ti*L, u1=(ti+1)*L;
-          const hc = rnd(r*7 + c*13 + e.ei*3 + ti*29 + 1, c*5 + r*11 + ti*17 + e.ei*23 + 1);
-          const hd = rnd(r*3 + c*19 + e.ei*11 + ti*7 + 2, c*29 + r*5 + ti*13 + 2);
-          const D = cell*(HD + HDV*hd);
-          const phi = Math.PI*0.5 + (hc-0.5)*1.8;
-          const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
-          let sMin=Infinity, sMax=-Infinity;
-          for(const cc of [[u0,0],[u1,0],[u0,D],[u1,D]]){ const s=cc[0]*perp[0]+cc[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
-          const BIG=L+D+10;
-          for(let s=sMin+gap*0.5; s<sMax; s+=gap){
-            const bx=s*perp[0], by=s*perp[1];
-            const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,0,u1,D);
-            if(!cl) continue;
-            const w1x=x0+utx*cl[0]+e.nx*cl[1], w1y=y0+uty*cl[0]+e.ny*cl[1];
-            const w2x=x0+utx*cl[2]+e.nx*cl[3], w2y=y0+uty*cl[2]+e.ny*cl[3];
-            hatch += `M ${w1x.toFixed(1)} ${w1y.toFixed(1)} L ${w2x.toFixed(1)} ${w2y.toFixed(1)} `;
-          }
-        }
+        outer += `M ${x0} ${y0} L ${x1} ${y1} `;   // mur exterieur
       }
     }
-    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032);
+    // 2) bande de rocher : tout l'espace vide est de la roche hachuree. Son bord
+    //    exterieur suit un champ de distance a la grille module par un bruit multi-
+    //    echelle, un gauchissement du domaine et un jitter par tuile -> lisiere tres
+    //    irreguliere et naturelle (facon Dyson Logos) ; quelques poches vides
+    //    subsistent au coeur (comme sur le modele). Deterministe (coord. de cases).
+    const bandN = cell ? M/cell : 2;
+    const winCells = Math.ceil(bandN) + 1;
+    const REACH = small ? 0.85 : 1.05, AMP = small ? 0.42 : 0.72, CORE = 0.5, JIT = small ? 0.3 : 0.5;
+    // bruit multi-echelle (grandes ondes -> details fins) en coordonnees de cases
+    const fbm = (X,Y) => 0.55*Math.sin(X*1.7 + Y*1.0 + 0.5)
+                       + 0.30*Math.sin(X*1.0 - Y*2.1 + 2.4)
+                       + 0.22*Math.sin((X+Y)*3.4 + 4.1)
+                       + 0.15*Math.sin(X*5.1 - Y*3.7 + 1.1)
+                       + 0.10*Math.sin(X*7.3 + Y*6.1 + 2.7);
+    const NMAX = 1.32, maxReach = REACH + AMP*NMAX + JIT*0.5;
+    const distGrid = (px,py) => {
+      let best = Infinity;
+      const cc = Math.floor(px/cell), cr = Math.floor(py/cell);
+      for(let r=cr-winCells; r<=cr+winCells; r++) for(let c=cc-winCells; c<=cc+winCells; c++){
+        if(!has(r,c)) continue;
+        const dx = Math.max(c*cell - px, 0, px - (c+1)*cell), dy = Math.max(r*cell - py, 0, py - (r+1)*cell);
+        const d = dx*dx + dy*dy; if(d<best) best=d;
+      }
+      return Math.sqrt(best)/cell;
+    };
+    // contour de la roche (profondeur en cases) : bruit gauchi + frange par tuile
+    const contourAt = (X,Y,ti,tj) => {
+      const wx = X + 0.6*Math.sin(Y*1.9 + 0.7), wy = Y + 0.6*Math.sin(X*1.7 + 2.3);   // gauchissement du domaine
+      const jit = (rnd(ti*13.1+7, tj*7.7+3) - 0.5) * JIT;                              // frange par tuile
+      return REACH + AMP*fbm(wx, wy) + jit;
+    };
+    const nT = small ? 3 : 4, gap = cell*(small ? 0.15 : 0.115);
+    const WASH = false;                                 // fond gris : true = degrade confine, false = supprime
+    for(let r=-winCells;r<PUZZLE.rows+winCells;r++) for(let c=-winCells;c<PUZZLE.cols+winCells;c++){
+      if(has(r,c)) continue;                            // case pleine = salle jouable
+      const x=c*cell, y=r*cell;
+      if(distGrid(x+cell/2, y+cell/2) - 0.72 > maxReach) continue;   // case hors de portee
+      for(let iu=0; iu<nT; iu++) for(let iv=0; iv<nT; iv++){
+        const u0=iu*cell/nT, u1=(iu+1)*cell/nT, v0=iv*cell/nT, v1=(iv+1)*cell/nT;
+        const cx=x+(u0+u1)/2, cy=y+(v0+v1)/2, dG=distGrid(cx,cy);
+        if(dG >= CORE && dG > contourAt(cx/cell, cy/cell, c*nT+iu, r*nT+iv)) continue;   // page ou poche interne
+        // fond gris confine pres des murs, degrade fort : nul des ~1 case -> plus de tuiles isolees au bord
+        const op = WASH ? 0.9*(1 - dG/1.05) : 0;
+        if(op > 0.05) greyRects += `<rect x="${(x+u0).toFixed(1)}" y="${(y+v0).toFixed(1)}" width="${(u1-u0).toFixed(1)}" height="${(v1-v0).toFixed(1)}" fill="#e5ddca" fill-opacity="${op.toFixed(2)}"/>`;
+        // hachures : traits courts a un angle propre a la tuile
+        const phi = rnd(r*7 + c*13 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + 1) * Math.PI;
+        const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
+        let sMin=Infinity, sMax=-Infinity;
+        for(const q of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=q[0]*perp[0]+q[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
+        const BIG=cell*2;
+        let si=0;
+        for(let s=sMin+gap*0.5; s<sMax; s+=gap){
+          const bx=s*perp[0], by=s*perp[1];
+          const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,v0,u1,v1);
+          if(!cl) continue;
+          // longueur irreguliere : on rogne chaque extremite d'une fraction aleatoire
+          const t0=rnd(r*3+c*5+iu+iv*2+si*7+1, c*3+r*5+iu*2+iv+si*11+1)*0.34;
+          const t1=1 - rnd(r*5+c*3+iu*3+iv+si*13+2, c*7+r+iu+iv*3+si*5+2)*0.34;
+          const ax=cl[0]+(cl[2]-cl[0])*t0, ay=cl[1]+(cl[3]-cl[1])*t0;
+          const zx=cl[0]+(cl[2]-cl[0])*t1, zy=cl[1]+(cl[3]-cl[1])*t1;
+          hatch += `M ${(x+ax).toFixed(1)} ${(y+ay).toFixed(1)} L ${(x+zx).toFixed(1)} ${(y+zy).toFixed(1)} `;
+          si++;
+        }
+      }
+      // gros caillou de forme irreguliere (polygone a rayons varies), bien dans la roche
+      const cgx=x+cell/2, cgy=y+cell/2, dGc=distGrid(cgx,cgy);
+      if((dGc < CORE || dGc <= REACH + AMP*fbm(cgx/cell, cgy/cell) - 0.2) && rnd(r*3+c*29+91, c*13+r*23+91) > 0.7){
+        const px=cgx + (rnd(r*5+c*7+3, c*3+r*9+3)-0.5)*cell*0.42, py=cgy + (rnd(r*9+c*3+5, c*7+r*5+5)-0.5)*cell*0.42;
+        const R0p=cell*(0.11+0.06*rnd(r+c+7, c+r+7)), nv=6+Math.floor(rnd(r*2+c*5+1, c*2+r*5+1)*4);
+        let dd="";
+        for(let k=0;k<nv;k++){
+          const ang=(k/nv)*6.2832 + (rnd(r*3+c+k*7, c*3+r+k*5)-0.5)*0.7;
+          const rad=R0p*(0.55 + 0.6*rnd(r+c*4+k*9, c+r*4+k*3));
+          dd += (k===0?"M ":"L ") + (px+Math.cos(ang)*rad).toFixed(1) + " " + (py+Math.sin(ang)*rad).toFixed(1) + " ";
+        }
+        pebbles += dd + "Z ";
+      }
+    }
+    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032), pebbleW = Math.max(0.8, cell*0.045);
     const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
     latticeSvg.innerHTML =
+      greyRects +
       `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` +
+      `<path d="${pebbles.trim()}" fill="#fff" stroke="#1a1712" stroke-width="${pebbleW.toFixed(2)}" stroke-linejoin="round"/>` +
       `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
       `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
       `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
