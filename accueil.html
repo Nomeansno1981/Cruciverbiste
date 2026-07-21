@@ -139,9 +139,11 @@ try{
 const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
 const app = m.initializeApp(cfg);
 const auth = m.getAuth(app);
-let db;
-try{ db = m.initializeFirestore(app, { localCache: m.persistentLocalCache({ tabManager: m.persistentMultipleTabManager() }) }); }
-catch(e){ db = m.initializeFirestore(app, {}); }
+// Cache mémoire seul (pas de persistance IndexedDB). La persistance multi-onglets
+// fait planter les lectures Firestore sur Safari : l'utilisateur se retrouvait
+// « connecté mais sans données » (profil, série, points, grilles vides). Les
+// lectures vont au serveur, ce qui convient à un jeu en ligne.
+const db = m.initializeFirestore(app, {});
 if(EMU_MODE){
   m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
