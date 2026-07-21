@@ -3,7 +3,13 @@
   "hosting": {
     "public": "_fire",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
   },
   "emulators": {
     "auth": { "port": 9099 },
