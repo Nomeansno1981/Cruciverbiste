@@ -132,7 +132,8 @@
   .gcontrols .grow{flex:1; min-width:120px}
   .toggle{display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink); cursor:pointer; user-select:none; white-space:nowrap}
   .toggle input{width:16px; height:16px; accent-color:var(--accent)}
-  .board{border:1px solid var(--line-2); border-radius:6px; background:#fff; padding:20px; display:flex; justify-content:center; align-items:center; min-height:200px; overflow:auto}
+  /* fond légèrement grisé : les cases pleines (blanches) ressortent, la silhouette des mots se lit d'un coup d'œil */
+  .board{border:1px solid var(--line); border-radius:6px; background:#ECE8E0; padding:20px; display:flex; justify-content:center; align-items:center; min-height:200px; overflow:auto}
   .board svg{max-width:100%; height:auto; display:block}
   .board.empty{color:var(--muted); font-family:var(--serif); font-style:italic; font-size:15px; text-align:center; padding:44px 20px}
   .gstats{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:12px 2px 0; font-size:13px; color:var(--muted)}
@@ -200,7 +201,7 @@
     .cols{display:block; margin:0}
     .panel{border:none; box-shadow:none}
     .body{padding:0}
-    .board{border:none; padding:0; justify-content:flex-start}
+    .board{border:none; padding:0; justify-content:flex-start; background:#fff}
     .print-title{display:block !important}
     .clues{page-break-inside:avoid}
     .definebox, .ctools, .clue-select{display:none !important}
