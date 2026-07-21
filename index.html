@@ -137,6 +137,7 @@
   .board.empty{color:var(--muted); font-family:var(--serif); font-style:italic; font-size:15px; text-align:center; padding:44px 20px}
   .gstats{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:12px 2px 0; font-size:13px; color:var(--muted)}
   .gstats .placed{font-family:var(--mono)}
+  .gstats .placed .warn{color:var(--accent); font-weight:600}
   .gstats .unplaced{color:var(--accent)}
   .gexport{display:flex; gap:8px; margin:14px 0 4px; flex-wrap:wrap}
 
@@ -902,73 +903,153 @@ function bbox(grid){
     if(r<minR)minR=r; if(r>maxR)maxR=r; if(c<minC)minC=c; if(c>maxC)maxC=c; }
   return { minR, minC, maxR, maxC, rows:maxR-minR+1, cols:maxC-minC+1 };
 }
-// Places words inside a maxW x maxH box, preferring crossings then least growth (denser, resserré).
-function generateOnce(entries, maxW, maxH){
+// Meilleur placement d'un mot dans la grille courante : parcourt les cases
+// occupées, aligne une lettre commune, teste les deux sens, et retient la
+// position qui croise le plus (x) en agrandissant le moins la boîte (growth).
+// Rend { r, c, dir, x, growth, nMin/Max..., score } ou null si rien ne tient.
+function bestPlacement(grid, bb, e, maxW, maxH){
+  let best = null;
+  for(const [k,cell] of grid){
+    const ci = k.indexOf(","); const cr = +k.slice(0,ci), cc = +k.slice(ci+1);
+    for(let idx=0; idx<e.letters.length; idx++){
+      if(e.letters[idx] !== cell.letter) continue;
+      for(const dir of [ACROSS,DOWN]){
+        const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
+        const r = cr - dr*idx, c = cc - dc*idx;
+        const x = canPlace(grid, e.letters, r, c, dir);
+        if(x <= 0) continue;
+        const eR = r + dr*(e.letters.length-1), eC = c + dc*(e.letters.length-1);
+        const nMinR = Math.min(bb.minR, r, eR), nMaxR = Math.max(bb.maxR, r, eR);
+        const nMinC = Math.min(bb.minC, c, eC), nMaxC = Math.max(bb.maxC, c, eC);
+        if((nMaxC-nMinC+1) > maxW || (nMaxR-nMinR+1) > maxH) continue;
+        const growth = ((nMaxR-nMinR+1)*(nMaxC-nMinC+1)) - (bb.rows*bb.cols);
+        // maillage d'abord : chaque croisement pèse lourd, un mot qui en croise
+        // deux (ou plus) est franchement préféré, et l'on grandit le moins possible
+        const score = x*100 + (x>=2 ? 70 : 0) - growth*4;
+        if(!best || score>best.score || (score===best.score && Math.random()<0.3))
+          best = { r, c, dir, x, growth, nMinR, nMaxR, nMinC, nMaxC, score };
+      }
+    }
+  }
+  return best;
+}
+// Croisements par mot : une case est « croisée » quand deux mots la partagent.
+// On compte les mots faiblement ancrés — 0 croisement (isolé) ou 1 seul (épine) —
+// car leurs lettres non croisées ne se déduisent d'aucun autre mot.
+function crossStats(res){
+  const count = new Map();
+  for(const p of res.placed){
+    const dr = p.dir===DOWN?1:0, dc = p.dir===ACROSS?1:0;
+    for(let k=0;k<p.letters.length;k++){
+      const kk = keyOf(p.r+dr*k, p.c+dc*k);
+      count.set(kk, (count.get(kk)||0)+1);
+    }
+  }
+  let spurs=0, isolated=0;
+  for(const p of res.placed){
+    const dr = p.dir===DOWN?1:0, dc = p.dir===ACROSS?1:0;
+    let checked=0;
+    for(let k=0;k<p.letters.length;k++){
+      if((count.get(keyOf(p.r+dr*k, p.c+dc*k))||0) >= 2) checked++;
+    }
+    if(checked===0) isolated++;
+    else if(checked===1) spurs++;
+  }
+  return { spurs, isolated };
+}
+// N'expose que du bien croisé : retire itérativement les mots à moins de deux
+// croisements (le « 2-core » du graphe des mots) jusqu'à stabilité. Une épine —
+// dont les lettres non croisées ne se déduisent d'aucun autre mot — n'est jamais
+// publiée : elle repart en réserve. Deux mots ne pouvant de toute façon pas
+// croiser davantage, ou un cœur qui s'effondrerait entièrement (grille en arbre),
+// on garde la grille telle quelle.
+function corePrune(res){
+  const cellsOf = p => { const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0, a=[];
+    for(let k=0;k<p.letters.length;k++) a.push(keyOf(p.r+dr*k, p.c+dc*k)); return a; };
+  let survivors = res.placed.slice();
+  for(;;){
+    if(!survivors.length) break;
+    const count = new Map();
+    for(const p of survivors) for(const kk of cellsOf(p)) count.set(kk, (count.get(kk)||0)+1);
+    const keep = [];
+    for(const p of survivors){
+      let deg = 0; for(const kk of cellsOf(p)) if(count.get(kk) >= 2) deg++;
+      if(deg >= 2) keep.push(p);
+    }
+    if(keep.length === survivors.length) break;     // stable : chaque mot croise ≥ 2 réponses
+    survivors = keep;
+  }
+  // cœur trop maigre (moins de deux mots) ou grille déjà propre : on ne touche à rien
+  if(survivors.length < 2 || survivors.length === res.placed.length) return res;
+  const kept = new Set(survivors);
+  const dropped = res.placed.filter(p => !kept.has(p));
+  const grid = new Map();
+  for(const p of survivors) put(grid, p, p.r, p.c, p.dir);
+  const bb = bbox(grid);
+  res.grid = grid; res.placed = survivors;
+  res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
+  let sumLen = 0; for(const p of survivors) sumLen += p.letters.length;
+  res.crossings = sumLen - res.filled;
+  res.unplaced = (res.unplaced || []).concat(dropped);
+  return res;
+}
+// Construit une grille dense visant « target » mots à l'intérieur d'une boîte
+// maxW x maxH. Glouton global : à chaque tour on place le meilleur (mot,
+// position) de toute la réserve, en privilégiant les croisements. On s'arrête à
+// la cible (nombre de mots adaptable aux contraintes de croisements).
+function generateOnce(entries, maxW, maxH, target){
   const cap = Math.max(maxW, maxH);
   const fitList = [], tooBig = [];
   for(const e of entries){ (e.letters.length <= cap ? fitList : tooBig).push(e); }
-  fitList.sort((a,b)=>b.letters.length - a.letters.length);
-  for(let i=fitList.length-1;i>0;i--){
-    if(fitList[i].letters.length===fitList[i-1].letters.length && Math.random()<0.5){
-      [fitList[i],fitList[i-1]]=[fitList[i-1],fitList[i]];
-    }
-  }
   if(!fitList.length) return { grid:new Map(), placed:[], unplaced:tooBig.slice(), minR:0, minC:0, rows:1, cols:1, filled:0 };
 
+  // graine : un mot long (ossature), tiré au sort parmi les plus longs pour varier les essais
+  const bySize = fitList.slice().sort((a,b)=>b.letters.length - a.letters.length);
+  const top = bySize.slice(0, Math.min(4, bySize.length));
+  const seed = top[Math.floor(Math.random()*top.length)];
+  const fitsA = seed.letters.length <= maxW, fitsD = seed.letters.length <= maxH;
+  const dir0 = (fitsA && fitsD) ? (Math.random()<0.5?ACROSS:DOWN) : (fitsA?ACROSS:DOWN);
   const grid = new Map(), placed = [];
-  const a0 = fitList[0];
-  const dir0 = a0.letters.length <= maxW ? ACROSS : DOWN;
-  put(grid, a0, 0, 0, dir0);
-  placed.push(Object.assign({}, a0, {r:0,c:0,dir:dir0}));
+  put(grid, seed, 0, 0, dir0);
+  placed.push(Object.assign({}, seed, {r:0,c:0,dir:dir0}));
   let bb = bbox(grid);
 
-  const tryPlace = (e) => {
-    let best = null;
-    for(const [k,cell] of grid){
-      const ci = k.indexOf(","); const cr = +k.slice(0,ci), cc = +k.slice(ci+1);
-      for(let idx=0; idx<e.letters.length; idx++){
-        if(e.letters[idx] !== cell.letter) continue;
-        for(const dir of [ACROSS,DOWN]){
-          const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
-          const r = cr - dr*idx, c = cc - dc*idx;
-          const x = canPlace(grid, e.letters, r, c, dir);
-          if(x <= 0) continue;
-          const eR = r + dr*(e.letters.length-1), eC = c + dc*(e.letters.length-1);
-          const nMinR = Math.min(bb.minR, r, eR), nMaxR = Math.max(bb.maxR, r, eR);
-          const nMinC = Math.min(bb.minC, c, eC), nMaxC = Math.max(bb.maxC, c, eC);
-          if((nMaxC-nMinC+1) > maxW || (nMaxR-nMinR+1) > maxH) continue;
-          const growth = ((nMaxR-nMinR+1)*(nMaxC-nMinC+1)) - (bb.rows*bb.cols);
-          const score = x*1000 - growth*3;
-          if(!best || score>best.score || (score===best.score && Math.random()<0.25))
-            best = { r, c, dir, nMinR, nMaxR, nMinC, nMaxC, score };
-        }
+  const remaining = fitList.filter(e => e !== seed);
+  while(placed.length < target && remaining.length){
+    let pick = null, pickIdx = -1;
+    for(let i=0;i<remaining.length;i++){
+      const cand = bestPlacement(grid, bb, remaining[i], maxW, maxH);
+      if(cand && (!pick || cand.score>pick.score || (cand.score===pick.score && Math.random()<0.3))){
+        pick = cand; pickIdx = i;
       }
     }
-    if(best){
-      put(grid, e, best.r, best.c, best.dir);
-      placed.push(Object.assign({}, e, {r:best.r,c:best.c,dir:best.dir}));
-      bb = { minR:best.nMinR, minC:best.nMinC, maxR:best.nMaxR, maxC:best.nMaxC, rows:best.nMaxR-best.nMinR+1, cols:best.nMaxC-best.nMinC+1 };
-      return true;
-    }
-    return false;
-  };
-
-  let unplaced = [];
-  for(let i=1;i<fitList.length;i++){ if(!tryPlace(fitList[i])) unplaced.push(fitList[i]); }
-  for(let pass=0; pass<2; pass++){ const still=[]; for(const e of unplaced){ if(!tryPlace(e)) still.push(e); } unplaced = still; }
-  unplaced = unplaced.concat(tooBig);
+    if(!pick) break;
+    const e = remaining.splice(pickIdx,1)[0];
+    put(grid, e, pick.r, pick.c, pick.dir);
+    placed.push(Object.assign({}, e, {r:pick.r,c:pick.c,dir:pick.dir}));
+    bb = { minR:pick.nMinR, minC:pick.nMinC, maxR:pick.nMaxR, maxC:pick.nMaxC, rows:pick.nMaxR-pick.nMinR+1, cols:pick.nMaxC-pick.nMinC+1 };
+  }
+  const unplaced = remaining.concat(tooBig);
   return { grid, placed, unplaced, minR:bb.minR, minC:bb.minC, rows:bb.rows, cols:bb.cols, filled:grid.size };
 }
-function generate(entries, maxW, maxH, attempts){
+// Retient, sur « attempts » tirages, la disposition au maillage le plus dense :
+// beaucoup de croisements, peu de mots faiblement ancrés, resserrée, proche de
+// la cible de mots. Le nombre de mots placés ne prime plus sur la densité.
+function generate(entries, maxW, maxH, attempts, target){
   let best = null;
   for(let i=0;i<attempts;i++){
-    const res = generateOnce(entries, maxW, maxH);
+    const res = generateOnce(entries, maxW, maxH, target);
+    corePrune(res);                       // on juge et retient la grille telle qu'elle sera publiée : sans épine
     const pc = res.placed.length;
+    if(pc < 1) continue;
     let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
     const crossings = sumLen - res.filled;
+    const { spurs, isolated } = crossStats(res);
     const area = res.rows * res.cols;
-    const sc = pc*100000 + crossings*1000 - area - Math.abs(res.rows-res.cols)*300;
-    if(!best || pc>best.pc || (pc===best.pc && sc>best.sc)) best = Object.assign(res, {pc, sc, crossings});
+    const over = Math.max(0, pc - target), under = Math.max(0, target - pc);
+    const sc = crossings*130 - spurs*320 - isolated*2600 - area*2
+             - Math.abs(res.rows-res.cols)*70 - over*300 - under*160;
+    if(!best || sc > best.sc) best = Object.assign(res, {pc, sc, crossings, spurs, isolated});
   }
   return best;
 }
@@ -1001,8 +1082,20 @@ function buildModel(res){
     (p.dir===ACROSS?across:down).push(item);
   }
   across.sort((a,b)=>a.num-b.num); down.sort((a,b)=>a.num-b.num);
-  return { cells, number, filled, rows, cols, across, down, bars, unplaced:res.unplaced, crossings:res.crossings||0 };
+  // qualité du maillage : taux de cases croisées et mots faiblement ancrés (0-1
+  // croisement) — repère utile au compositeur pour juger de la difficulté
+  const cnt = {};
+  for(const p of placed){ const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0;
+    for(let k=0;k<p.letters.length;k++){ const kk=keyOf(p.r+dr*k, p.c+dc*k); cnt[kk]=(cnt[kk]||0)+1; } }
+  let checkedCells = 0; for(const k in cnt) if(cnt[k] >= 2) checkedCells++;
+  let weak = 0; for(const p of placed){ const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0; let ch=0;
+    for(let k=0;k<p.letters.length;k++) if((cnt[keyOf(p.r+dr*k, p.c+dc*k)]||0) >= 2) ch++;
+    if(ch < 2) weak++; }
+  const checkedRatio = filledCount(cells) ? checkedCells / filledCount(cells) : 0;
+  return { cells, number, filled, rows, cols, across, down, bars, unplaced:res.unplaced,
+    crossings:res.crossings||0, checkedRatio, weak };
 }
+function filledCount(cells){ return Object.keys(cells).length; }
 // Rebuild the filled() lookup for a grid model restored from storage.
 function ensureFilled(model){
   if(typeof model.filled !== "function"){
@@ -1120,9 +1213,9 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  // les champs vides se préremplissent au défaut ferme : 15 x 15 (format du jeu)
-  if(!$("maxW").value) $("maxW").value = "15";
-  if(!$("maxH").value) $("maxH").value = "15";
+  // les champs vides se préremplissent au défaut ferme : 14 x 14 (format du jeu)
+  if(!$("maxW").value) $("maxW").value = "14";
+  if(!$("maxH").value) $("maxH").value = "14";
 }
 
 // Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
@@ -1219,7 +1312,13 @@ function renderGrid(animate){
   // stats
   $("gstats").hidden = false;
   const samp = currentModel.sampled;
+  // maillage : taux de cases croisées, et mots faiblement ancrés (0-1 croisement)
+  const dens = currentModel.checkedRatio != null
+    ? `<span class="fillinfo"> · ${Math.round(currentModel.checkedRatio*100)} % de cases croisées</span>`
+      + (currentModel.weak ? ` · <span class="warn">${currentModel.weak} mot${currentModel.weak>1?"s":""} peu ancré${currentModel.weak>1?"s":""}</span>` : "")
+    : "";
   $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
+    + dens
     + (samp ? `<span class="fillinfo"> · ${samp.rotated ? "rotation : les mots les moins utilisés dans vos grilles d'abord" : "tirage dans le dictionnaire"} (${samp.total} mots au total)${samp.extended ? ` · extension : +${samp.extended} de la réserve` : ""}</span>` : "");
   const up = currentModel.unplaced || [];
   $("unplacedStat").textContent = up.length
@@ -1412,49 +1511,34 @@ function selectPool(out, W, H){
   return { pool, rotated: out.length > cap && scored.some(x => x.u > 0) };
 }
 
-// Passe d'extension : une fois la meilleure grille retenue, toute la réserve
-// tente de se glisser dans les trous restants (mêmes primitives et même score
-// de placement que le prototype), les mots les moins utilisés d'abord.
-function extendGrid(res, extras, W, H, passes){
+// Passe de densification : une fois la meilleure grille retenue, la réserve
+// tente de se glisser dans les trous — mais on n'accepte que ce qui resserre le
+// maillage sans étaler la grille : un mot qui croise au moins deux réponses (ou
+// une seule sans agrandir la boîte). Les mots les moins utilisés d'abord.
+function extendGrid(res, extras, W, H, target){
   const grid = res.grid;
   let bb = bbox(grid);
   let added = 0;
+  const ceiling = target + 4;                 // marge de densification au-dessus de la cible
   const stems = new Set(res.placed.map(p => stemOf(p.letters)));
   const tryOne = (e) => {
     if(stems.has(stemOf(e.letters))) return false;
-    let best = null;
-    for(const [k, cell] of grid){
-      const ci = k.indexOf(","); const cr = +k.slice(0,ci), cc = +k.slice(ci+1);
-      for(let idx=0; idx<e.letters.length; idx++){
-        if(e.letters[idx] !== cell.letter) continue;
-        for(const dir of [ACROSS, DOWN]){
-          const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
-          const r = cr - dr*idx, c = cc - dc*idx;
-          const x = canPlace(grid, e.letters, r, c, dir);
-          if(x <= 0) continue;
-          const eR = r + dr*(e.letters.length-1), eC = c + dc*(e.letters.length-1);
-          const nMinR = Math.min(bb.minR, r, eR), nMaxR = Math.max(bb.maxR, r, eR);
-          const nMinC = Math.min(bb.minC, c, eC), nMaxC = Math.max(bb.maxC, c, eC);
-          if((nMaxC-nMinC+1) > W || (nMaxR-nMinR+1) > H) continue;
-          const growth = ((nMaxR-nMinR+1)*(nMaxC-nMinC+1)) - (bb.rows*bb.cols);
-          const score = x*1000 - growth*3;
-          if(!best || score > best.score) best = { r, c, dir, nMinR, nMaxR, nMinC, nMaxC, score };
-        }
-      }
-    }
-    if(!best) return false;
-    put(grid, e, best.r, best.c, best.dir);
-    res.placed.push(Object.assign({}, e, { r: best.r, c: best.c, dir: best.dir }));
+    const cand = bestPlacement(grid, bb, e, W, H);
+    // densifier, pas étaler : deux croisements, ou un seul mais sans agrandir
+    if(!cand || !((cand.x >= 2 && cand.growth <= 2) || (cand.x >= 1 && cand.growth <= 0))) return false;
+    put(grid, e, cand.r, cand.c, cand.dir);
+    res.placed.push(Object.assign({}, e, { r: cand.r, c: cand.c, dir: cand.dir }));
     stems.add(stemOf(e.letters));
-    bb = { minR:best.nMinR, minC:best.nMinC, maxR:best.nMaxR, maxC:best.nMaxC, rows:best.nMaxR-best.nMinR+1, cols:best.nMaxC-best.nMinC+1 };
+    bb = { minR:cand.nMinR, minC:cand.nMinC, maxR:cand.nMaxR, maxC:cand.nMaxC, rows:cand.nMaxR-cand.nMinR+1, cols:cand.nMaxC-cand.nMinC+1 };
     added++;
     return true;
   };
   let rest = extras.slice();
-  for(let p = 0; p < passes; p++){
+  for(let p = 0; p < 2; p++){
     const still = [];
-    for(const e of rest){ if(!tryOne(e)) still.push(e); }
+    for(const e of rest){ if(res.placed.length >= ceiling || !tryOne(e)) still.push(e); }
     rest = still;
+    if(res.placed.length >= ceiling) break;
   }
   res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
   let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
@@ -1469,20 +1553,24 @@ function doGenerate(){
     currentModel = null; renderGrid(false); return;
   }
   // dimensions (bounding box). Empty or too-small fields fall back to the
-  // default: 15 x 15 ferme (format du jeu); un mot plus long que la boîte n'est pas utilisé
+  // default: 14 x 14 ferme (format du jeu); un mot plus long que la boîte n'est pas utilisé
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
-  if(!W || W < 2){ W = 15; $("maxW").value = "15"; }
-  if(!H || H < 2){ H = 15; $("maxH").value = "15"; }
+  if(!W || W < 2){ W = 14; $("maxW").value = "14"; }
+  if(!H || H < 2){ H = 14; $("maxH").value = "14"; }
   const { pool, rotated } = selectPool(out, W, H);
   const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
-  // au-delà de quelques dizaines de mots, moins de tentatives : chacune est lourde
-  const attempts = Math.max(pool.length > 60 ? 60 : 150, Math.min(600, Math.round(6500 / pool.length)));
+  // cible de mots avant élagage : ~16 sur une 14×14 (aire/12). L'élagage des
+  // épines en retire deux ou trois, la grille publiée tombe autour de 14 mots
+  // tous bien croisés. Adaptable à la taille de la boîte et au vivier disponible.
+  const target = Math.max(6, Math.min(pool.length, Math.round((W * H) / 12)));
+  // le glouton global est plus lourd par tirage : on module le nombre de tirages
+  const attempts = Math.max(pool.length > 60 ? 40 : 60, Math.min(140, Math.round(2600 / pool.length)));
 
   $("genBtn").disabled = true; $("regenBtn").disabled = true;
   $("board").className = "board empty";
   $("board").textContent = pool.length > 60 ? "Génération… (beaucoup de mots, cela peut prendre quelques secondes)" : "Génération…";
   setTimeout(() => {
-    const best = generate(pool, W, H, attempts);
+    const best = generate(pool, W, H, attempts, target);
     // extension : la réserve entière tente de se glisser dans les trous,
     // les mots les moins présents dans les grilles enregistrées d'abord
     const inPool = new Set(pool.map(e => e.letters));
@@ -1492,8 +1580,9 @@ function doGenerate(){
       const usage = savedGridUsage();
       extras = extras.map(e => ({ e, u: usage(e), r: Math.random() }))
         .sort((a,b) => a.u - b.u || a.r - b.r).map(x => x.e);
-      extended = extendGrid(best, extras, W, H, 2);
+      extended = extendGrid(best, extras, W, H, target);
     }
+    corePrune(best);            // la densification a pu réintroduire une épine : dernier passage avant publication
     currentModel = buildModel(best);
     const eligible = out.length - tooLong.length;
     currentModel.sampled = pool.length < eligible ? { total: eligible, rotated, extended } : null;

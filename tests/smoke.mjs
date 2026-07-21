@@ -73,9 +73,9 @@ await check("une grille se génère réellement (cellules SVG présentes)", asyn
   if (cells < 10) throw new Error("seulement " + cells + " cellules");
 });
 
-await check("les dimensions proposées par défaut sont 15 x 15 (format du jeu)", async () => {
+await check("les dimensions proposées par défaut sont 14 x 14 (format du jeu)", async () => {
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "15" || h !== "15") throw new Error("proposé : " + w + " x " + h);
+  if (w !== "14" || h !== "14") throw new Error("proposé : " + w + " x " + h);
 });
 
 await check("les définitions horizontales et verticales sont listées", async () => {
@@ -360,7 +360,7 @@ await check("boîte ferme : un mot plus long que la grille n'est pas utilisé", 
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "15" || h !== "15") throw new Error("dimensions retenues : " + w + " x " + h);
+  if (w !== "14" || h !== "14") throw new Error("dimensions retenues : " + w + " x " + h);
   const words = await page.locator(".clues .definebox input").evaluateAll(
     els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1]));
   if (words.some(x => x && x.length > 25)) throw new Error("mot trop long placé : " + words.join(", "));
@@ -510,6 +510,46 @@ await check("export « Copier pour le jeu » : structure valide et coordonnées 
   }
   // pas de tableau imbriqué au premier niveau des champs simples (stockage JSON côté publication)
   if (typeof JSON.stringify(p) !== "string") throw new Error("sérialisation impossible");
+});
+
+await check("maillage dense sans épine : ~14 mots, tous croisant ≥ 2 réponses", async () => {
+  // liste réaliste façon jeu de rôle : le générateur vise ~14 mots au maillage
+  // serré et ne publie AUCUNE épine (mot à 0-1 croisement), la grille restant d'un
+  // seul tenant. On répète : la garantie doit tenir à chaque tirage.
+  await page.click("#newList");
+  await page.click("#toggleImport");
+  await page.fill("#pasteArea",
+    "dragon ; gobelin ; sortilege ; taverne ; paladin ; donjon ; grimoire ; arbalete ; potion ; elfe ; nain ; orque\n" +
+    "magie ; epee ; bouclier ; heros ; quete ; tresor ; heaume ; sorcier ; demon ; guilde ; auberge ; chateau ; archer ; barde ; voleur ; clerc ; geant ; troll");
+  await page.click("#parseBtn");
+  await page.fill("#maxW", "14");
+  await page.fill("#maxH", "14");
+  for (let t = 0; t < 5; t++) {
+    await page.click("#genBtn");
+    await page.waitForSelector("#board svg g.cell");
+    const p = await page.evaluate(() => window.__vcGamePuzzle());
+    const all = p.across.concat(p.down);
+    const count = new Map();
+    for (const w of all) for (const [r, c] of w.cells) { const k = r + "," + c; count.set(k, (count.get(k) || 0) + 1); }
+    // aucune épine : chaque mot croise au moins deux réponses
+    for (const w of all) {
+      let ch = 0; for (const [r, c] of w.cells) if ((count.get(r + "," + c) || 0) >= 2) ch++;
+      if (ch < 2) throw new Error("épine publiée au tirage " + t + " (mot à " + ch + " croisement)");
+    }
+    if (all.length < 8 || all.length > 20) throw new Error("nombre de mots hors cible : " + all.length);
+    // grille d'un seul tenant : toutes les cases sont reliées par des croisements
+    const cellKey = ([r, c]) => r + "," + c;
+    const idxOf = new Map(); all.forEach((w, i) => w.cells.forEach(c => { (idxOf.get(cellKey(c)) || idxOf.set(cellKey(c), []).get(cellKey(c))).push(i); }));
+    const adj = all.map(() => new Set());
+    for (const ids of idxOf.values()) for (const a of ids) for (const b of ids) if (a !== b) adj[a].add(b);
+    const seen = new Set([0]); const stack = [0];
+    while (stack.length) { const u = stack.pop(); for (const v of adj[u]) if (!seen.has(v)) { seen.add(v); stack.push(v); } }
+    if (seen.size !== all.length) throw new Error("grille en " + "plusieurs morceaux : " + seen.size + "/" + all.length + " mots reliés");
+  }
+  // la statistique affiche le taux de cases croisées, sans mention « peu ancré »
+  const stat = await page.locator("#placedStat").innerText();
+  if (!/cases croisées/.test(stat)) throw new Error("taux de croisement absent de la statistique : " + stat);
+  if (/peu ancré/.test(stat)) throw new Error("mot peu ancré publié malgré l'élagage : " + stat);
 });
 
 await check("aucune erreur JavaScript sur la page", async () => {
