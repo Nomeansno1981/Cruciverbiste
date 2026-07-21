@@ -501,6 +501,21 @@ function showBadgePopup(ids){
   $("badgeModal").hidden = false;
 }
 function closeBadge(){ $("badgeModal").hidden = true; }
+// « Aux aguets » : verrou « premier arrive » pour la grille d'une date. La
+// transaction atomique garantit qu'un seul joueur (le tout premier a resoudre)
+// pose le verrou et decroche le badge, meme en cas de resolutions simultanees.
+async function claimFirst(dateStr){
+  if(!CU) return false;
+  try{
+    const ref = m.doc(db, "premiers", dateStr);
+    return await m.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if(snap.exists()) return false;                    // quelqu'un a fini avant
+      tx.set(ref, { uid: CU.uid, at: m.serverTimestamp() });
+      return true;                                        // premier de la journee !
+    });
+  }catch(e){ window.__ddef.firstError = String(e); return false; }
+}
 
 window.__ddef.resize = resizeImage;
 window.__ddef.setPendingAvatar = d => { pendingAvatar = d; };
@@ -510,6 +525,15 @@ window.__ddef.lbProbe = async () => {
   const other = m.doc(db, "leaderboard", "intrus-" + (CU ? CU.uid : "x"));
   try{ await m.getDoc(other); out.read = "ok"; }catch(e){ out.read = (e && e.code) || String(e); }
   try{ await m.setDoc(other, { pseudo: "Intrus", total: 999999, months: {} }); out.write = "ok"; }catch(e){ out.write = (e && e.code) || String(e); }
+  return out;
+};
+// sonde des regles du verrou « premier » : usurper l'uid d'autrui est refuse,
+// poser sa propre fiche est permis
+window.__ddef.firstProbe = async () => {
+  const out = {};
+  const ref = m.doc(db, "premiers", "sonde-" + (CU ? CU.uid : "x"));
+  try{ await m.setDoc(ref, { uid: "un-autre-joueur" }); out.spoof = "ok"; }catch(e){ out.spoof = (e && e.code) || String(e); }
+  try{ await m.setDoc(ref, { uid: CU.uid }); out.self = "ok"; }catch(e){ out.self = (e && e.code) || String(e); }
   return out;
 };
 
@@ -614,9 +638,12 @@ m.onAuthStateChanged(auth, async user => {
       const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
       rs.forEach(ds => { const d = ds.data(); if(d && d.solved) totalSolved++; });
       const noAid = (stats.hints === 0 && stats.solutions === 0);
+      // « Aux aguets » : seul le tout premier a finir la grille du jour l'obtient
+      const isFirstOfDay = isToday ? await claimFirst(todayStr) : false;
       await awardBadges({
         totalSolved, seconds, streak: streakNow,
-        noAid, isArchive: !isToday, lateFinish: isToday && parisAvantMinuit()
+        noAid, isArchive: !isToday, lateFinish: isToday && parisAvantMinuit(),
+        isFirstOfDay
       });
     }catch(e){ window.__ddef.badgeError = String(e); }
     homeLink();

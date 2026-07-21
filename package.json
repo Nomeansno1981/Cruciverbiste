@@ -15,7 +15,8 @@
     "test:publish": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/publish.mjs\"",
     "test:atelier-publish": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/atelier-publish.mjs\"",
     "test:outils-auteur": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/outils-auteur.mjs\"",
-    "test:revue": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/revue.mjs\""
+    "test:revue": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/revue.mjs\"",
+    "test:premier": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/premier.mjs\""
   },
   "devDependencies": {
     "firebase-tools": "^14.0.0",
