@@ -77,7 +77,7 @@ export function monterJeu(PUZZLE, opts = {}){
     if(b) b.innerHTML = '<p class="board-empty">Grille indisponible pour cette date.</p>';
     for(const id of ["acrossList", "downList"]){ const el = document.getElementById(id); if(el) el.innerHTML = ""; }
     const dateEl = document.getElementById("date"); if(dateEl){ try{ dateEl.textContent = opts.dateText || ""; }catch(e){} }
-    return { isSolved: () => false, elapsedShown: () => "0:00", type(){}, tapKey(){}, hint(){}, solution(){}, selectClue(){}, fillSolution(){} };
+    return { isSolved: () => false, elapsedShown: () => "0:00", type(){}, tapKey(){}, hint(){}, solution(){}, selectClue(){}, fillSolution(){}, replay(){} };
   }
   const K = (r,c) => r + "," + c;
   const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);
@@ -96,7 +96,7 @@ export function monterJeu(PUZZLE, opts = {}){
   let hintCount = 0, solutionCount = 0;
   let muted = false; try{ muted = localStorage.getItem("dd-mute") === "1"; }catch(e){}
   let audioCtx = null;
-  let sel = null, solved = false, started = 0, tick = null, cell = 30;
+  let sel = null, solved = false, started = 0, tick = null, cell = 30, noSave = false;
 
   const correct = k => norm(user[k]) === norm(PUZZLE.solution[k]);
   const wordsAt = k => { const cw = cellWord[k]; return cw ? [cw.across, cw.down].filter(Boolean) : []; };
@@ -444,7 +444,24 @@ export function monterJeu(PUZZLE, opts = {}){
     const b = document.getElementById("banner");
     b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(secs)}. <b>+${xp} XP</b>`;
     b.classList.add("show");
-    if(opts.onSolved){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp }); }catch(e){ /* la page hote gere */ } }
+    if(opts.onSolved && !noSave){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp }); }catch(e){ /* la page hote gere */ } }
+  }
+  // Rejouer (outil d'auteur) : remet la grille a zero pour la retester. On
+  // n'enregistre plus de resultat ensuite — un essai ne doit pas ecraser le
+  // vrai resultat du jour ni toucher au classement.
+  function replay(){
+    noSave = true;
+    for(const k in user) delete user[k];
+    for(const k in given) delete given[k];
+    okWords.clear(); solvedWords.clear();
+    hintCount = 0; solutionCount = 0;
+    solved = false; sel = null;
+    if(tick){ clearInterval(tick); tick = null; }
+    started = 0;
+    const t = document.getElementById("timer"); if(t) t.textContent = "0:00";
+    board.classList.remove("done");
+    const b = document.getElementById("banner"); if(b){ b.classList.remove("show"); b.innerHTML = ""; }
+    gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
   }
   // Indice : revele une lettre encore introuvable du mot selectionne. La lettre
   // donnee reste rouge (given) et verrouillee ; si elle complete le mot, celui-ci
@@ -538,6 +555,7 @@ export function monterJeu(PUZZLE, opts = {}){
     currentClue: () => { const w = currentWord(); return w ? w.id : null; },
     wordHighlight: () => board.querySelectorAll(".cell.word").length,
     isSolved: () => solved,
+    replay: () => replay(),
     fillSolution: () => { for(const k in PUZZLE.solution) user[k] = PUZZLE.solution[k]; render(); checkSolved(); },
     elapsedShown: () => document.getElementById("timer").textContent,
     hint: () => hint(),

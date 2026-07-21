@@ -70,6 +70,8 @@ ol li.filled{color:var(--muted)}
 .tools{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
 button.tool{font-family:var(--sans); font-size:13px; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--ink); cursor:pointer}
 button.tool:hover{border-color:#d8cfbe}
+/* outils réservés à l'auteur : teinte accent discrète pour les distinguer */
+button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 
 /* clavier integre (masque sur ordinateur) */
 .kbd{display:none; flex-direction:column; gap:6px; width:100%; max-width:560px; touch-action:none}
@@ -112,6 +114,11 @@ button.tool:hover{border-color:#d8cfbe}
 .hdr-btn{display:inline-flex; align-items:center; gap:6px; background:none; border:1px solid var(--line); border-radius:999px; padding:4px 12px; cursor:pointer; color:var(--ink); font-size:12.5px; font-weight:600}
 .hdr-btn[hidden]{display:none}
 .hdr-btn:hover{border-color:#d8cfbe}
+.hdr-btn.hdr-admin{text-decoration:none; color:var(--accent-ink); border-color:#e6cfd0}
+/* accueil : lien direct vers l'atelier (auteur seul), même allure que les pastilles d'en-tête */
+.atelier-link{display:inline-flex; align-items:center; gap:5px; text-decoration:none; background:none; border:1px solid #e6cfd0; border-radius:999px; padding:4px 12px; color:var(--accent-ink); font-size:12.5px; font-weight:600}
+.atelier-link[hidden]{display:none}
+.atelier-link:hover{border-color:#d8a9ac}
 #boardModal{position:fixed; inset:0; z-index:60; background:rgba(28,27,20,.4); display:flex; align-items:center; justify-content:center; padding:18px}
 #boardModal[hidden]{display:none}
 .lb-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; width:100%; max-width:420px; max-height:88vh; overflow:auto; display:flex; flex-direction:column; gap:14px}
