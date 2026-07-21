@@ -254,9 +254,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .acct .mail{display:none}
   .mode{display:none}
   .timer{display:none}                                  /* barre du haut allégée : le temps est masqué */
-  .hdr-btn{display:none}                                 /* bouton Atelier masqué (jeu) */
-  .atelier-link{display:none}                            /* bouton Atelier masqué (accueil) : barre du haut normalisée */
-  .brand > div{display:none}                             /* ne garder que l'icône du titre (jeu ET accueil) */
+  .brand > div{display:none}                             /* ne garder que l'icône du titre partout (le lien de navigation reste visible) */
   .acct-btn{max-width:130px}
   h1{font-size:16px}
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
