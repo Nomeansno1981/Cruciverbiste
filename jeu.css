@@ -253,9 +253,10 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .date{display:none}
   .acct .mail{display:none}
   .mode{display:none}
-  .acct-btn{max-width:120px}
-  .hdr-btn-txt{display:none}
-  .hdr-btn{padding:4px 8px}
+  .timer{display:none}                                  /* barre du haut allégée : le temps est masqué */
+  .hdr-btn{display:none}                                /* bouton Atelier masqué dans le jeu (accessible depuis l'accueil) */
+  body:not(.page-accueil) .brand > div{display:none}    /* ne garder que l'icône du titre dans le jeu */
+  .acct-btn{max-width:130px}
   h1{font-size:16px}
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
   .gridarea{flex:1; min-height:0}
@@ -265,4 +266,6 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .kbd{display:flex; flex:none; padding-bottom:calc(4px + env(safe-area-inset-bottom))}
   .stamp{display:none}
   .banner{position:fixed; left:8px; right:8px; top:50%; transform:translateY(-50%); z-index:9; max-width:none}
+  /* en revue, le bandeau reste dans le flux (en haut) au lieu de recouvrir la grille et d'intercepter les appuis */
+  .banner.review{position:static; transform:none; left:auto; right:auto; z-index:auto; padding:8px 12px; font-size:13px}
 }

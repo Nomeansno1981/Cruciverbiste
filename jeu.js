@@ -559,7 +559,7 @@ export function monterJeu(PUZZLE, opts = {}){
     board.classList.remove("done");
     const kb = document.getElementById("kbd"); if(kb) kb.style.display = "";           // le clavier redevient piloté par le CSS
     for(const id of ["hintBtn", "solveBtn"]){ const el = document.getElementById(id); if(el) el.hidden = false; }
-    const b = document.getElementById("banner"); if(b){ b.classList.remove("show"); b.innerHTML = ""; }
+    const b = document.getElementById("banner"); if(b){ b.classList.remove("show", "review"); b.innerHTML = ""; }
     gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
   }
   // Revue en lecture seule (joueur ayant résolu la grille) : la grille complétée,
@@ -576,7 +576,7 @@ export function monterJeu(PUZZLE, opts = {}){
     for(const id of ["hintBtn", "solveBtn"]){ const el = document.getElementById(id); if(el) el.hidden = true; }
     const t = document.getElementById("timer"); if(t && rv.seconds != null) t.textContent = fmt(rv.seconds);
     const bn = document.getElementById("banner");
-    if(bn){ bn.innerHTML = 'Grille résolue. <b>En rouge</b>, les cases que vous avez dévoilées (indice ou solution).'; bn.classList.add("show"); }
+    if(bn){ bn.innerHTML = 'Grille résolue. <b>En rouge</b>, les cases que vous avez dévoilées (indice ou solution).'; bn.classList.add("show", "review"); }
     render();
   }
   // Indice : revele une lettre encore introuvable du mot selectionne. La lettre
@@ -668,6 +668,7 @@ export function monterJeu(PUZZLE, opts = {}){
 
   const api = {
     selectClue: (dir, num) => { const w = (dir==="across"?PUZZLE.across:PUZZLE.down).find(x => x.num===num); if(w) gotoClue(w, true); },
+    tapCell: (r, c) => onCellTap(r, c),   // simule un appui sur une case (selection + definition)
     type: s => { for(const ch of s) place(ch); },
     tapKey: ch => place(ch),
     letterAt: (r,c) => user[K(r,c)] || "",

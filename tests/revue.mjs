@@ -118,6 +118,28 @@ await check("revue : lecture seule — pas de clavier, pas d'indice, saisie sans
   if (before !== after) throw new Error("la saisie a modifié la grille en revue (" + before + " → " + after + ")");
 });
 
+await check("revue : cliquer une case affiche la définition du mot correspondant", async () => {
+  // (0,2) = K, début de KOBOLD (A1) ; (9,0) = I, début de INITIATIVE (A16)
+  await page.evaluate(() => window.__play.tapCell(0, 2));
+  const c1 = await page.evaluate(() => document.getElementById("cluebarTxt").textContent);
+  if (!/reptilien fouisseur/i.test(c1)) throw new Error("la barre ne montre pas la définition de la case cliquée : " + c1);
+  await page.evaluate(() => window.__play.tapCell(9, 0));
+  const c2 = await page.evaluate(() => document.getElementById("cluebarTxt").textContent);
+  if (!/ordre du combat/i.test(c2)) throw new Error("cliquer une autre case ne change pas la définition : " + c2);
+});
+
+await check("revue (mobile) : le bandeau « Grille résolue » reste dans le flux, il ne recouvre plus la grille", async () => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(150);
+  const info = await page.evaluate(() => ({
+    review: /\breview\b/.test(document.getElementById("banner").className),
+    position: getComputedStyle(document.getElementById("banner")).position
+  }));
+  if (!info.review) throw new Error("le bandeau de revue devrait porter la classe review");
+  if (info.position !== "static") throw new Error("sur mobile, le bandeau de revue doit être dans le flux (static), obtenu : " + info.position);
+  await page.setViewportSize({ width: 1000, height: 800 });
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });
