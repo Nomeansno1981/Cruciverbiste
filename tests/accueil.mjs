@@ -132,6 +132,9 @@ await check("serie, niveau et points refletent la reussite", async () => {
   if (!(s.niveau >= 1)) throw new Error("niveau non reflete : " + JSON.stringify(s));
   const dispXp = await player.evaluate(() => document.getElementById("statXp").textContent);
   if (Number(dispXp) !== s.totalXp) throw new Error("points affiches != calcules : " + dispXp + " / " + s.totalXp);
+  // le compteur « Badges » de l'accueil reflete les hauts faits gagnes au jeu
+  const nb = await player.evaluate(() => Number(document.getElementById("statBadges").textContent));
+  if (!(nb >= 1)) throw new Error("compteur de badges de l'accueil nul alors qu'une grille a ete reussie : " + nb);
 });
 
 await check("la liste des grilles precedentes montre l'ancienne, pas encore faite", async () => {
@@ -164,19 +167,29 @@ await check("le classement est affiche sur l'accueil, le joueur mis en avant (mo
   await player.evaluate(() => document.getElementById("lbTabMonth").click());   // on revient au mois pour la suite
 });
 
-await check("le profil s'ouvre depuis l'entete, affiche le niveau et enregistre le pseudo", async () => {
+await check("le profil s'ouvre depuis l'entete : niveau, badges, et enregistrement du pseudo", async () => {
   await player.click("#who");
   await player.waitForSelector("#profileModal:not([hidden])");
   await player.waitForSelector("#histList li");
-  const boxHidden = await player.evaluate(() => document.getElementById("levelBox").hidden);
-  if (boxHidden) throw new Error("bloc de niveau masque dans le profil");
+  await player.waitForSelector("#badgeGrid .badge.on");
+  const info = await player.evaluate(() => ({
+    boxHidden: document.getElementById("levelBox").hidden,
+    total: document.querySelectorAll("#badgeGrid .badge").length,
+    gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
+    compteur: document.getElementById("badgesCount").textContent
+  }));
+  if (info.boxHidden) throw new Error("bloc de niveau masque dans le profil");
+  if (info.total !== 13) throw new Error("grille de badges incomplete au profil : " + info.total);
+  if (info.gagnes < 1) throw new Error("aucun badge gagne affiche au profil : " + info.gagnes);
+  if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
   await player.fill("#pseudoInput", "Rolista");
   await player.click("#saveProfile");
   await player.waitForFunction(() => window.__home.profile && window.__home.profile.pseudo === "Rolista");
   const hp = await player.evaluate(() => document.getElementById("hdrPseudo").textContent);
   if (hp !== "Rolista") throw new Error("pseudo entete apres enregistrement : " + hp);
-  const closed = await player.evaluate(() => { document.getElementById("closeProfile").click(); return document.getElementById("profileModal").hidden; });
-  if (closed !== true) throw new Error("le bouton Fermer n'a pas masque la fenetre de profil");
+  // saveProfile ferme la fenetre de lui-meme
+  const closed = await player.evaluate(() => document.getElementById("profileModal").hidden);
+  if (closed !== true) throw new Error("la fenetre de profil devrait se fermer apres enregistrement");
 });
 
 await check("depuis l'accueil connecte, la grille du jour s'ouvre sans redemander la connexion", async () => {

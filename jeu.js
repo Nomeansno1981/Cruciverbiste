@@ -64,6 +64,75 @@ export function niveauPourXp(xpTotal){
   };
 }
 
+// ---- Badges : hauts faits du joueur ----
+// Definitions partagees (jeu + accueil). `emoji` illustre le badge de facon
+// provisoire, en attendant les icones fournies ; `icon` (chemin/URL), s'il est
+// present, le remplace a l'affichage. `cat` regroupe les badges sur le profil.
+export const BADGES = [
+  { id: "grilles-1",   nom: "Touriste des catacombes",    cat: "Grilles terminées", emoji: "🗺️", desc: "Terminer une première grille." },
+  { id: "grilles-10",  nom: "Explorateur des profondeurs", cat: "Grilles terminées", emoji: "🏮", desc: "Terminer dix grilles." },
+  { id: "grilles-100", nom: "Maître des ténèbres",         cat: "Grilles terminées", emoji: "👑", desc: "Terminer cent grilles." },
+  { id: "vitesse-10",  nom: "Lame preste",        cat: "Rapidité", emoji: "🗡️", desc: "Terminer une grille en moins de 10 minutes." },
+  { id: "vitesse-5",   nom: "Vif comme l'éclair",  cat: "Rapidité", emoji: "⚡", desc: "Terminer une grille en moins de 5 minutes." },
+  { id: "vitesse-3",   nom: "Foudre de guerre",   cat: "Rapidité", emoji: "🌩️", desc: "Terminer une grille en moins de 3 minutes." },
+  { id: "premier",     nom: "Aux aguets", cat: "Rang du jour", emoji: "👁️", desc: "Être le premier à terminer la grille du jour." },
+  { id: "dernier",     nom: "Sur le fil", cat: "Rang du jour", emoji: "🌙", desc: "Terminer la grille du jour après 23 h 50." },
+  { id: "serie-10",  nom: "Braise ardente",  cat: "Série", emoji: "🔥", desc: "Atteindre une série de dix jours." },
+  { id: "serie-50",  nom: "Flamme vivace",   cat: "Série", emoji: "🎆", desc: "Atteindre une série de cinquante jours." },
+  { id: "serie-100", nom: "Brasier éternel", cat: "Série", emoji: "🌋", desc: "Atteindre une série de cent jours." },
+  { id: "puriste",     nom: "Puriste",     cat: "Talent", emoji: "💎", desc: "Terminer une grille sans aucun indice ni solution." },
+  { id: "archeologue", nom: "Archéologue", cat: "Talent", emoji: "🏺", desc: "Terminer une grille des archives (une grille précédente)." }
+];
+const BADGE_IDS = new Set(BADGES.map(b => b.id));
+
+// Badges pour lesquels le joueur QUALIFIE au vu d'une resolution et de ses
+// totaux. Fonction pure : la page hote fait la difference avec ceux deja acquis
+// (on n'attribue jamais deux fois, et un badge deja gagne reste acquis).
+export function evaluerBadges(ctx = {}){
+  const g = [];
+  const t = ctx.totalSolved || 0;
+  if(t >= 1)   g.push("grilles-1");
+  if(t >= 10)  g.push("grilles-10");
+  if(t >= 100) g.push("grilles-100");
+  if(typeof ctx.seconds === "number"){
+    if(ctx.seconds < 600) g.push("vitesse-10");
+    if(ctx.seconds < 300) g.push("vitesse-5");
+    if(ctx.seconds < 180) g.push("vitesse-3");
+  }
+  const st = ctx.streak || 0;
+  if(st >= 10)  g.push("serie-10");
+  if(st >= 50)  g.push("serie-50");
+  if(st >= 100) g.push("serie-100");
+  if(ctx.noAid)        g.push("puriste");
+  if(ctx.isArchive)    g.push("archeologue");
+  if(ctx.lateFinish)   g.push("dernier");
+  if(ctx.isFirstOfDay) g.push("premier");
+  return g;
+}
+
+// Nombre de badges valides reellement acquis (ignore les cles inconnues).
+export function compterBadges(earned){
+  return Object.keys(earned || {}).filter(id => BADGE_IDS.has(id)).length;
+}
+
+// Rendu de la grille de badges dans un conteneur (profil des deux pages).
+// `earned` : objet { id: date }, un badge absent est affiche grise (a debloquer).
+export function rendreBadges(container, earned = {}){
+  if(!container) return;
+  container.innerHTML = "";
+  for(const b of BADGES){
+    const acquis = !!(earned && earned[b.id]);
+    const el = document.createElement("div");
+    el.className = "badge" + (acquis ? " on" : "");
+    el.title = b.nom + " — " + b.desc + (acquis ? "" : " (à débloquer)");
+    const ico = b.icon ? '<img class="badge-img" alt="" src="' + b.icon + '">' : b.emoji;
+    el.innerHTML = '<span class="badge-ico" aria-hidden="true">' + ico + '</span>'
+      + '<span class="badge-nom"></span>';
+    el.querySelector(".badge-nom").textContent = b.nom;
+    container.appendChild(el);
+  }
+}
+
 export function monterJeu(PUZZLE, opts = {}){
   // Grille absente ou malformee (document vide, sans cases ni mots) : on affiche
   // un message clair au lieu d'une page blanche, et on ne monte pas le reste.

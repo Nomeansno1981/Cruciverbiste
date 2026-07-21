@@ -124,6 +124,10 @@
       <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
       <div class="level-next" id="levelNext"></div>
     </div>
+    <div class="badges">
+      <h3>Vos badges <span class="badges-count" id="badgesCount"></span></h3>
+      <div class="badge-grid" id="badgeGrid"></div>
+    </div>
     <div class="hist">
       <h3>Vos grilles reussies</h3>
       <ul id="histList"></ul>
@@ -132,8 +136,17 @@
   </div>
 </div>
 
+<div id="badgeModal" hidden>
+  <div class="badge-card">
+    <div class="badge-burst" aria-hidden="true">✦</div>
+    <h2 id="badgeTitle">Nouveau badge !</h2>
+    <ul class="badge-won" id="badgeWon"></ul>
+    <div class="profile-row"><button class="gate-btn primary" id="closeBadge" type="button">Superbe !</button></div>
+  </div>
+</div>
+
 <script type="module">
-import { monterJeu, DEMO_PUZZLE, niveauPourXp } from "./jeu.js";
+import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, rendreBadges, compterBadges } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -415,6 +428,8 @@ function openProfile(){
   $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
   $("profileModal").hidden = false;
   renderHistory();
+  if(badgesCache) renderBadges();               // affichage immediat si connu
+  loadBadges().then(renderBadges);              // puis rafraichissement
 }
 function closeProfile(){ $("profileModal").hidden = true; }
 async function saveProfile(){
@@ -432,6 +447,61 @@ async function saveProfile(){
   }catch(e){ $("pStatus").textContent = "Enregistrement impossible : " + ((e && e.message) || e); $("pStatus").classList.add("warn"); }
 }
 
+// ---- badges (hauts faits) ----
+let badgesCache = null;   // { id: dateObtenue } des badges deja acquis
+async function loadBadges(){
+  try{
+    const snap = await m.getDoc(m.doc(db, "users", CU.uid, "state", "badges"));
+    badgesCache = (snap.exists() && snap.data().earned) ? snap.data().earned : {};
+  }catch(e){ badgesCache = badgesCache || {}; }
+  window.__ddef.badges = badgesCache;
+  return badgesCache;
+}
+function renderBadges(){
+  rendreBadges($("badgeGrid"), badgesCache || {});
+  $("badgesCount").textContent = compterBadges(badgesCache || {}) + " / " + BADGES.length;
+}
+// heure de Paris : vrai dans les dix dernieres minutes avant minuit (« Sur le fil »)
+function parisAvantMinuit(){
+  try{
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+    const [h, mi] = p.split(":").map(Number);
+    return h === 23 && mi >= 50;
+  }catch(e){ return false; }
+}
+// decerne les badges nouvellement obtenus (jamais deux fois) et les annonce
+async function awardBadges(ctx){
+  if(!CU) return [];
+  const earned = badgesCache || await loadBadges();
+  const nouveaux = evaluerBadges(ctx).filter(id => !earned[id]);
+  window.__ddef.newBadges = nouveaux;
+  if(!nouveaux.length) return [];
+  const today = parisDate();
+  for(const id of nouveaux) earned[id] = today;
+  badgesCache = earned;
+  try{ await m.setDoc(m.doc(db, "users", CU.uid, "state", "badges"), { earned }, { merge: true }); }
+  catch(e){ window.__ddef.badgeError = String(e); }
+  window.__ddef.badges = earned;
+  showBadgePopup(nouveaux);
+  return nouveaux;
+}
+function showBadgePopup(ids){
+  const list = $("badgeWon"); list.innerHTML = "";
+  const defs = ids.map(id => BADGES.find(b => b.id === id)).filter(Boolean);
+  for(const b of defs){
+    const ico = b.icon ? '<img class="badge-img" alt="" src="' + b.icon + '">' : b.emoji;
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="badge-ico" aria-hidden="true">' + ico + '</span>'
+      + '<span class="badge-won-txt"><span class="badge-won-nom"></span><span class="badge-won-desc"></span></span>';
+    li.querySelector(".badge-won-nom").textContent = b.nom;
+    li.querySelector(".badge-won-desc").textContent = b.desc;
+    list.appendChild(li);
+  }
+  $("badgeTitle").textContent = defs.length > 1 ? (defs.length + " nouveaux badges !") : "Nouveau badge !";
+  $("badgeModal").hidden = false;
+}
+function closeBadge(){ $("badgeModal").hidden = true; }
+
 window.__ddef.resize = resizeImage;
 window.__ddef.setPendingAvatar = d => { pendingAvatar = d; };
 // sonde des regles du classement : lecture d'autrui autorisee, ecriture refusee
@@ -446,6 +516,8 @@ window.__ddef.lbProbe = async () => {
 $("profileBtn").onclick = openProfile;
 $("closeProfile").onclick = closeProfile;
 $("saveProfile").onclick = saveProfile;
+$("closeBadge").onclick = closeBadge;
+$("badgeModal").addEventListener("click", e => { if(e.target === $("badgeModal")) closeBadge(); });
 $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
 $("profileModal").addEventListener("click", e => { if(e.target === $("profileModal")) closeProfile(); });
 $("pickAvatar").onclick = () => $("avatarInput").click();
@@ -523,6 +595,7 @@ m.onAuthStateChanged(auth, async user => {
     // publie la fiche de classement mise a jour (toutes grilles confondues)
     await updateLeaderboard();
     // la serie ne compte que la grille du jour ; une grille precedente ne la touche pas
+    let streakNow = window.__ddef.streak || 0;   // serie courante (inchangee hors du jour)
     if(isToday){
       try{
         const sref = m.doc(db, "users", user.uid, "state", "streak");
@@ -530,10 +603,22 @@ m.onAuthStateChanged(auth, async user => {
         const n = nextStreakCount(cur.exists() ? cur.data() : null, todayStr);
         await m.setDoc(sref, { count: n, lastDate: todayStr, at: m.serverTimestamp() });
         setStreak(n);
+        streakNow = n;
         const b = document.getElementById("banner");
         if(b && b.classList.contains("show")) b.innerHTML += ` Serie : ${n} jour${n > 1 ? "s" : ""}.`;
       }catch(e){ window.__ddef.streakError = String(e); }
     }
+    // badges : on compte les grilles reussies et on decerne les nouveaux hauts faits
+    try{
+      let totalSolved = 0;
+      const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
+      rs.forEach(ds => { const d = ds.data(); if(d && d.solved) totalSolved++; });
+      const noAid = (stats.hints === 0 && stats.solutions === 0);
+      await awardBadges({
+        totalSolved, seconds, streak: streakNow,
+        noAid, isArchive: !isToday, lateFinish: isToday && parisAvantMinuit()
+      });
+    }catch(e){ window.__ddef.badgeError = String(e); }
     homeLink();
   };
 

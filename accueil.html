@@ -130,6 +130,10 @@
       <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
       <div class="level-next" id="levelNext"></div>
     </div>
+    <div class="badges">
+      <h3>Vos badges <span class="badges-count" id="badgesCount"></span></h3>
+      <div class="badge-grid" id="badgeGrid"></div>
+    </div>
     <div class="hist">
       <h3>Vos grilles reussies</h3>
       <ul id="histList"></ul>
@@ -138,7 +142,7 @@
 </div>
 
 <script type="module">
-import { niveauPourXp } from "./jeu.js";
+import { niveauPourXp, BADGES, rendreBadges, compterBadges } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -340,6 +344,8 @@ function openProfile(){
   $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
   $("profileModal").hidden = false;
   renderHistory();
+  if(badgesCache) renderBadges();
+  loadBadges().then(renderBadges);
 }
 function closeProfile(){ $("profileModal").hidden = true; }
 async function saveProfile(){
@@ -355,6 +361,21 @@ async function saveProfile(){
     updateLeaderboard();   // rafraichit le pseudo affiche au classement
     closeProfile();
   }catch(e){ $("pStatus").textContent = "Enregistrement impossible : " + ((e && e.message) || e); $("pStatus").classList.add("warn"); }
+}
+
+// ---- badges (hauts faits) : affichage seul ; l'attribution se fait dans le jeu ----
+let badgesCache = null;
+async function loadBadges(){
+  try{
+    const snap = await m.getDoc(m.doc(db, "users", CU.uid, "state", "badges"));
+    badgesCache = (snap.exists() && snap.data().earned) ? snap.data().earned : {};
+  }catch(e){ badgesCache = badgesCache || {}; }
+  window.__home.badges = badgesCache;
+  return badgesCache;
+}
+function renderBadges(){
+  rendreBadges($("badgeGrid"), badgesCache || {});
+  $("badgesCount").textContent = compterBadges(badgesCache || {}) + " / " + BADGES.length;
 }
 
 // ---- classement (mensuel + cumule), affiche directement sur l'accueil ----
@@ -482,6 +503,14 @@ async function buildHome(user){
   $("statLevelSub").textContent = niv.titre;
   $("statXp").textContent = totalXp;
   window.__home.stats = { streak, totalXp, niveau: niv.niveau, done: done.size };
+
+  // badges obtenus : compteur « Badges » de l'accueil (le détail est au profil)
+  try{
+    await loadBadges();
+    $("statBadges").textContent = compterBadges(badgesCache);
+    const sub = $("statBadges").parentElement.querySelector(".stat-s");
+    if(sub) sub.textContent = "sur " + BADGES.length;
+  }catch(e){}
 
   // etat de la grille du jour
   if(done.has(todayKey)){
