@@ -78,9 +78,13 @@ await check("résolution avec un indice (A1) et une solution (D6), puis victoire
 
 await check("réouverture : revue en lecture seule (isReview, grille complétée)", async () => {
   await page.reload();
-  // l'auth persiste : on remonte directement, sinon on re-connecte
-  const gate = await page.locator("#gGoogle:not([disabled])").count().catch(() => 0);
-  if (gate) { await page.click("#gGoogle"); }
+  // l'auth persiste généralement au reload : on remonte directement. Le bouton
+  // « Se connecter » reste dans le DOM même quand l'écran de connexion est masqué
+  // (un count() est donc trompeur, d'où l'ancien timeout) : on ne reclique que
+  // s'il est réellement visible, et on ignore l'échec si l'auth se résout entre-temps.
+  if (await page.locator("#gGoogle").isVisible().catch(() => false)) {
+    await page.click("#gGoogle").catch(() => {});
+  }
   await page.waitForSelector("#board .cell");
   await page.waitForFunction(() => window.__play && window.__play.isReview && window.__play.isReview());
   if (!(await page.evaluate(() => window.__ddef.review))) throw new Error("le mode revue n'est pas signalé");
@@ -89,12 +93,17 @@ await check("réouverture : revue en lecture seule (isReview, grille complétée
 });
 
 await check("revue : cases dévoilées en rouge, reste en vert", async () => {
-  // A1 (KOBOLD) a reçu un indice → la case 0,2 est « donnée » (lettre rouge), son mot reste vert
-  if (!(await page.evaluate(() => window.__play.isGiven(0, 2)))) throw new Error("la case d'indice n'est pas marquée rouge");
-  if (!(await page.evaluate(() => window.__play.isOk(0, 3)))) throw new Error("une case trouvée par le joueur n'est pas verte");
-  // D6 (MAGE) donné par Solution → cases rouges (fond)
+  // A1 (KOBOLD, cases (0,2)→(0,7)) a reçu un indice sur UNE case au hasard (l'indice
+  // n'est plus déterministe) : cette case est « donnée » (lettre rouge) et tout le
+  // mot reste « ok » (fond vert), les autres cases ayant été trouvées par le joueur.
+  const kob = await page.evaluate(() => [[0,2],[0,3],[0,4],[0,5],[0,6],[0,7]]
+    .map(([r,c]) => ({ r, c, given: window.__play.isGiven(r,c), ok: window.__play.isOk(r,c) })));
+  const givens = kob.filter(x => x.given);
+  if (givens.length !== 1) throw new Error("attendu exactement une case d'indice (rouge) dans KOBOLD, obtenu " + givens.length + " : " + JSON.stringify(kob));
+  if (!kob.every(x => x.ok)) throw new Error("tout le mot d'indice devrait rester vert (ok) : " + JSON.stringify(kob));
+  // D6 (MAGE) donné en entier par « Solution » → cases au fond rouge (solved)
   if (!(await page.evaluate(() => window.__play.isSolvedCell(3, 4)))) throw new Error("le mot donné n'est pas marqué rouge");
-  const bg = await page.evaluate(() => { const el = document.querySelectorAll("#board .cell.solved"); return el.length; });
+  const bg = await page.evaluate(() => document.querySelectorAll("#board .cell.solved").length);
   if (bg < 1) throw new Error("aucune case au fond rouge (solved)");
 });
 

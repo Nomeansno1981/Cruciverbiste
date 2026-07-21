@@ -56,7 +56,7 @@
     <div class="meta">
       <a class="atelier-link" id="atelierLink" href="atelier.html" hidden title="Ouvrir l'atelier (auteur)"><span aria-hidden="true">🛠️</span> Atelier</a>
       <span class="streak" id="streak" hidden></span>
-      <span class="who" id="who"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></span>
+      <button class="who" id="who" type="button" title="Votre profil"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
     </div>
   </header>
 
@@ -80,6 +80,16 @@
     <div class="stat"><div class="stat-k">Badges</div><div class="stat-v" id="statBadges">0</div><div class="stat-s">à venir</div></div>
   </section>
 
+  <section class="archive board-home">
+    <h2>Classement</h2>
+    <div class="lb-tabs">
+      <button class="lb-tab on" id="lbTabMonth" type="button">Ce mois-ci</button>
+      <button class="lb-tab" id="lbTabAll" type="button">Depuis toujours</button>
+    </div>
+    <ol class="lb-list" id="lbList"><li class="lb-empty">Chargement...</li></ol>
+    <p class="lb-status" id="lbStatus"></p>
+  </section>
+
   <section class="archive">
     <h2>Grilles précédentes</h2>
     <ul class="grid-list" id="gridList"><li class="gl-empty">Chargement...</li></ul>
@@ -87,6 +97,44 @@
 
   <div class="home-foot"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
   <div class="stamp">version de travail</div>
+</div>
+
+<div id="profileModal" hidden>
+  <div class="profile-card">
+    <h2>Votre profil</h2>
+    <div class="profile-top">
+      <span class="avatar" id="pAvatar"></span>
+      <div class="profile-fields">
+        <label for="pseudoInput">Pseudo</label>
+        <input type="text" id="pseudoInput" maxlength="24" placeholder="Votre pseudo" autocomplete="off">
+        <div class="avatar-actions">
+          <button class="linklike" id="pickAvatar" type="button">Changer la photo</button>
+          <button class="linklike" id="removeAvatar" type="button">Retirer</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="avatarInput" accept="image/*" hidden>
+    <p class="pstatus" id="pStatus"></p>
+    <div class="profile-row">
+      <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
+      <button class="gate-btn primary" id="saveProfile" type="button">Enregistrer</button>
+    </div>
+    <div class="level" id="levelBox" hidden>
+      <div class="level-head">
+        <span class="level-rank" id="levelNum">1</span>
+        <div class="level-txt">
+          <div class="level-title" id="levelTitle">Roturier</div>
+          <div class="level-xp"><b id="xpTotal">0</b> XP au total</div>
+        </div>
+      </div>
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+      <div class="level-next" id="levelNext"></div>
+    </div>
+    <div class="hist">
+      <h3>Vos grilles reussies</h3>
+      <ul id="histList"></ul>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -189,6 +237,28 @@ $("gCreate").onclick = () => emailLogin(true);
 $("gPass").addEventListener("keydown", e => { if(e.key === "Enter") emailLogin(false); });
 $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
 
+// profil : ouverture depuis l'entete (le pseudo/avatar), edition et avatar
+$("who").onclick = openProfile;
+$("closeProfile").onclick = closeProfile;
+$("saveProfile").onclick = saveProfile;
+$("profileModal").addEventListener("click", e => { if(e.target === $("profileModal")) closeProfile(); });
+$("pickAvatar").onclick = () => $("avatarInput").click();
+$("removeAvatar").onclick = () => { pendingAvatar = ""; fillAvatar($("pAvatar"), "", $("pseudoInput").value || "J"); };
+$("avatarInput").onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
+  try{ pendingAvatar = await resizeImage(f, 128); fillAvatar($("pAvatar"), pendingAvatar, ""); }
+  catch(err){ $("pStatus").textContent = "Image illisible."; $("pStatus").classList.add("warn"); }
+  e.target.value = "";
+};
+// classement : bascule entre le mois en cours et le cumul
+$("lbTabMonth").onclick = () => setLbTab("month");
+$("lbTabAll").onclick = () => setLbTab("all");
+// crochets de test (parite avec le jeu)
+window.__home.resize = resizeImage;
+window.__home.setPendingAvatar = d => { pendingAvatar = d; };
+
 // ---- serie ----
 function prevDate(ds){ const [y,mo,d] = ds.split("-").map(Number); const dt = new Date(Date.UTC(y, mo-1, d, 12, 0, 0)); dt.setUTCDate(dt.getUTCDate() - 1); return dt.toISOString().slice(0, 10); }
 function effectiveStreak(doc, today){ if(!doc || !doc.lastDate) return 0; if(doc.lastDate === today || doc.lastDate === prevDate(today)) return doc.count || 0; return 0; }
@@ -196,6 +266,168 @@ const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><
 
 function initial(s){ return ((s || "?").trim().charAt(0) || "?").toUpperCase(); }
 function fillAvatar(el, av, txt){ if(av){ el.innerHTML = '<img alt="" src="' + av + '">'; } else { el.textContent = initial(txt); } }
+
+// ---- profil (avatar, pseudo, historique, niveau), editable depuis l'entete ----
+let CU = null;                 // utilisateur courant
+let profile = { pseudo: "", avatar: "" };
+let pendingAvatar = null;      // avatar choisi mais pas encore enregistre
+
+function setHeaderProfile(){
+  const name = profile.pseudo || (CU && CU.email ? CU.email.split("@")[0] : "Joueur");
+  $("hdrPseudo").textContent = name;
+  fillAvatar($("hdrAvatar"), profile.avatar, name);
+}
+// redimensionne l'image cote navigateur en un petit carre (data URL), rangee
+// avec le profil sans service de stockage
+function resizeImage(file, size){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      canvas.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
+    img.src = url;
+  });
+}
+function renderLevel(total){
+  const box = $("levelBox");
+  if(!box) return;
+  const n = niveauPourXp(total);
+  $("levelNum").textContent = n.niveau;
+  $("levelTitle").textContent = n.titre;
+  $("xpTotal").textContent = total;
+  $("levelFill").style.width = Math.round(Math.min(1, Math.max(0, n.progression)) * 100) + "%";
+  $("levelNext").textContent = n.max
+    ? "Rang maximal atteint."
+    : "Encore " + (n.prochain - total) + " XP avant « " + n.titreProchain + " ».";
+  box.hidden = false;
+}
+async function renderHistory(){
+  const ul = $("histList"); ul.innerHTML = "";
+  const box = $("levelBox");
+  if(box) box.hidden = true;
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc")));
+    if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
+    let total = 0, anyXp = false;
+    snap.forEach(ds => {
+      const d = ds.data();
+      let label = ds.id;
+      try{ const [y, mo, da] = ds.id.split("-").map(Number); label = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }catch(e){}
+      const t = (typeof d.seconds === "number") ? (Math.floor(d.seconds / 60) + ":" + String(d.seconds % 60).padStart(2, "0")) : "";
+      const hasXp = typeof d.xp === "number";
+      if(hasXp){ total += d.xp; anyXp = true; }
+      const right = (hasXp ? d.xp + " XP · " : "") + t;
+      const li = document.createElement("li");
+      li.innerHTML = "<span>" + label + '</span><span class="t">' + right + "</span>";
+      ul.appendChild(li);
+    });
+    if(anyXp) renderLevel(total);
+  }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
+}
+function openProfile(){
+  if(!CU) return;
+  pendingAvatar = null;
+  $("pseudoInput").value = profile.pseudo || "";
+  fillAvatar($("pAvatar"), profile.avatar, profile.pseudo || (CU.email ? CU.email.split("@")[0] : "J"));
+  $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
+  $("profileModal").hidden = false;
+  renderHistory();
+}
+function closeProfile(){ $("profileModal").hidden = true; }
+async function saveProfile(){
+  if(!CU) return;
+  const pseudo = ($("pseudoInput").value || "").trim().slice(0, 24);
+  const avatar = (pendingAvatar !== null) ? pendingAvatar : profile.avatar;
+  $("pStatus").textContent = "Enregistrement..."; $("pStatus").classList.remove("warn");
+  try{
+    await m.setDoc(m.doc(db, "users", CU.uid, "state", "profile"), { pseudo, avatar, updatedAt: m.serverTimestamp() }, { merge: true });
+    profile = { pseudo, avatar };
+    window.__home.profile = { pseudo, avatar };
+    setHeaderProfile();
+    updateLeaderboard();   // rafraichit le pseudo affiche au classement
+    closeProfile();
+  }catch(e){ $("pStatus").textContent = "Enregistrement impossible : " + ((e && e.message) || e); $("pStatus").classList.add("warn"); }
+}
+
+// ---- classement (mensuel + cumule), affiche directement sur l'accueil ----
+function escapeHtml(s){ return (s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
+function monthKeyNow(){ return parisDate().slice(0, 7); }
+// (re)publie la fiche de classement du joueur : pseudo, XP totale et XP par mois,
+// recalculees a partir de toutes ses grilles reussies (robuste aux reprises).
+async function updateLeaderboard(){
+  if(!CU) return;
+  try{
+    const snap = await m.getDocs(m.collection(db, "users", CU.uid, "results"));
+    let total = 0; const months = {};
+    snap.forEach(ds => {
+      const d = ds.data();
+      if(typeof d.xp !== "number") return;
+      total += d.xp;
+      const mk = String(d.date || ds.id || "").slice(0, 7);
+      if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
+    });
+    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0] : "Joueur");
+    window.__home.myBoard = { pseudo, total, months };
+    if(total > 0){ await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() }); }
+    // refleter aussitot le nouveau pseudo/total dans le tableau deja affiche (sans recharger)
+    if(lbCache){
+      const mine = lbCache.find(e => e.uid === CU.uid);
+      if(mine){ mine.pseudo = pseudo; mine.total = total; mine.months = months; }
+      else if(total > 0){ lbCache.push({ uid: CU.uid, pseudo, total, months }); }
+      renderBoard();
+    }
+  }catch(e){ window.__home.leaderboardError = String(e); }
+}
+let lbCache = null, lbTab = "month";
+async function loadBoard(){
+  if(!CU) return;
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "leaderboard"), m.orderBy("total", "desc"), m.limit(500)));
+    lbCache = [];
+    snap.forEach(ds => { const d = ds.data(); lbCache.push({ uid: ds.id, pseudo: d.pseudo || "Joueur", total: d.total || 0, months: d.months || {} }); });
+    renderBoard();
+  }catch(e){ window.__home.boardError = String(e); $("lbStatus").textContent = "Classement indisponible pour l'instant."; }
+}
+function setLbTab(tab){
+  lbTab = tab;
+  $("lbTabMonth").classList.toggle("on", tab === "month");
+  $("lbTabAll").classList.toggle("on", tab === "all");
+  if(lbCache) renderBoard();
+}
+function renderBoard(){
+  const mk = monthKeyNow();
+  const rows = (lbCache || [])
+    .map(e => ({ uid: e.uid, pseudo: e.pseudo, val: lbTab === "month" ? (e.months[mk] || 0) : e.total }))
+    .filter(e => e.val > 0)
+    .sort((a, b) => b.val - a.val);
+  const ol = $("lbList"); ol.innerHTML = "";
+  if(!rows.length){
+    ol.innerHTML = '<li class="lb-empty">' + (lbTab === "month" ? "Aucun score ce mois-ci." : "Personne au classement pour l'instant.") + "</li>";
+    $("lbStatus").textContent = "";
+    window.__home.board = [];
+    return;
+  }
+  rows.slice(0, 100).forEach((e, i) => {
+    const li = document.createElement("li");
+    if(CU && e.uid === CU.uid) li.className = "me";
+    li.innerHTML = '<span class="lb-rank">' + (i + 1) + '</span>'
+      + '<span class="avatar lb-av">' + escapeHtml(initial(e.pseudo)) + '</span>'
+      + '<span class="lb-name">' + escapeHtml(e.pseudo) + '</span>'
+      + '<span class="lb-xp">' + e.val + ' XP</span>';
+    ol.appendChild(li);
+  });
+  const myIdx = CU ? rows.findIndex(e => e.uid === CU.uid) : -1;
+  $("lbStatus").textContent = myIdx >= 0 ? ("Vous êtes " + (myIdx + 1) + (myIdx === 0 ? "er" : "e") + " sur " + rows.length + ".") : "";
+  window.__home.board = rows.map(r => ({ uid: r.uid, pseudo: r.pseudo, val: r.val }));
+}
 
 // ---- compte a rebours jusqu'a la prochaine grille (minuit, heure de Paris) ----
 function msToNextParisMidnight(){
@@ -222,12 +454,10 @@ async function buildHome(user){
   $("heroDate").textContent = labelFromKey(todayKey);
   startCountdown();
 
-  // profil (pseudo, avatar) affiche dans l'entete
-  let profile = { pseudo: "", avatar: "" };
-  try{ const ps = await m.getDoc(m.doc(db, "users", user.uid, "state", "profile")); if(ps.exists()){ const d = ps.data(); profile = { pseudo: d.pseudo || "", avatar: d.avatar || "" }; } }catch(e){}
-  const name = profile.pseudo || (user.email ? user.email.split("@")[0] : "Joueur");
-  $("hdrPseudo").textContent = name;
-  fillAvatar($("hdrAvatar"), profile.avatar, name);
+  // profil (pseudo, avatar) affiche dans l'entete, editable via la fenetre de profil
+  try{ const ps = await m.getDoc(m.doc(db, "users", user.uid, "state", "profile")); const d = ps.exists() ? ps.data() : {}; profile = { pseudo: d.pseudo || "", avatar: d.avatar || "" }; }catch(e){ profile = { pseudo: "", avatar: "" }; }
+  window.__home.profile = { pseudo: profile.pseudo, avatar: profile.avatar };
+  setHeaderProfile();
 
   // resultats du joueur : dates faites + total d'XP
   const done = new Set();
@@ -289,12 +519,16 @@ async function buildHome(user){
     window.__home.archiveCount = n;
   }catch(e){ ul.innerHTML = '<li class="gl-empty">Liste indisponible pour l\'instant.</li>'; window.__home.archiveError = String(e); }
 
+  // classement affiche directement sur l'accueil (onglet du mois par defaut)
+  await loadBoard();
+
   window.__home.ready = true;
 }
 
 let mounted = false;
 m.onAuthStateChanged(auth, async user => {
-  if(!user){ gate.hidden = false; $("home").hidden = true; if(!mounted) info(""); return; }
+  if(!user){ CU = null; closeProfile(); gate.hidden = false; $("home").hidden = true; if(!mounted) info(""); return; }
+  CU = user;
   gate.hidden = true; $("home").hidden = false;
   if(user.email === ADMIN_EMAIL) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
   if(mounted) return; mounted = true;

@@ -178,8 +178,12 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 
 /* ---- page d'accueil (accueil.html) ---- */
 .home{display:flex; flex-direction:column; gap:18px}
-.who{display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:999px; padding:3px 11px 3px 3px; color:var(--ink); font-size:12.5px; font-weight:600; max-width:180px}
+.who{display:inline-flex; align-items:center; gap:7px; background:none; border:1px solid var(--line); border-radius:999px; padding:3px 11px 3px 3px; color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:600; max-width:180px; cursor:pointer}
+.who:hover{border-color:#d8cfbe}
 .who .pseudo{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* classement affiche directement sur l'accueil (reutilise les styles .lb-*) */
+.board-home .lb-tabs{margin-bottom:10px}
+.board-home .lb-status{margin-top:8px; text-align:left}
 .hero{display:flex; gap:18px; flex-wrap:wrap; align-items:center; background:linear-gradient(180deg,#ffffff,#fbf6ef); border:1px solid var(--line); border-radius:16px; padding:22px 24px}
 .hero-main{flex:1 1 260px; min-width:0}
 .hero-label{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent)}
