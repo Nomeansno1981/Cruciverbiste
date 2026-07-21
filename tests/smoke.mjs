@@ -498,6 +498,9 @@ await check("export « Copier pour le jeu » : structure valide et coordonnées 
   // une grille est présente (générée au contrôle précédent)
   const p = await page.evaluate(() => window.__vcGamePuzzle());
   if (!p || !p.solution || !p.rows || !p.cols) throw new Error("structure invalide");
+  // les lettres de la grille publiée sont neutralisées : aucune lettre accentuée
+  const lettres = Object.values(p.solution).join("");
+  if (!/^[A-Z0-9]+$/.test(lettres)) throw new Error("des accents subsistent dans la solution publiée : " + lettres);
   if (!Array.isArray(p.across) || !Array.isArray(p.down)) throw new Error("across/down manquants");
   const all = p.across.concat(p.down);
   if (!all.length) throw new Error("aucune définition exportée");

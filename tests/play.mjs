@@ -257,6 +257,18 @@ await check("apercu depuis l'atelier : jouer.html monte la grille passee par le 
   if (!/<em>jaune<\/em>/.test(clueHtml)) throw new Error("asterisques non mises en italique : " + clueHtml);
 });
 
+await check("accents neutralisés : une solution accentuée s'affiche en lettres nues", async () => {
+  // ÉPÉE : la solution stockée porte des accents, la grille doit les neutraliser (É→E)
+  const accents = { title: "Accents", rows: 1, cols: 4, solution: { "0,0": "É", "0,1": "P", "0,2": "É", "0,3": "E" }, numbers: { "0,0": 1 }, bars: {}, across: [{ num: 1, clue: "Arme blanche du chevalier.", cells: [[0,0],[0,1],[0,2],[0,3]] }], down: [] };
+  await page.evaluate(p => localStorage.setItem("dd-apercu", JSON.stringify(p)), accents);
+  await page.reload();
+  await page.waitForSelector("#board .cell");
+  await page.evaluate(() => window.__play.fillSolution());
+  const mot = await page.evaluate(() => [0,1,2,3].map(c => window.__play.letterAt(0, c)).join(""));
+  if (/[À-ÿ]/.test(mot)) throw new Error("des accents subsistent dans la grille : " + mot);
+  if (mot !== "EPEE") throw new Error("attendu EPEE (accents neutralisés), obtenu : " + mot);
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });

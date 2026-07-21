@@ -178,6 +178,11 @@ export function monterJeu(PUZZLE, opts = {}){
   const K = (r,c) => r + "," + c;
   const filled = k => Object.prototype.hasOwnProperty.call(PUZZLE.solution, k);
   const norm = ch => (ch||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Grille \u00e0 la fran\u00e7aise : on saisit sans accent. On neutralise donc les accents
+  // de la solution une fois pour toutes (\u00c9\u2192E, \u00c8\u2192E, \u00c2\u2192A\u2026), pour que l'affichage,
+  // les indices et la r\u00e9v\u00e9lation \u00ab Solution \u00bb montrent des lettres nues, comme la
+  // saisie. La comparaison passait d\u00e9j\u00e0 par norm() ; la grille reste donc jouable.
+  for(const k in PUZZLE.solution) PUZZLE.solution[k] = norm(PUZZLE.solution[k]);
   const hasDigits = Object.values(PUZZLE.solution).some(ch => /[0-9]/.test(ch));
 
   const cellWord = {};
