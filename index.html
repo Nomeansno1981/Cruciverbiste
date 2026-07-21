@@ -883,6 +883,10 @@ function canPlace(grid, letters, r, c, dir){
     const cell = grid.get(keyOf(rr,cc));
     if(cell){
       if(cell.letter !== letters[k]) return -1;
+      // un vrai croisement est perpendiculaire : si la case occupée a une voisine
+      // occupée DANS LE SENS du placement, on chevauche un mot colinéaire (ex.
+      // MAGICIEN inclus dans MAGICIENNES) — ce n'est pas un croisement, on refuse.
+      if(grid.has(keyOf(rr+dr, cc+dc)) || grid.has(keyOf(rr-dr, cc-dc))) return -1;
       crossings++;
     } else {
       if(grid.has(keyOf(rr+pr, cc+pc))) return -1;
