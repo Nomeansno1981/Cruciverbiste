@@ -115,6 +115,23 @@ await check("resolution : le resultat du joueur (avec XP) est enregistre en lign
   if (typeof r.words !== "number") throw new Error("nombre de mots absent du resultat");
 });
 
+await check("badges : la fenetre annonce les hauts faits gagnes a la resolution", async () => {
+  await page.waitForSelector("#badgeModal:not([hidden])", { timeout: 6000 });
+  const info = await page.evaluate(() => ({
+    nouveaux: window.__ddef.newBadges || [],
+    lignes: document.querySelectorAll("#badgeWon li").length,
+    titre: document.getElementById("badgeTitle").textContent
+  }));
+  // demonstration resolue d'un coup, sans aide : au moins 1re grille, vitesse, puriste
+  for (const id of ["grilles-1", "vitesse-3", "puriste"]) {
+    if (!info.nouveaux.includes(id)) throw new Error("badge attendu absent (" + id + ") : " + JSON.stringify(info.nouveaux));
+  }
+  if (info.lignes !== info.nouveaux.length) throw new Error("la fenetre ne liste pas tous les badges : " + info.lignes + " / " + info.nouveaux.length);
+  if (!/badge/i.test(info.titre)) throw new Error("titre de la fenetre inattendu : " + info.titre);
+  const closed = await page.evaluate(() => { document.getElementById("closeBadge").click(); return document.getElementById("badgeModal").hidden; });
+  if (closed !== true) throw new Error("la fenetre de badge ne s'est pas fermee");
+});
+
 await check("le profil affiche le niveau, l'XP totale et le detail par grille", async () => {
   await page.click("#profileBtn");
   await page.waitForSelector("#profileModal:not([hidden])");
@@ -139,6 +156,21 @@ await check("le profil affiche le niveau, l'XP totale et le detail par grille", 
   if (!/XP/.test(info.next)) throw new Error("indication du prochain palier absente : " + info.next);
   if (!/%$/.test(info.fill)) throw new Error("barre de progression sans largeur : " + info.fill);
   if (!/XP/.test(info.line)) throw new Error("XP absente de la ligne d'historique : " + info.line);
+  await page.click("#closeProfile");
+});
+
+await check("badges : le profil affiche les badges gagnes (couleur) et a debloquer (grises)", async () => {
+  await page.click("#profileBtn");
+  await page.waitForSelector("#profileModal:not([hidden])");
+  await page.waitForSelector("#badgeGrid .badge");
+  const info = await page.evaluate(() => ({
+    total: document.querySelectorAll("#badgeGrid .badge").length,
+    gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
+    compteur: document.getElementById("badgesCount").textContent
+  }));
+  if (info.total !== 13) throw new Error("grille de badges incomplete : " + info.total + " (attendu 13)");
+  if (info.gagnes < 3) throw new Error("badges gagnes non mis en couleur : " + info.gagnes);
+  if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
   await page.click("#closeProfile");
 });
 
