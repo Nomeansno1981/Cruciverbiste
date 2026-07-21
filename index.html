@@ -85,6 +85,9 @@
   .btn-out:hover{border-color:#cfccc4; background:#fbfaf7}
   .btn-ghost{background:transparent; color:var(--muted); padding:7px 9px}
   .btn-ghost:hover{color:var(--ink); background:var(--line-2)}
+  /* bouton « aller au jeu » : même aspect que le bouton « Atelier » du jeu (pastille) */
+  .game-link{display:inline-flex; align-items:center; gap:5px; text-decoration:none; background:none; border:1px solid #e6cfd0; border-radius:999px; padding:4px 12px; color:var(--accent-ink); font-size:12.5px; font-weight:600}
+  .game-link:hover{border-color:#d8a9ac; background:none; color:var(--accent-ink)}
   .btn-danger.armed{background:var(--danger); color:#fff; border-color:var(--danger)}
   button:disabled{opacity:.45; cursor:default}
   button:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -249,7 +252,7 @@
     </div>
     <span class="sub">Atelier de l'auteur &nbsp;·&nbsp; dictionnaire, création et publication des grilles</span>
     <span class="hstatus" id="hstatus"></span>
-    <span class="account" id="accountBar" hidden><a class="btn-ghost game-link" id="gameLink" href="accueil.html" title="Aller au jeu">🎲 Jeu</a><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
+    <span class="account" id="accountBar" hidden><a class="game-link" id="gameLink" href="accueil.html" title="Aller au jeu"><span aria-hidden="true">🎲</span><span>Jeu</span></a><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Sections de l'atelier">
