@@ -1,0 +1,73 @@
+<!-- Donjons & Definitions : apercu du jeu, autonome (grille de demonstration,
+     aucune connexion). Le moteur et les styles sont partages (jeu.js, jeu.css) ;
+     donjons.html reutilise les memes avec la connexion et la grille du jour. -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Donjons &amp; Définitions</title>
+<link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="jeu.css">
+</head>
+<body>
+<div class="wrap game">
+  <header>
+    <div class="brand">
+      <img class="mark" src="icones/heaume.svg" alt="">
+      <div>
+        <h1>Donjons <span class="amp">&amp;</span> Définitions</h1>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="mode">Aperçu</span>
+      <span class="timer" id="timer">0:00</span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="layout">
+    <div class="gridarea"><div class="board" id="board"></div></div>
+
+    <div class="cluebar" id="cluebar">
+      <button class="arrow" id="prevClue" aria-label="Definition precedente">&#8249;</button>
+      <div class="txt" id="cluebarTxt"></div>
+      <button class="arrow" id="nextClue" aria-label="Definition suivante">&#8250;</button>
+    </div>
+
+    <div class="tools">
+      <button class="tool" id="hintBtn">Indice</button>
+      <button class="tool" id="solveBtn">Solution</button>
+      <button class="tool" id="muteBtn" aria-label="Couper le son">🔊</button>
+    </div>
+
+    <div class="kbd" id="kbd"></div>
+
+    <aside class="aside" id="clueAside" data-dir="across">
+      <div class="dir-toggle" role="tablist" aria-label="Sens des définitions">
+        <button class="dir-btn on" id="dirAcross" type="button" role="tab" aria-selected="true">Horizontalement</button>
+        <button class="dir-btn" id="dirDown" type="button" role="tab" aria-selected="false">Verticalement</button>
+      </div>
+      <ol id="acrossList" class="clue-list"></ol>
+      <ol id="downList" class="clue-list"></ol>
+    </aside>
+  </div>
+
+  <div class="stamp">version df5701b publiée le 22/07/2026</div>
+</div>
+
+<script type="module">
+import { monterJeu, DEMO_PUZZLE } from "./jeu.js";
+// Apercu depuis l'atelier : une grille peut etre deposee dans le stockage local
+// (cle dd-apercu), lue une seule fois. Sinon, grille de demonstration.
+let puzzle = null;
+try {
+  const raw = localStorage.getItem("dd-apercu");
+  if(raw){ puzzle = JSON.parse(raw); localStorage.removeItem("dd-apercu"); }
+} catch(e){ puzzle = null; }
+monterJeu(puzzle || DEMO_PUZZLE, puzzle ? { dateText: "Aperçu · " + (puzzle.title || "votre grille") } : {});
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!-- Donjons & Definitions : page d'administration (auteur). Connexion Google,
+     collage d'une grille exportee depuis l'atelier ("Copier pour le jeu"),
+     choix de la date de parution, publication dans Firestore (puzzles/{date}).
+     Reservee au compte administrateur par les regles de securite. -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Publier une grille - Donjons &amp; Définitions</title>
+<link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="jeu.css">
+<style>
+  .wrap{max-width:720px}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px}
+  .panel h3{margin:0 0 12px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-family:var(--mono)}
+  label{display:block; font-size:13px; color:var(--muted); margin:10px 0 4px}
+  textarea, input[type=date], input[type=text]{width:100%; font-family:var(--sans); font-size:15px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink)}
+  textarea{min-height:120px; font-family:var(--mono); font-size:12.5px; resize:vertical}
+  .btn{font-family:var(--sans); font-size:14.5px; font-weight:600; padding:10px 16px; border-radius:10px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; margin-top:12px}
+  .btn:disabled{opacity:.55; cursor:default}
+  .msg{margin-top:10px; font-size:13px; min-height:1.1em; font-family:var(--serif)}
+  .msg.warn{color:var(--accent)}
+  .msg.ok{color:#2c5a2a}
+  .summary{font-size:13px; color:var(--muted); font-family:var(--serif); margin-top:8px}
+  .plist{list-style:none; margin:0; padding:0}
+  .plist li{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-family:var(--serif); font-size:14px}
+  .plist li .d{font-family:var(--mono); font-size:12.5px; color:var(--accent); min-width:92px}
+  .plist li .t{flex:1; min-width:0}
+  .plist li button{font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--ink); cursor:pointer}
+  .guest{font-family:var(--serif); color:#3a3833; line-height:1.55}
+</style>
+</head>
+<body>
+
+<div id="authGate">
+  <div class="gate-card">
+    <img class="mark" src="icones/heaume.svg" alt="">
+    <h2>Administration</h2>
+    <p class="gate-text">Espace de publication des grilles, reserve a l'auteur. Connectez-vous avec le compte Google administrateur.</p>
+    <button class="gate-btn primary" id="gGoogle">Se connecter avec Google</button>
+    <p class="gate-status" id="gStatus">Verification de la session...</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="mark" src="icones/heaume.svg" alt="">
+      <h1>Publier une grille</h1>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="acct" id="acct" hidden><span class="mail" id="acctMail"></span><button id="signOut">Deconnexion</button></span>
+    </div>
+  </header>
+
+  <div id="guestPanel" class="panel" hidden>
+    <p class="guest">Ce compte n'est pas administrateur : il ne peut pas publier de grilles. Connectez-vous avec le compte Google de l'auteur.</p>
+  </div>
+
+  <div id="adminPanel" hidden>
+    <div class="panel">
+      <h3>Nouvelle grille du jour</h3>
+      <label for="pjson">Grille (collez ce que l'atelier a copie via « Copier pour le jeu »)</label>
+      <textarea id="pjson" placeholder="{ &quot;rows&quot;: 15, &quot;cols&quot;: 15, ... }"></textarea>
+      <div class="summary" id="summary"></div>
+      <label for="pdate">Date de parution</label>
+      <input type="date" id="pdate">
+      <label for="ptitle">Titre (optionnel)</label>
+      <input type="text" id="ptitle" placeholder="Jeu de role">
+      <button class="btn" id="publishBtn">Publier</button>
+      <div class="msg" id="pmsg"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Grilles publiees</h3>
+      <ul class="plist" id="plist"></ul>
+    </div>
+  </div>
+
+  <div class="stamp">version df5701b publiée le 22/07/2026</div>
+</div>
+
+<script type="module">
+const EMU_MODE = location.hash.includes("emu");
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
+};
+const ADMIN_EMAIL = "nominesnow@gmail.com";
+
+window.__admin = { role: "checking", lastPublished: null, error: null };
+
+const $ = id => document.getElementById(id);
+const gate = $("authGate"), status = $("gStatus");
+function gwarn(m){ status.textContent = m; status.classList.add("warn"); }
+function ginfo(m){ status.textContent = m; status.classList.remove("warn"); }
+
+function parisDate(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+let m;
+try{
+  const [appM, authM, fsM] = await Promise.all([
+    import(FIREBASE_SDK + "/firebase-app.js"),
+    import(FIREBASE_SDK + "/firebase-auth.js"),
+    import(FIREBASE_SDK + "/firebase-firestore.js")
+  ]);
+  m = Object.assign({}, appM, authM, fsM);
+}catch(e){ gwarn("Impossible de charger le module. Rechargez la page."); throw e; }
+
+const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
+const app = m.initializeApp(cfg);
+const auth = m.getAuth(app);
+const db = m.initializeFirestore(app, {});
+if(EMU_MODE){
+  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
+// tentative d'ecriture directe, pour verifier en test que les regles refusent
+// bien un compte non administrateur.
+window.__admin.tryWrite = async () => {
+  try{ await m.setDoc(m.doc(db, "puzzles", "test-regles"), { date: "test-regles", title: "x", puzzle: { solution: {} }, publishedAt: m.serverTimestamp() }); return "ok"; }
+  catch(e){ return (e && e.code) || String(e); }
+};
+window.__admin.provider = async () => {
+  const u = auth.currentUser; if(!u) return "none";
+  const t = await u.getIdTokenResult();
+  return (t.signInProvider || "?") + " / " + (t.claims.email || "?");
+};
+
+$("gGoogle").onclick = async () => {
+  ginfo("Connexion...");
+  try{
+    if(EMU_MODE){
+      // en test, #emu-guest permet de simuler un compte non administrateur
+      const asGuest = location.hash.includes("guest");
+      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: asGuest ? "joueur-test" : "admin-test", email: asGuest ? "joueur@example.com" : ADMIN_EMAIL, email_verified: true }));
+      await m.signInWithCredential(auth, cred);
+    } else {
+      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+    }
+  }catch(e){ gwarn("Connexion impossible : " + ((e && e.message) || e)); }
+};
+
+function validate(text){
+  const p = JSON.parse(text);
+  if(!p || typeof p !== "object") throw new Error("format invalide");
+  if(!p.solution || !p.rows || !p.cols) throw new Error("il manque solution / rows / cols");
+  if(!Array.isArray(p.across) || !Array.isArray(p.down)) throw new Error("il manque across / down");
+  // format impose pour des vignettes homogenes (contournable seulement en test)
+  if(!EMU_MODE && (p.rows !== 15 || p.cols !== 15)) throw new Error("format impose : 15×15 (rows et cols doivent valoir 15)");
+  return p;
+}
+$("pjson").addEventListener("input", () => {
+  const s = $("summary");
+  try{
+    const p = validate($("pjson").value);
+    const nb = p.across.length + p.down.length;
+    const undef = p.across.concat(p.down).filter(w => !w.clue).length;
+    s.textContent = `Grille ${p.cols}x${p.rows}, ${nb} mots` + (undef ? `, ${undef} definition(s) manquante(s)` : "") + ".";
+    if(p.title && !$("ptitle").value) $("ptitle").placeholder = p.title;
+  }catch(e){ s.textContent = $("pjson").value.trim() ? "JSON invalide : " + e.message : ""; }
+});
+
+async function refreshList(){
+  const ul = $("plist"); ul.innerHTML = "";
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "puzzles"), m.orderBy("date", "desc"), m.limit(40)));
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="d">${docSnap.id}</span><span class="t">${(d.title || "").replace(/[<>&]/g, "")}</span>`;
+      const del = document.createElement("button");
+      del.textContent = "Supprimer";
+      del.onclick = async () => {
+        if(!confirm("Supprimer la grille du " + docSnap.id + " ?")) return;
+        try{ await m.deleteDoc(m.doc(db, "puzzles", docSnap.id)); refreshList(); }catch(e){ alert("Suppression impossible : " + ((e && e.message) || e)); }
+      };
+      li.appendChild(del);
+      ul.appendChild(li);
+    });
+    if(!snap.size) ul.innerHTML = `<li style="color:var(--muted);border:none">Aucune grille publiee pour l'instant.</li>`;
+  }catch(e){ /* liste indisponible */ }
+}
+
+$("publishBtn").onclick = async () => {
+  const msg = $("pmsg"); msg.className = "msg";
+  let p;
+  try{ p = validate($("pjson").value); }
+  catch(e){ msg.textContent = "Grille invalide : " + e.message; msg.classList.add("warn"); return; }
+  const date = $("pdate").value;
+  if(!date){ msg.textContent = "Choisissez une date de parution."; msg.classList.add("warn"); return; }
+  const title = ($("ptitle").value || p.title || "").trim();
+  $("publishBtn").disabled = true;
+  msg.textContent = "Publication...";
+  try{
+    // la grille est stockee en chaine JSON : Firestore refuse les tableaux
+    // imbriques (les coordonnees des cases en sont)
+    await m.setDoc(m.doc(db, "puzzles", date), { date, title, puzzle: JSON.stringify(p), publishedAt: m.serverTimestamp() });
+    const snap = await m.getDoc(m.doc(db, "puzzles", date));
+    const data = snap.exists() ? snap.data() : null;
+    window.__admin.lastPublished = data ? Object.assign({}, data, { puzzle: JSON.parse(data.puzzle) }) : null;
+    msg.textContent = "Grille publiee pour le " + date + ".";
+    msg.classList.add("ok");
+    $("pjson").value = ""; $("summary").textContent = "";
+    refreshList();
+  }catch(e){
+    window.__admin.error = String(e);
+    msg.textContent = "Publication refusee : " + ((e && e.message) || e);
+    msg.classList.add("warn");
+  }finally{ $("publishBtn").disabled = false; }
+};
+
+m.onAuthStateChanged(auth, user => {
+  if(!user){ gate.hidden = false; $("acct").hidden = true; $("adminPanel").hidden = true; $("guestPanel").hidden = true; window.__admin.role = "checking"; ginfo(""); return; }
+  $("acctMail").textContent = user.email || "";
+  $("acct").hidden = false;
+  $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+  const isAdmin = (user.email === ADMIN_EMAIL) && (user.providerData[0] && user.providerData[0].providerId === "google.com");
+  window.__admin.role = isAdmin ? "admin" : "guest";
+  gate.hidden = true;
+  if(isAdmin){
+    $("adminPanel").hidden = false; $("guestPanel").hidden = true;
+    if(!$("pdate").value) $("pdate").value = parisDate();
+    refreshList();
+  } else {
+    $("guestPanel").hidden = false; $("adminPanel").hidden = true;
+  }
+});
+</script>
+</body>
+</html>

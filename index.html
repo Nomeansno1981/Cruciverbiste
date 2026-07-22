@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Donjons &amp; Définitions · Atelier</title>
+<link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Polices auto-hebergees (voir fonts/) : Pirata One = titres, Crimson Pro = texte. */
+  @font-face{font-family:'Pirata One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/PirataOne-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:'Pirata One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/PirataOne-latinext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  @font-face{font-family:'Crimson Pro';font-style:normal;font-weight:200 900;font-display:swap;src:url(fonts/CrimsonPro-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:'Crimson Pro';font-style:normal;font-weight:200 900;font-display:swap;src:url(fonts/CrimsonPro-latinext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  @font-face{font-family:'Crimson Pro';font-style:italic;font-weight:200 900;font-display:swap;src:url(fonts/CrimsonPro-italic-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:'Crimson Pro';font-style:italic;font-weight:200 900;font-display:swap;src:url(fonts/CrimsonPro-italic-latinext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  :root{
+    --paper:#FAF9F5; --panel:#FFFFFF; --ink:#1C1B19; --muted:#74706A;
+    --line:#E5E2DA; --line-2:#EFEDE6; --grid-line:#211E17;
+    --accent:#7C1D2E; --accent-ink:#5E1522; --accent-weak:#F4E7E9;
+    --brand-red:#C4161C;   /* rouge du logo (titre de marque) */
+    --forest:#4d7f46; --forest-ink:#4d7f46; --forest-weak:#E4ECE1;
+    --num:#5B574F; --danger:#8A2432;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --serif:"Crimson Pro","Iowan Old Style",Palatino,"Book Antiqua",Georgia,serif;
+    --display:"Pirata One",Palatino,Georgia,serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --r:6px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  /* grain de papier recycle : quasi blanc, tres legerement moucheté par endroits. */
+  body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='sp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 13 -9.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23sp)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='185' height='185'%3E%3Cfilter id='sf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.0' numOctaves='1' seed='21' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 16 -12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23sf)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='gr'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gr)'/%3E%3C/svg%3E");
+    background-size:240px 240px, 185px 185px, 140px 140px}
+  .wrap{max-width:1240px; margin:0 auto; padding:22px 22px 60px}
+
+  /* ---- header ---- */
+  header{display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom:none; flex-wrap:wrap; position:relative}
+  header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%234d7f46' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+  .mark{height:40px; width:auto; align-self:center; flex:0 0 auto}
+  .amp{color:var(--ink); font-size:.7em; font-weight:400}   /* & du logo : noir, plus petit */
+  .brand{display:flex; align-items:center; gap:16px}
+  h1{font-family:var(--display); font-size:34px; letter-spacing:0; font-weight:400; margin:0; color:var(--brand-red)}
+  .sub{color:var(--muted); font-size:13px; letter-spacing:.01em}
+  .hstatus{margin-left:auto; font-size:12.5px; color:var(--muted); min-height:1em; transition:color .2s}
+  .hstatus.warn{color:var(--accent)}
+
+  /* ---- layout ---- */
+  .cols{display:grid; grid-template-columns:minmax(0,0.82fr) minmax(0,1.18fr); gap:20px; margin-top:20px}
+  @media (max-width:900px){ .cols{grid-template-columns:1fr} }
+
+  /* ---- onglets ---- */
+  .tabs{display:flex; gap:2px; margin-top:22px; border-bottom:1px solid var(--line)}
+  .tab{background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); font-size:14px; font-weight:600; padding:10px 15px 11px; margin-bottom:-1px; border-radius:0; cursor:pointer}
+  .tab:hover{color:var(--ink)}
+  .tab.is-active{color:var(--accent); border-bottom-color:var(--accent)}
+  .tabpane{margin-top:20px}
+  .tabpane[hidden]{display:none}
+
+  /* ---- liste des grilles publiées ---- */
+  .plist{list-style:none; margin:8px 0 0; padding:0}
+  .plist li{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line-2); font-size:14px}
+  .plist li .d{font-family:var(--mono); font-size:12.5px; color:var(--accent); min-width:96px}
+  .plist li .t{flex:1; min-width:0; font-family:var(--serif); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .plist .pub-del{font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer}
+  .plist .pub-del:hover{border-color:#cfccc4; background:#fbfaf7}
+  .plist .pub-empty{color:var(--muted); border:none; font-family:var(--serif)}
+
+  /* ---- publier au jeu ---- */
+  .pub-box{margin-top:12px; padding:14px 16px; background:var(--accent-weak); border:1px solid var(--line); border-radius:var(--r)}
+  .pub-form{display:flex; gap:10px; align-items:end; flex-wrap:wrap}
+  .pub-form input[type=date]{width:auto}
+  .pub-form .grow{flex:1 1 180px; min-width:0}
+  .pub-msg{margin:10px 0 0; font-family:var(--serif); font-size:13.5px; min-height:1.1em}
+  .pub-msg.ok{color:#2c5a2a}
+  .pub-msg.warn{color:var(--accent)}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); overflow:hidden}
+  .panel-h{display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-2)}
+  .eyebrow{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .count{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .body{padding:16px}
+
+  /* ---- controls ---- */
+  label.f{display:block; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%; font-family:var(--sans); font-size:14px; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-radius:5px; padding:8px 10px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak)}
+  textarea{resize:vertical; min-height:88px; line-height:1.45; font-family:var(--mono); font-size:13px}
+  .row{display:flex; gap:8px; align-items:end}
+  .row > *{min-width:0}
+
+  button{font-family:var(--sans); font-size:13.5px; font-weight:600; cursor:pointer; border-radius:5px; border:1px solid transparent; padding:8px 13px; transition:background .15s,border-color .15s,color .15s}
+  .btn-primary{background:var(--accent); color:#fff}
+  .btn-primary:hover{background:var(--accent-ink)}
+  .btn-out{background:#fff; color:var(--ink); border-color:var(--line)}
+  .btn-out:hover{border-color:#cfccc4; background:#fbfaf7}
+  .btn-ghost{background:transparent; color:var(--muted); padding:7px 9px}
+  .btn-ghost:hover{color:var(--ink); background:var(--line-2)}
+  /* bouton « aller au jeu » : même aspect que le bouton « Atelier » du jeu (pastille) */
+  .game-link{display:inline-flex; align-items:center; gap:5px; text-decoration:none; background:none; border:1px solid #e6cfd0; border-radius:999px; padding:4px 12px; color:var(--accent-ink); font-size:12.5px; font-weight:600}
+  .game-link:hover{border-color:#d8a9ac; background:none; color:var(--accent-ink)}
+  .btn-danger.armed{background:var(--danger); color:#fff; border-color:var(--danger)}
+  button:disabled{opacity:.45; cursor:default}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .icon-btn{border:none; background:transparent; color:var(--muted); padding:4px 6px; border-radius:4px; font-size:15px; line-height:1}
+  .icon-btn:hover{color:var(--ink); background:var(--line-2)}
+  .icon-btn.del:hover{color:var(--danger)}
+
+  /* ---- list selector ---- */
+  .listbar{display:flex; gap:8px; align-items:center; margin-bottom:14px}
+  .listbar select{flex:1}
+  .namefield{margin-bottom:16px}
+
+  /* ---- add form ---- */
+  .addform{display:grid; grid-template-columns:1fr 1.7fr auto; gap:8px; align-items:end; margin-bottom:14px}
+  @media (max-width:560px){ .addform{grid-template-columns:1fr; } .addform button{width:100%} }
+
+  /* ---- entries ---- */
+  .entries{border:1px solid var(--line-2); border-radius:5px; max-height:360px; overflow:auto; background:#fff}
+  .entry{display:flex; align-items:center; gap:10px; padding:8px 10px; border-bottom:1px solid var(--line-2); cursor:pointer}
+  .entry:last-child{border-bottom:none}
+  .entry:hover{background:#fbfaf7}
+  .entry .word{font-family:var(--mono); font-weight:600; font-size:13px; letter-spacing:.03em; color:var(--ink); white-space:nowrap; text-transform:uppercase}
+  .entry .clue{flex:1; font-family:var(--serif); font-size:14px; color:#3a3833; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .entry .clue.none{color:var(--muted); font-style:italic}
+  .entry .cluecount{font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; flex:0 0 auto}
+  .entry .cluecount.zero{color:var(--accent)}
+  .entry .acts{display:flex; gap:2px; opacity:0; transition:opacity .12s}
+  .entry:hover .acts, .entry:focus-within .acts{opacity:1}
+  @media (hover: none){ .entry .acts{opacity:.55} }
+  .entry-editor{padding:10px 12px; border-bottom:1px solid var(--line-2); background:#fbfaf7; display:flex; flex-direction:column; gap:8px}
+  .entry-editor label.f{margin:0}
+  .entry-editor .cluerow{display:flex; gap:6px; align-items:center}
+  .entry-editor .cluerow input{flex:1; font-family:var(--serif)}
+  .entry-editor .ed-acts{display:flex; gap:8px; align-items:center; margin-top:2px; flex-wrap:wrap}
+  .entry-editor .ed-acts .btn-danger{margin-left:auto}
+  .empty-hint{padding:22px 14px; text-align:center; color:var(--muted); font-family:var(--serif); font-style:italic; font-size:14px}
+
+  .tools{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .disclosure{margin-top:12px}
+  .disclosure[hidden]{display:none}
+  .fineprint{font-size:12px; color:var(--muted); margin:6px 0 0}
+
+  /* ---- grid panel ---- */
+  .gcontrols{display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:16px}
+  .gcontrols .grow{flex:1; min-width:120px}
+  .toggle{display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink); cursor:pointer; user-select:none; white-space:nowrap}
+  .toggle input{width:16px; height:16px; accent-color:var(--accent)}
+  /* fond légèrement grisé : les cases pleines (blanches) ressortent, la silhouette des mots se lit d'un coup d'œil */
+  .board{border:1px solid var(--line); border-radius:6px; background:#ECE8E0; padding:20px; display:flex; justify-content:center; align-items:center; min-height:200px; overflow:auto}
+  .board svg{max-width:100%; height:auto; display:block}
+  .board.empty{color:var(--muted); font-family:var(--serif); font-style:italic; font-size:15px; text-align:center; padding:44px 20px}
+  .gstats{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:12px 2px 0; font-size:13px; color:var(--muted)}
+  .gstats .placed{font-family:var(--mono)}
+  .gstats .placed .warn{color:var(--accent); font-weight:600}
+  .gstats .unplaced{color:var(--accent)}
+  .gexport{display:flex; gap:8px; margin:14px 0 4px; flex-wrap:wrap}
+
+  /* ---- clues ---- */
+  .clues{margin-top:22px; display:grid; grid-template-columns:1fr 1fr; gap:26px}
+  @media (max-width:640px){ .clues{grid-template-columns:1fr} }
+  .clues h3{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 10px; padding-bottom:7px; border-bottom:1px solid var(--line-2)}
+  .clues ol{list-style:none; margin:0; padding:0; font-family:var(--serif); font-size:14.5px; line-height:1.55}
+  .clues li{margin-bottom:8px; display:flex; gap:8px}
+  .clues .n{font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--accent); min-width:20px; text-align:right; padding-top:1px}
+  .clues .miss{color:var(--muted); font-style:italic}
+  .clues .cluebody{flex:1; min-width:0}
+  .clues .ctools{display:inline-flex; gap:2px; margin-left:6px; opacity:0; transition:opacity .12s; vertical-align:baseline}
+  .clues li:hover .ctools, .clues li:focus-within .ctools{opacity:1}
+  /* écrans tactiles : pas de survol, on garde les boutons (modifier / ajouter) visibles, comme le dictionnaire */
+  @media (hover: none){ .clues .ctools{opacity:.55} }
+  .clues .ctools .icon-btn{padding:1px 5px; font-size:13px}
+  .definebox{display:flex; gap:6px}
+  .definebox input{flex:1; font-family:var(--serif); font-size:14px; padding:5px 8px}
+  .definebox .btn-primary{padding:5px 11px; font-size:12.5px}
+  .clue-select{font-family:var(--serif); font-size:13.5px; padding:5px 8px}
+  .clue-word{font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.02em; margin-right:8px; white-space:nowrap}
+  .print-fallback{display:none}
+
+  /* ---- saved grids ---- */
+  .saved{margin-top:24px; border-top:1px solid var(--line-2); padding-top:16px}
+  .saved[hidden]{display:none}
+  .saved-h{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 12px}
+  .saved-row{display:flex; align-items:center; gap:12px; padding:8px 10px; border:1px solid var(--line-2); border-radius:5px; margin-bottom:8px; background:#fff}
+  .saved-row:hover{background:#fbfaf7}
+  .saved-meta{display:flex; flex-direction:column; gap:1px; min-width:0; flex:1}
+  .saved-name{font-family:var(--serif); font-size:14.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .saved-sub{font-family:var(--mono); font-size:11.5px; color:var(--muted)}
+  .saved-acts{display:flex; align-items:center; gap:6px; flex:0 0 auto}
+  .saved-acts .btn-out{padding:6px 12px; font-size:12.5px}
+
+  @keyframes pop{from{opacity:0; transform:scale(.94)} to{opacity:1; transform:none}}
+  .board svg g.cell{animation:pop .28s ease both}
+  @media (prefers-reduced-motion:reduce){ .board svg g.cell{animation:none} }
+
+  /* ---- compte & écran de connexion ---- */
+  .account{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted)}
+  .account[hidden]{display:none}
+  .account .btn-ghost{padding:4px 8px; font-size:12px}
+  #authGate{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:24px}
+  #authGate[hidden]{display:none}
+  .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 1px 2px rgba(30,27,20,.04); padding:36px 40px; max-width:440px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px}
+  .gate-card .mark{height:60px; width:auto}
+  .gate-card h2{margin:0; font-family:var(--display); font-weight:400; text-transform:none; font-size:33px; letter-spacing:0; color:var(--brand-red)}
+  .gate-text{margin:0; font-family:var(--serif); font-size:14.5px; color:#3a3833; line-height:1.55}
+  .gate-status{margin:0; font-size:12.5px; color:var(--muted); min-height:1.2em}
+  .gate-status.warn{color:var(--accent)}
+
+  /* ---- tampon de version (rempli au déploiement) ---- */
+  .stamp{margin:26px 0 4px; text-align:center; font-size:11.5px; color:var(--muted); letter-spacing:.02em}
+
+  /* ---- mobile : barre du haut réduite comme le jeu (icône + lien + compte) ---- */
+  @media (max-width:859px){
+    header h1{display:none}                 /* ne garder que l'icône du titre, comme le jeu et l'accueil */
+    #accountMail{display:none}              /* l'adresse e-mail n'est pas essentielle sur mobile */
+  }
+
+  /* ---- print ---- */
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none; padding:0}
+    header .sub, .hstatus, .brand .mark, .panel:first-child, .gcontrols, .gexport, .saved, .panel-h, .gstats .fillinfo, .stamp{display:none !important}
+    .cols{display:block; margin:0}
+    .panel{border:none; box-shadow:none}
+    .body{padding:0}
+    .board{border:none; padding:0; justify-content:flex-start; background:#fff}
+    .print-title{display:block !important}
+    .clues{page-break-inside:avoid}
+    .definebox, .ctools, .clue-select{display:none !important}
+    .print-fallback{display:inline !important}
+    #authGate, .account{display:none !important}
+    h1{font-size:18px}
+  }
+  .print-title{display:none; font-family:var(--serif); font-size:18px; font-weight:700; margin:0 0 14px}
+</style>
+</head>
+<body>
+<div id="authGate" hidden>
+  <div class="gate-card">
+    <img class="mark" src="icones/heaume.svg" alt="">
+    <h2>Donjons <span class="amp">&amp;</span> Définitions</h2>
+    <p class="gate-text">Atelier de l'auteur : dictionnaire, création et publication des grilles. Connectez-vous avec le compte de l'auteur.</p>
+    <button class="btn-primary" id="loginBtn" hidden>Se connecter avec Google</button>
+    <button class="btn-ghost" id="gateSignOut" hidden>Se déconnecter</button>
+    <p class="gate-status" id="gateStatus">Vérification de la session…</p>
+  </div>
+</div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="mark" src="icones/heaume.svg" alt="">
+      <h1>Donjons <span class="amp">&amp;</span> Définitions</h1>
+    </div>
+    <span class="hstatus" id="hstatus"></span>
+    <span class="account" id="accountBar" hidden><a class="game-link" id="membresLink" href="membres.html" title="Modérer les membres"><span aria-hidden="true">👤</span><span>Membres</span></a><a class="game-link" id="gameLink" href="accueil.html" title="Aller au jeu"><span aria-hidden="true">🎲</span><span>Jeu</span></a><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections de l'atelier">
+    <button class="tab is-active" id="tabDict" role="tab" aria-selected="true" data-pane="paneDict">Dictionnaire</button>
+    <button class="tab" id="tabGrids" role="tab" aria-selected="false" data-pane="paneGrids">Grilles</button>
+    <button class="tab" id="tabPub" role="tab" aria-selected="false" data-pane="panePub">Grilles publiées</button>
+  </nav>
+
+  <div class="tabpane" id="paneDict" role="tabpanel" aria-labelledby="tabDict">
+    <!-- ============ DICTIONNAIRE ============ -->
+    <section class="panel" aria-label="Dictionnaire">
+      <div class="panel-h">
+        <span class="eyebrow">Dictionnaire</span>
+        <span class="count" id="entryCount">0 mots</span>
+      </div>
+      <div class="body">
+        <div class="listbar">
+          <select id="listSelect" aria-label="Choisir une liste"></select>
+          <button class="btn-out" id="newList" title="Nouvelle liste">＋&nbsp;Liste</button>
+          <button class="btn-out btn-danger" id="delList" title="Supprimer cette liste">Suppr.</button>
+        </div>
+        <div class="namefield">
+          <label class="f" for="listName">Nom de la liste</label>
+          <input type="text" id="listName" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="addform">
+          <div><label class="f" for="wIn">Mot</label><input type="text" id="wIn" autocomplete="off" spellcheck="false" placeholder="lancelot   (ou : chat ; chien ; oiseau)" /></div>
+          <div><label class="f" for="cIn">Définition</label><input type="text" id="cIn" autocomplete="off" placeholder="Le héros chevalier du roman" /></div>
+          <button class="btn-primary" id="addBtn">Ajouter</button>
+        </div>
+
+        <div class="entries" id="entries" aria-live="polite"></div>
+
+        <div class="tools">
+          <button class="btn-out" id="toggleImport">Coller une liste</button>
+          <button class="btn-ghost" id="expJson">Exporter (sauvegarde)</button>
+          <button class="btn-ghost" id="expTsv">Exporter (.tsv)</button>
+          <button class="btn-ghost" id="impJsonBtn">Importer une sauvegarde</button>
+          <input type="file" id="impJson" accept=".json,application/json" hidden />
+        </div>
+
+        <div class="disclosure" id="importBox" hidden>
+          <label class="f" for="pasteArea" style="margin-top:8px"><span style="text-transform:none;letter-spacing:0">Collez des mots séparés par des points-virgules, ou un par ligne. Définition optionnelle avec <code>mot : définition</code>.</span></label>
+          <textarea id="pasteArea" placeholder="lancelot ; guenièvre ; charrette ; méléagant&#10;quête ; épée&#10;pont : l'obstacle tranchant à franchir"></textarea>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button class="btn-primary" id="parseBtn">Ajouter à la liste</button>
+            <button class="btn-ghost" id="cancelImport">Fermer</button>
+          </div>
+          <p class="fineprint">Points-virgules ou retours à la ligne, au choix. Les mots sans définition sont acceptés : vous les définirez plus tard, à la génération. Les doublons sont ignorés; une définition nouvelle d'un mot déjà présent rejoint ce mot.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tabpane" id="paneGrids" role="tabpanel" aria-labelledby="tabGrids" hidden>
+    <!-- ============ GRILLE ============ -->
+    <section class="panel" aria-label="Grille">
+      <div class="panel-h">
+        <span class="eyebrow">Grille</span>
+      </div>
+      <div class="body">
+        <p class="print-title" id="printTitle"></p>
+        <div class="gcontrols">
+          <button class="btn-primary" id="genBtn">Générer la grille</button>
+          <button class="btn-out" id="regenBtn">Régénérer</button>
+          <div class="grow" style="max-width:110px">
+            <label class="f" for="maxW">Largeur max</label>
+            <input type="number" id="maxW" min="2" step="1" />
+          </div>
+          <div class="grow" style="max-width:110px">
+            <label class="f" for="maxH">Hauteur max</label>
+            <input type="number" id="maxH" min="2" step="1" />
+          </div>
+          <label class="toggle" style="margin-bottom:2px"><input type="checkbox" id="showSol" /> Afficher les solutions</label>
+        </div>
+
+        <div class="board empty" id="board">Ajoutez des mots, puis générez votre grille.</div>
+
+        <div class="gstats" id="gstats" hidden>
+          <span class="placed" id="placedStat"></span>
+          <span class="unplaced" id="unplacedStat"></span>
+        </div>
+
+        <div class="gexport" id="gexport" hidden>
+          <button class="btn-out" id="saveGrid">Enregistrer la grille</button>
+          <button class="btn-out" id="svgEmpty">SVG (grille vide)</button>
+          <button class="btn-out" id="svgSolved">SVG (corrigé)</button>
+          <button class="btn-out" id="copyClues">Copier les définitions</button>
+          <button class="btn-out" id="previewGame" title="Ouvrir cette grille dans le vrai moteur du jeu, dans un nouvel onglet">Prévisualiser dans le jeu</button>
+          <button class="btn-primary" id="publishGame" title="Publier cette grille dans le jeu, à une date de parution">Publier au jeu</button>
+          <button class="btn-out" id="printBtn">Imprimer / PDF</button>
+        </div>
+
+        <div class="disclosure pub-box" id="publishBox" hidden>
+          <div class="pub-form">
+            <div><label class="f" for="pubDate">Date de parution</label><input type="date" id="pubDate"></div>
+            <div class="grow"><label class="f" for="pubTitle">Titre (optionnel)</label><input type="text" id="pubTitle" placeholder="Jeu de rôle"></div>
+            <button class="btn-primary" id="pubConfirm">Confirmer la publication</button>
+          </div>
+          <p class="pub-msg" id="pubMsg"></p>
+        </div>
+
+        <div class="clues" id="clues" hidden>
+          <div>
+            <h3>Horizontalement</h3>
+            <ol id="acrossList"></ol>
+          </div>
+          <div>
+            <h3>Verticalement</h3>
+            <ol id="downList"></ol>
+          </div>
+        </div>
+
+        <div class="saved" id="savedWrap" hidden>
+          <h3 class="saved-h">Grilles enregistrées</h3>
+          <div id="savedList"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tabpane" id="panePub" role="tabpanel" aria-labelledby="tabPub" hidden>
+    <section class="panel" aria-label="Grilles publiées">
+      <div class="panel-h">
+        <span class="eyebrow">Grilles publiées</span>
+        <span class="count" id="pubCount"></span>
+      </div>
+      <div class="body">
+        <p class="fineprint" id="pubHint">Les grilles déjà en ligne dans le jeu, par date de parution. Vous pouvez en supprimer.</p>
+        <ul class="plist" id="pubList"></ul>
+      </div>
+    </section>
+  </div>
+  <footer class="stamp">version df5701b publiée le 22/07/2026</footer>
+</div>
+
+<script type="module">
+"use strict";
+
+/* =========================================================
+   Modes : en ligne (par défaut), #local (stockage navigateur seul),
+   #emu (émulateurs Firebase, pour les tests automatisés)
+   ========================================================= */
+const LOCAL_MODE = location.hash.includes("local");
+const EMU_MODE = location.hash.includes("emu");
+const FLAT_MODE = location.hash.includes("flat");   // tests : toutes les sections visibles, sans onglets
+const CLOUD = !LOCAL_MODE;
+
+// En mode #emu (tests), le SDK est servi localement par le serveur de test.
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+// Ce bloc identifie le projet Firebase; il n'est pas secret, la protection
+// vient des règles Firestore (l'auteur seul publie; chaque compte ne lit et n'écrit que ses données).
+const firebaseConfig = {
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
+};
+// L'atelier est réservé au compte de l'auteur (les règles Firestore le vérifient aussi).
+const ADMIN_EMAIL = "nominesnow@gmail.com";
+
+/* =========================================================
+   Persistance locale (IndexedDB)
+   ========================================================= */
+const DB_NAME = "verbicruciste", DB_STORE = "kv", STATE_KEY = "state";
+let HAS_IDB = false;
+try { HAS_IDB = !!window.indexedDB; } catch(e){ HAS_IDB = false; }
+
+let dbPromise = null;
+function openDb(){
+  if(!dbPromise){
+    dbPromise = new Promise((resolve, reject) => {
+      const req = window.indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if(!req.result.objectStoreNames.contains(DB_STORE)) req.result.createObjectStore(DB_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("ouverture refusée"));
+    });
+  }
+  return dbPromise;
+}
+function idbGet(key){
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const rq = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get(key);
+    rq.onsuccess = () => resolve(rq.result);
+    rq.onerror = () => reject(rq.error);
+  }));
+}
+function idbSet(key, value){
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("transaction interrompue"));
+  }));
+}
+
+async function loadState(){
+  if(!HAS_IDB) return null;
+  try{
+    const raw = await idbGet(STATE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ /* état absent ou illisible : on repartira de la graine */ }
+  return null;
+}
+let saveTimer = null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 350);
+}
+async function doSave(){
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  if(CLOUD){
+    try{ localStorage.setItem("vc-current", state.currentId || ""); }catch(e){}
+    await cloudSaveDict();
+    return;
+  }
+  if(!HAS_IDB) return;
+  try{ await idbSet(STATE_KEY, JSON.stringify(state)); }
+  catch(e){ flash("Sauvegarde impossible. Exportez vos listes.", true); }
+}
+window.addEventListener("pagehide", () => { if(saveTimer) doSave(); });
+
+/* =========================================================
+   Synchronisation en ligne (Firebase Auth + Firestore)
+   Le dictionnaire vit dans un document, chaque grille enregistrée
+   dans le sien; les deux machines écoutent les mêmes documents.
+   ========================================================= */
+let cloud = null;              // références Firebase une fois la session ouverte
+let opened = false;            // premier chargement terminé, interface affichée
+let pendingRemoteLists = null; // mise à jour distante différée (édition ou sauvegarde en cours)
+let savingDict = false;        // écriture du dictionnaire en vol
+
+const plain = x => JSON.parse(JSON.stringify(x));
+
+async function cloudSaveDict(){
+  if(!cloud) return;
+  savingDict = true;
+  try{ await cloud.setDoc(cloud.dictRef, { lists: plain(state.lists), updatedAt: cloud.serverTimestamp() }); }
+  catch(e){ flash("Écriture en ligne impossible pour l'instant.", true); }
+  finally{ savingDict = false; }
+}
+async function cloudSaveGrid(g){
+  if(!cloud) return;
+  try{ await cloud.setDoc(cloud.doc(cloud.db, "users", cloud.uid, "grids", g.id), plain(g)); }
+  catch(e){ flash("Grille non synchronisée pour l'instant.", true); }
+}
+async function cloudDeleteGrid(id){
+  if(!cloud) return;
+  try{ await cloud.deleteDoc(cloud.doc(cloud.db, "users", cloud.uid, "grids", id)); }catch(e){}
+}
+// Écrit tout l'état courant en ligne; retire les grilles qui n'existent plus.
+async function cloudReplaceAll(prevGridIds){
+  if(!cloud) return;
+  const ops = [["set", cloud.dictRef, { lists: plain(state.lists), updatedAt: cloud.serverTimestamp() }]];
+  for(const g of state.savedGrids) ops.push(["set", cloud.doc(cloud.db, "users", cloud.uid, "grids", g.id), plain(g)]);
+  const keep = new Set(state.savedGrids.map(g => g.id));
+  for(const id of prevGridIds || []) if(!keep.has(id)) ops.push(["del", cloud.doc(cloud.db, "users", cloud.uid, "grids", id)]);
+  while(ops.length){
+    const chunk = ops.splice(0, 400);
+    const b = cloud.writeBatch(cloud.db);
+    for(const [kind, ref, data] of chunk){ if(kind === "set") b.set(ref, data); else b.delete(ref); }
+    await b.commit();
+  }
+}
+
+const SEED_WORDS = "Lancelot|Guenièvre|charrette|Chrétien|Troyes|reine|Gauvain|épée|pont|amour|Méléagant|quête";
+function isPristineSeed(st){
+  if(!st || !Array.isArray(st.lists) || st.lists.length !== 1) return false;
+  if((st.savedGrids || []).length) return false;
+  const l = st.lists[0];
+  if(l.name !== "Le Chevalier de la charrette") return false;
+  return l.entries.map(e => e.word).join("|") === SEED_WORDS;
+}
+
+function sortGrids(){
+  state.savedGrids.sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+}
+function pickCurrent(){
+  let want = state.currentId;
+  if(CLOUD){ try{ want = localStorage.getItem("vc-current") || want; }catch(e){} }
+  state.currentId = want && state.lists.some(l => l.id === want) ? want : (state.lists[0] ? state.lists[0].id : null);
+}
+// Une mise à jour distante n'est pas appliquée pendant une saisie en cours.
+function uiBusy(){
+  const a = document.activeElement;
+  if(!a || !a.closest) return false;
+  return !!(a.closest(".entry-editor") || a.closest(".definebox") || a.classList.contains("clue-select") || a.id === "listName");
+}
+function applyRemoteLists(lists){
+  // tout instantané plus récent remplace celui éventuellement en attente
+  pendingRemoteLists = null;
+  const norm = (lists || []).map(l => ({
+    id: l.id || uid(), name: l.name || "",
+    entries: (l.entries || []).map(migrateEntry).filter(e => e.word)
+  }));
+  if(JSON.stringify(norm) === JSON.stringify(state.lists)) return;
+  if(!opened){ state.lists = norm; return; }
+  // jamais pendant qu'une sauvegarde locale attend ou part : elle ferait perdre
+  // la modification locale; l'instantané est réappliqué juste après
+  if(saveTimer || savingDict || uiBusy()){ pendingRemoteLists = norm; setTimeout(retryPendingRemote, 700); return; }
+  state.lists = norm;
+  pickCurrent();
+  renderLists(); renderEntries();
+}
+function retryPendingRemote(){
+  if(pendingRemoteLists === null) return;
+  if(saveTimer || savingDict || uiBusy()){ setTimeout(retryPendingRemote, 700); return; }
+  const l = pendingRemoteLists; pendingRemoteLists = null;
+  applyRemoteLists(l);
+}
+function applyRemoteGrids(arr){
+  const sorted = arr.slice().sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")));
+  if(JSON.stringify(sorted) === JSON.stringify(state.savedGrids)) return;
+  state.savedGrids = sorted;
+  if(opened) renderSaved();
+}
+function finishOpen(){
+  if(opened) return;
+  opened = true;
+  if(!state.lists.length) state.lists = [{ id: uid(), name: "Nouvelle liste", entries: [] }];
+  pickCurrent();
+  sortGrids();
+  $("authGate").hidden = true;
+  renderAll();
+  // Auto-generate a first grid so the workspace opens on a real crossword.
+  if(prep(currentList().entries.map(toGenEntry)).out.length >= 2) doGenerate();
+}
+
+async function bootCloud(){
+  const gate = $("authGate"), status = $("gateStatus"), loginBtn = $("loginBtn");
+  gate.hidden = false;
+  bind();
+  let m;
+  try{
+    const [appM, authM, fsM] = await Promise.all([
+      import(FIREBASE_SDK + "/firebase-app.js"),
+      import(FIREBASE_SDK + "/firebase-auth.js"),
+      import(FIREBASE_SDK + "/firebase-firestore.js")
+    ]);
+    m = Object.assign({}, appM, authM, fsM);
+  }catch(e){
+    status.textContent = "Impossible de charger le module de synchronisation. Vérifiez votre connexion, puis rechargez la page.";
+    status.classList.add("warn");
+    return;
+  }
+  const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
+  const app = m.initializeApp(cfg);
+  const auth = m.getAuth(app);
+  // Cache mémoire seul (pas de persistance IndexedDB) : la persistance
+  // multi-onglets fait planter les lectures Firestore sur Safari.
+  const db = m.initializeFirestore(app, {});
+  if(EMU_MODE){
+    m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  }
+
+  loginBtn.onclick = async () => {
+    status.textContent = "Connexion…"; status.classList.remove("warn");
+    try{
+      if(EMU_MODE){
+        const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "auteur-test", email: ADMIN_EMAIL, email_verified: true }));
+        await m.signInWithCredential(auth, cred);
+      } else {
+        await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+      }
+    }catch(e){
+      status.classList.add("warn");
+      const code = (e && e.code) || "";
+      if(code === "auth/popup-blocked") status.textContent = "La fenêtre de connexion a été bloquée. Autorisez les fenêtres surgissantes pour ce site, puis réessayez.";
+      else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") status.textContent = "Fenêtre refermée avant la fin de la connexion. Réessayez.";
+      else if(code === "auth/configuration-not-found") status.textContent = "La connexion Google n'est pas activée dans la console Firebase : menu Authentication, onglet Sign-in method, fournisseur Google.";
+      else if(code === "auth/operation-not-allowed") status.textContent = "Le fournisseur Google n'est pas activé dans la console Firebase : Authentication, onglet Sign-in method, Google, interrupteur Activer, puis Enregistrer.";
+      else if(code === "auth/unauthorized-domain") status.textContent = "Ce domaine n'est pas autorisé dans la console Firebase : Authentication, Settings, Domaines autorisés.";
+      else status.textContent = "Connexion impossible : " + (e && e.message ? e.message : e);
+    }
+  };
+
+  let started = false;
+  m.onAuthStateChanged(auth, user => {
+    if(!user){
+      gate.hidden = false;
+      loginBtn.hidden = false;
+      status.textContent = started ? "Session terminée. Reconnectez-vous." : "";
+      $("accountBar").hidden = true;
+      return;
+    }
+    const isAdmin = (user.email === ADMIN_EMAIL) && (user.providerData[0] && user.providerData[0].providerId === "google.com");
+    if(!isAdmin){
+      gate.hidden = false;
+      loginBtn.hidden = true;
+      const so = $("gateSignOut");
+      so.hidden = false;
+      so.onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+      status.textContent = "Cet espace est réservé à l'auteur. Déconnectez-vous, puis connectez-vous avec le compte de l'auteur.";
+      status.classList.add("warn");
+      $("accountBar").hidden = true;
+      return;
+    }
+    if(started) return;
+    started = true;
+    cloud = { db, uid: user.uid,
+              doc: m.doc, setDoc: m.setDoc, deleteDoc: m.deleteDoc,
+              writeBatch: m.writeBatch, serverTimestamp: m.serverTimestamp,
+              collection: m.collection, query: m.query, orderBy: m.orderBy, limit: m.limit, getDocs: m.getDocs,
+              dictRef: m.doc(db, "users", user.uid, "data", "dict") };
+    $("accountMail").textContent = user.email || "";
+    $("accountBar").hidden = false;
+    $("signOutBtn").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+    status.textContent = "Ouverture de votre atelier…";
+    startSession(m);
+  });
+}
+
+async function startSession(m){
+  // ancien stockage local de ce navigateur, repris une seule fois
+  const legacy = migrateState(await loadState());
+  const migratedFlag = "vc-migrated-" + cloud.uid;
+  let alreadyMigrated = false;
+  try{ alreadyMigrated = !!localStorage.getItem(migratedFlag); }catch(e){}
+  const markMigrated = () => { try{ localStorage.setItem(migratedFlag, "1"); }catch(e){} };
+
+  state = { lists: [], currentId: null, savedGrids: [] };
+  let dictSeen = false, gridsSeen = false, uploading = false;
+  const maybeOpen = () => {
+    if(opened || uploading || !dictSeen || !gridsSeen) return;
+    // fusion unique : données locales significatives inconnues du nuage
+    if(!alreadyMigrated){
+      alreadyMigrated = true; markMigrated();
+      if(legacy && legacy.lists.length && !isPristineSeed(legacy)){
+        const known = new Set(state.lists.map(l => l.id));
+        const extraL = legacy.lists.filter(l => !known.has(l.id));
+        if(extraL.length){ state.lists = state.lists.concat(plain(extraL)); cloudSaveDict(); }
+        const knownG = new Set(state.savedGrids.map(g => g.id));
+        for(const g of (legacy.savedGrids || []).filter(g => !knownG.has(g.id))){
+          state.savedGrids.push(plain(g)); cloudSaveGrid(g);
+        }
+      }
+    }
+    finishOpen();
+  };
+
+  m.onSnapshot(cloud.dictRef, async snap => {
+    if(!dictSeen){
+      dictSeen = true;
+      if(!snap.exists() && !snap.metadata.fromCache){
+        // tout premier passage : le nuage est vide, on y verse l'état local (ou la graine)
+        uploading = true;
+        if(legacy && legacy.lists.length){ state.lists = plain(legacy.lists); state.savedGrids = plain(legacy.savedGrids || []); }
+        else { seed(); }
+        alreadyMigrated = true; markMigrated();
+        try{ await cloudReplaceAll([]); }
+        catch(e){ flash("Écriture en ligne impossible : " + (e && e.code ? e.code : e), true); }
+        uploading = false; gridsSeen = true;
+        finishOpen();
+        return;
+      }
+      applyRemoteLists(snap.exists() ? (snap.data().lists || []) : []);
+      maybeOpen();
+      return;
+    }
+    applyRemoteLists(snap.exists() ? (snap.data().lists || []) : []);
+  }, err => {
+    $("gateStatus").textContent = "Lecture en ligne refusée (" + err.code + "). Vérifiez les règles Firestore dans la console.";
+    $("gateStatus").classList.add("warn");
+  });
+
+  m.onSnapshot(m.collection(cloud.db, "users", cloud.uid, "grids"), snap => {
+    applyRemoteGrids(snap.docs.map(d => d.data()));
+    if(!gridsSeen){ gridsSeen = true; maybeOpen(); }
+  });
+}
+
+/* =========================================================
+   State
+   ========================================================= */
+let state = { lists: [], currentId: null, savedGrids: [] };
+let currentModel = null;   // last generated grid model
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+function currentList(){ return state.lists.find(l => l.id === state.currentId) || state.lists[0]; }
+function findEntry(entryId){
+  if(!entryId) return null;
+  for(const l of state.lists){
+    const e = l.entries.find(x => x.id === entryId);
+    if(e) return e;
+  }
+  return null;
+}
+// La définition par défaut d'une entrée : la dernière utilisée, sinon la première.
+function defaultClueOf(entry){
+  if(!entry || !entry.clues.length) return null;
+  if(entry.lastClueId){
+    const c = entry.clues.find(x => x.id === entry.lastClueId);
+    if(c) return c;
+  }
+  return entry.clues[0];
+}
+function newEntry(word, clueText){
+  const text = (clueText || "").trim();
+  return { id: uid(), word, clues: text ? [{ id: uid(), text }] : [] };
+}
+// Clé de comparaison d'un mot : ses lettres de placement (casse, accents,
+// ligatures et signes neutralisés). Sert à refuser les doublons dans une liste.
+function letterKey(word){ return sanitize(word).clean; }
+function findDuplicate(list, word, exceptId){
+  const key = letterKey(word);
+  if(!key) return null;
+  return list.entries.find(e => e.id !== exceptId && letterKey(e.word) === key) || null;
+}
+
+/* Migration ascendante : { word, clue } devient { word, clues: Clue[] } */
+function migrateEntry(e){
+  const out = { id: e.id || uid(), word: (e.word || "").trim(), clues: [] };
+  if(Array.isArray(e.clues)){
+    for(const c of e.clues){
+      if(c && typeof c.text === "string" && c.text.trim()) out.clues.push({ id: c.id || uid(), text: c.text.trim() });
+    }
+  } else if(typeof e.clue === "string" && e.clue.trim()){
+    out.clues.push({ id: uid(), text: e.clue.trim() });
+  }
+  if(e.lastClueId && out.clues.some(c => c.id === e.lastClueId)) out.lastClueId = e.lastClueId;
+  return out;
+}
+function migrateSavedGrid(g){
+  const item = it => ({
+    num: it.num, word: it.word || "", clue: it.clue || "",
+    clueId: it.clueId || null, entryId: it.entryId || null
+  });
+  return {
+    id: g.id || uid(), name: g.name || "Grille", listName: g.listName || "",
+    date: g.date || "", rows: g.rows, cols: g.cols,
+    cells: g.cells || {}, number: g.number || {}, bars: g.bars || {},
+    across: (g.across || []).map(item), down: (g.down || []).map(item),
+    crossings: g.crossings || 0
+  };
+}
+function migrateState(data){
+  if(!data || !Array.isArray(data.lists)) return null;
+  const lists = data.lists.map(l => ({
+    id: l.id || uid(), name: l.name || "",
+    entries: (l.entries || []).map(migrateEntry).filter(e => e.word)
+  }));
+  if(!lists.length) return null;
+  const st = { lists, currentId: null, savedGrids: (Array.isArray(data.savedGrids) ? data.savedGrids : []).map(migrateSavedGrid) };
+  st.currentId = data.currentId && lists.some(l => l.id === data.currentId) ? data.currentId : lists[0].id;
+  return st;
+}
+
+function seed(){
+  const entries = [
+    ["Lancelot","Le héros chevalier du roman"],
+    ["Guenièvre","La reine aimée et enlevée"],
+    ["charrette","Le véhicule d'infamie qui donne son titre"],
+    ["Chrétien","L'auteur, … de Troyes"],
+    ["Troyes","Ville d'origine de l'auteur"],
+    ["reine","Rang de Guenièvre à la cour d'Arthur"],
+    ["Gauvain","Le neveu modèle du roi Arthur"],
+    ["épée","Le pont est fait de cette lame"],
+    ["pont","L'obstacle tranchant à franchir"],
+    ["amour","Le moteur courtois du récit"],
+    ["Méléagant","Le ravisseur de la reine"],
+    ["quête","La recherche qui structure le roman"]
+  ].map(([w,c]) => newEntry(w, c));
+  const l = { id: uid(), name: "Le Chevalier de la charrette", entries };
+  state = { lists: [l], currentId: l.id, savedGrids: [] };
+}
+
+/* =========================================================
+   Crossword generation (algorithme du prototype, repris tel quel)
+   ========================================================= */
+const ACROSS = "A", DOWN = "D";
+const keyOf = (r,c) => r + "," + c;
+
+function sanitize(raw){
+  const up = (raw || "").toUpperCase();
+  let clean = "";
+  const display = [];
+  const breaks = [];        // indices de lettres précédées d'une frontière de mot
+  let pendingBreak = false; // un espace ou un trait d'union vient d'être vu
+  for(const ch of up){
+    if(ch === " " || ch === "\u00A0" || ch === "-"){
+      if(clean) pendingBreak = true;
+      continue;
+    }
+    // Ligatures : un caractère, deux cases (CŒUR s'écrit C, O, E, U, R dans la grille).
+    if(ch === "Œ" || ch === "Æ"){
+      if(pendingBreak){ breaks.push(clean.length); pendingBreak = false; }
+      const pair = ch === "Œ" ? "OE" : "AE";
+      clean += pair;
+      display.push(pair[0], pair[1]);
+      continue;
+    }
+    const stripped = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // les chiffres entrent dans la grille, une case chacun; 0 et O restent distincts
+    if(/^[A-Z0-9]$/.test(stripped)){
+      if(pendingBreak){ breaks.push(clean.length); pendingBreak = false; }
+      clean += stripped; display.push(ch.normalize("NFC"));
+    }
+  }
+  return { clean, display, breaks };
+}
+
+// Adaptateur : une entrée du dictionnaire vers le générateur, avec sa définition par défaut.
+function toGenEntry(e){
+  const c = defaultClueOf(e);
+  return { word: e.word, clue: c ? c.text : "", entryId: e.id, clueId: c ? c.id : null };
+}
+
+function prep(entries){
+  const out = [], skipped = [];
+  for(const e of entries){
+    const { clean, display, breaks } = sanitize(e.word);
+    if(clean.length >= 2) out.push({ letters: clean, display, breaks, clue: e.clue, raw: e.word, entryId: e.entryId || null, clueId: e.clueId || null });
+    else if((e.word||"").trim()) skipped.push(e.word);
+  }
+  return { out, skipped };
+}
+
+function canPlace(grid, letters, r, c, dir){
+  const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
+  const pr = dir===DOWN?0:1, pc = dir===ACROSS?0:1;
+  const len = letters.length;
+  if(grid.has(keyOf(r-dr, c-dc))) return -1;
+  if(grid.has(keyOf(r+dr*len, c+dc*len))) return -1;
+  let crossings = 0;
+  for(let k=0;k<len;k++){
+    const rr=r+dr*k, cc=c+dc*k;
+    const cell = grid.get(keyOf(rr,cc));
+    if(cell){
+      if(cell.letter !== letters[k]) return -1;
+      // un vrai croisement est perpendiculaire : si la case occupée a une voisine
+      // occupée DANS LE SENS du placement, on chevauche un mot colinéaire (ex.
+      // MAGICIEN inclus dans MAGICIENNES) — ce n'est pas un croisement, on refuse.
+      if(grid.has(keyOf(rr+dr, cc+dc)) || grid.has(keyOf(rr-dr, cc-dc))) return -1;
+      crossings++;
+    } else {
+      if(grid.has(keyOf(rr+pr, cc+pc))) return -1;
+      if(grid.has(keyOf(rr-pr, cc-pc))) return -1;
+    }
+  }
+  return crossings;
+}
+function put(grid, entry, r, c, dir){
+  const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
+  for(let k=0;k<entry.letters.length;k++){
+    const kk = keyOf(r+dr*k, c+dc*k);
+    if(!grid.has(kk)) grid.set(kk, { letter: entry.letters[k], display: entry.display[k] });
+  }
+}
+function bbox(grid){
+  let minR=Infinity,minC=Infinity,maxR=-Infinity,maxC=-Infinity;
+  for(const k of grid.keys()){ const ci=k.indexOf(","); const r=+k.slice(0,ci), c=+k.slice(ci+1);
+    if(r<minR)minR=r; if(r>maxR)maxR=r; if(c<minC)minC=c; if(c>maxC)maxC=c; }
+  return { minR, minC, maxR, maxC, rows:maxR-minR+1, cols:maxC-minC+1 };
+}
+// Meilleur placement d'un mot dans la grille courante : parcourt les cases
+// occupées, aligne une lettre commune, teste les deux sens, et retient la
+// position qui croise le plus (x) en agrandissant le moins la boîte (growth).
+// Rend { r, c, dir, x, growth, nMin/Max..., score } ou null si rien ne tient.
+function bestPlacement(grid, bb, e, maxW, maxH){
+  let best = null;
+  for(const [k,cell] of grid){
+    const ci = k.indexOf(","); const cr = +k.slice(0,ci), cc = +k.slice(ci+1);
+    for(let idx=0; idx<e.letters.length; idx++){
+      if(e.letters[idx] !== cell.letter) continue;
+      for(const dir of [ACROSS,DOWN]){
+        const dr = dir===DOWN?1:0, dc = dir===ACROSS?1:0;
+        const r = cr - dr*idx, c = cc - dc*idx;
+        const x = canPlace(grid, e.letters, r, c, dir);
+        if(x <= 0) continue;
+        const eR = r + dr*(e.letters.length-1), eC = c + dc*(e.letters.length-1);
+        const nMinR = Math.min(bb.minR, r, eR), nMaxR = Math.max(bb.maxR, r, eR);
+        const nMinC = Math.min(bb.minC, c, eC), nMaxC = Math.max(bb.maxC, c, eC);
+        if((nMaxC-nMinC+1) > maxW || (nMaxR-nMinR+1) > maxH) continue;
+        const growth = ((nMaxR-nMinR+1)*(nMaxC-nMinC+1)) - (bb.rows*bb.cols);
+        // maillage d'abord : chaque croisement pèse lourd, un mot qui en croise
+        // deux (ou plus) est franchement préféré, et l'on grandit le moins possible
+        const score = x*100 + (x>=2 ? 70 : 0) - growth*4;
+        if(!best || score>best.score || (score===best.score && Math.random()<0.3))
+          best = { r, c, dir, x, growth, nMinR, nMaxR, nMinC, nMaxC, score };
+      }
+    }
+  }
+  return best;
+}
+// Croisements par mot : une case est « croisée » quand deux mots la partagent.
+// On compte les mots faiblement ancrés — 0 croisement (isolé) ou 1 seul (épine) —
+// car leurs lettres non croisées ne se déduisent d'aucun autre mot.
+function crossStats(res){
+  const count = new Map();
+  for(const p of res.placed){
+    const dr = p.dir===DOWN?1:0, dc = p.dir===ACROSS?1:0;
+    for(let k=0;k<p.letters.length;k++){
+      const kk = keyOf(p.r+dr*k, p.c+dc*k);
+      count.set(kk, (count.get(kk)||0)+1);
+    }
+  }
+  let spurs=0, isolated=0;
+  for(const p of res.placed){
+    const dr = p.dir===DOWN?1:0, dc = p.dir===ACROSS?1:0;
+    let checked=0;
+    for(let k=0;k<p.letters.length;k++){
+      if((count.get(keyOf(p.r+dr*k, p.c+dc*k))||0) >= 2) checked++;
+    }
+    if(checked===0) isolated++;
+    else if(checked===1) spurs++;
+  }
+  return { spurs, isolated };
+}
+// N'expose que du bien croisé : retire itérativement les mots à moins de deux
+// croisements (le « 2-core » du graphe des mots) jusqu'à stabilité. Une épine —
+// dont les lettres non croisées ne se déduisent d'aucun autre mot — n'est jamais
+// publiée : elle repart en réserve. Deux mots ne pouvant de toute façon pas
+// croiser davantage, ou un cœur qui s'effondrerait entièrement (grille en arbre),
+// on garde la grille telle quelle.
+function corePrune(res){
+  const cellsOf = p => { const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0, a=[];
+    for(let k=0;k<p.letters.length;k++) a.push(keyOf(p.r+dr*k, p.c+dc*k)); return a; };
+  let survivors = res.placed.slice();
+  for(;;){
+    if(!survivors.length) break;
+    const count = new Map();
+    for(const p of survivors) for(const kk of cellsOf(p)) count.set(kk, (count.get(kk)||0)+1);
+    const keep = [];
+    for(const p of survivors){
+      let deg = 0; for(const kk of cellsOf(p)) if(count.get(kk) >= 2) deg++;
+      if(deg >= 2) keep.push(p);
+    }
+    if(keep.length === survivors.length) break;     // stable : chaque mot croise ≥ 2 réponses
+    survivors = keep;
+  }
+  // cœur trop maigre (moins de deux mots) ou grille déjà propre : on ne touche à rien
+  if(survivors.length < 2 || survivors.length === res.placed.length) return res;
+  const kept = new Set(survivors);
+  const dropped = res.placed.filter(p => !kept.has(p));
+  const grid = new Map();
+  for(const p of survivors) put(grid, p, p.r, p.c, p.dir);
+  const bb = bbox(grid);
+  res.grid = grid; res.placed = survivors;
+  res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
+  let sumLen = 0; for(const p of survivors) sumLen += p.letters.length;
+  res.crossings = sumLen - res.filled;
+  res.unplaced = (res.unplaced || []).concat(dropped);
+  return res;
+}
+// Construit une grille dense visant « target » mots à l'intérieur d'une boîte
+// maxW x maxH. Glouton global : à chaque tour on place le meilleur (mot,
+// position) de toute la réserve, en privilégiant les croisements. On s'arrête à
+// la cible (nombre de mots adaptable aux contraintes de croisements).
+function generateOnce(entries, maxW, maxH, target){
+  const cap = Math.max(maxW, maxH);
+  const fitList = [], tooBig = [];
+  for(const e of entries){ (e.letters.length <= cap ? fitList : tooBig).push(e); }
+  if(!fitList.length) return { grid:new Map(), placed:[], unplaced:tooBig.slice(), minR:0, minC:0, rows:1, cols:1, filled:0 };
+
+  // graine : un mot long (ossature), tiré au sort parmi les plus longs pour varier les essais
+  const bySize = fitList.slice().sort((a,b)=>b.letters.length - a.letters.length);
+  const top = bySize.slice(0, Math.min(4, bySize.length));
+  const seed = top[Math.floor(Math.random()*top.length)];
+  const fitsA = seed.letters.length <= maxW, fitsD = seed.letters.length <= maxH;
+  const dir0 = (fitsA && fitsD) ? (Math.random()<0.5?ACROSS:DOWN) : (fitsA?ACROSS:DOWN);
+  const grid = new Map(), placed = [];
+  put(grid, seed, 0, 0, dir0);
+  placed.push(Object.assign({}, seed, {r:0,c:0,dir:dir0}));
+  let bb = bbox(grid);
+
+  const remaining = fitList.filter(e => e !== seed);
+  while(placed.length < target && remaining.length){
+    let pick = null, pickIdx = -1;
+    for(let i=0;i<remaining.length;i++){
+      const cand = bestPlacement(grid, bb, remaining[i], maxW, maxH);
+      if(cand && (!pick || cand.score>pick.score || (cand.score===pick.score && Math.random()<0.3))){
+        pick = cand; pickIdx = i;
+      }
+    }
+    if(!pick) break;
+    const e = remaining.splice(pickIdx,1)[0];
+    put(grid, e, pick.r, pick.c, pick.dir);
+    placed.push(Object.assign({}, e, {r:pick.r,c:pick.c,dir:pick.dir}));
+    bb = { minR:pick.nMinR, minC:pick.nMinC, maxR:pick.nMaxR, maxC:pick.nMaxC, rows:pick.nMaxR-pick.nMinR+1, cols:pick.nMaxC-pick.nMinC+1 };
+  }
+  const unplaced = remaining.concat(tooBig);
+  return { grid, placed, unplaced, minR:bb.minR, minC:bb.minC, rows:bb.rows, cols:bb.cols, filled:grid.size };
+}
+// Retient, sur « attempts » tirages, la disposition au maillage le plus dense :
+// beaucoup de croisements, peu de mots faiblement ancrés, resserrée, proche de
+// la cible de mots. Le nombre de mots placés ne prime plus sur la densité.
+function generate(entries, maxW, maxH, attempts, target){
+  let best = null;
+  for(let i=0;i<attempts;i++){
+    const res = generateOnce(entries, maxW, maxH, target);
+    corePrune(res);                       // on juge et retient la grille telle qu'elle sera publiée : sans épine
+    const pc = res.placed.length;
+    if(pc < 1) continue;
+    let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
+    const crossings = sumLen - res.filled;
+    const { spurs, isolated } = crossStats(res);
+    const area = res.rows * res.cols;
+    const over = Math.max(0, pc - target), under = Math.max(0, target - pc);
+    const sc = crossings*130 - spurs*320 - isolated*2600 - area*2
+             - Math.abs(res.rows-res.cols)*70 - over*300 - under*160;
+    if(!best || sc > best.sc) best = Object.assign(res, {pc, sc, crossings, spurs, isolated});
+  }
+  return best;
+}
+function buildModel(res){
+  const { grid, placed, minR, minC, rows, cols } = res;
+  const cells = {};
+  // Lettres de la grille sans accent (É→E, Â→A…) : l'aperçu de l'atelier et la
+  // grille publiée montrent des lettres nues, comme la saisie côté joueur. Les
+  // listes de mots et les définitions gardent, elles, l'orthographe accentuée.
+  for(const [k,v] of grid){ const ci=k.indexOf(","); const r=+k.slice(0,ci), c=+k.slice(ci+1);
+    cells[keyOf(r-minR, c-minC)] = { display: v.display.normalize("NFD").replace(/[̀-ͯ]/g, "") }; }
+  const filled = (r,c) => Object.prototype.hasOwnProperty.call(cells, keyOf(r,c));
+  const number = {}; let n=0;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(!filled(r,c)) continue;
+    const sA = !filled(r,c-1) && filled(r,c+1);
+    const sD = !filled(r-1,c) && filled(r+1,c);
+    if(sA||sD){ n++; number[keyOf(r,c)] = n; }
+  }
+  const across=[], down=[];
+  // barres épaisses : frontières de mots des réponses composées (espaces, traits d'union)
+  const bars = {};
+  for(const p of placed){
+    for(const k of (p.breaks || [])){
+      const kk = keyOf(p.r - minR + (p.dir===DOWN ? k : 0), p.c - minC + (p.dir===ACROSS ? k : 0));
+      const b = bars[kk] || (bars[kk] = {});
+      if(p.dir === ACROSS) b.left = true; else b.top = true;
+    }
+  }
+  for(const p of placed){
+    const num = number[keyOf(p.r-minR, p.c-minC)];
+    const item = { num, clue:p.clue, word:p.display.join(""), entryId:p.entryId || null, clueId:p.clueId || null };
+    (p.dir===ACROSS?across:down).push(item);
+  }
+  across.sort((a,b)=>a.num-b.num); down.sort((a,b)=>a.num-b.num);
+  // qualité du maillage : taux de cases croisées et mots faiblement ancrés (0-1
+  // croisement) — repère utile au compositeur pour juger de la difficulté
+  const cnt = {};
+  for(const p of placed){ const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0;
+    for(let k=0;k<p.letters.length;k++){ const kk=keyOf(p.r+dr*k, p.c+dc*k); cnt[kk]=(cnt[kk]||0)+1; } }
+  let checkedCells = 0; for(const k in cnt) if(cnt[k] >= 2) checkedCells++;
+  let weak = 0; for(const p of placed){ const dr=p.dir===DOWN?1:0, dc=p.dir===ACROSS?1:0; let ch=0;
+    for(let k=0;k<p.letters.length;k++) if((cnt[keyOf(p.r+dr*k, p.c+dc*k)]||0) >= 2) ch++;
+    if(ch < 2) weak++; }
+  const checkedRatio = filledCount(cells) ? checkedCells / filledCount(cells) : 0;
+  return { cells, number, filled, rows, cols, across, down, bars, unplaced:res.unplaced,
+    crossings:res.crossings||0, checkedRatio, weak };
+}
+function filledCount(cells){ return Object.keys(cells).length; }
+// Rebuild the filled() lookup for a grid model restored from storage.
+function ensureFilled(model){
+  if(typeof model.filled !== "function"){
+    model.filled = (r,c)=>Object.prototype.hasOwnProperty.call(model.cells, keyOf(r,c));
+  }
+  return model;
+}
+
+/* =========================================================
+   SVG render
+   ========================================================= */
+const CELL = 38;
+function svgString(model, solution, animate){
+  const { rows, cols, filled, cells, number } = model;
+  const bars = model.bars || {};
+  const W = cols*CELL, H = rows*CELL;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" shape-rendering="crispEdges">`;
+  let i = 0;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(!filled(r,c)) continue;
+    const x=c*CELL, y=r*CELL;
+    const num = number[keyOf(r,c)];
+    const delay = animate ? ` style="animation-delay:${(i*10)}ms"` : "";
+    s += `<g class="cell"${delay}>`;
+    s += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="#ffffff"/>`;
+    if(num) s += `<text x="${x+3.5}" y="${y+11.5}" font-family="${'SF Mono,Menlo,monospace'}" font-size="10.5" font-weight="600" fill="#7C1D2E">${num}</text>`;
+    if(solution){
+      const ch = cells[keyOf(r,c)].display;
+      s += `<text x="${x+CELL/2}" y="${y+CELL/2+7.5}" text-anchor="middle" font-family="${'SF Mono,Menlo,monospace'}" font-size="20" font-weight="600" fill="#1C1B19">${escapeXml(ch)}</text>`;
+    }
+    s += `</g>`;
+    i++;
+  }
+  // quadrillage : chaque arête est tracée une seule fois (les rects mitoyens
+  // doublaient les traits intérieurs, d'où des épaisseurs inégales)
+  let lattice = "";
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(!filled(r,c)) continue;
+    const x=c*CELL, y=r*CELL;
+    lattice += `M ${x} ${y} H ${x+CELL} `;
+    if(!filled(r+1,c)) lattice += `M ${x} ${y+CELL} H ${x+CELL} `;
+    lattice += `M ${x} ${y} V ${y+CELL} `;
+    if(!filled(r,c+1)) lattice += `M ${x+CELL} ${y} V ${y+CELL} `;
+  }
+  s += `<path d="${lattice.trim()}" fill="none" stroke="#211E17" stroke-width="1.5" stroke-linecap="square"/>`;
+
+  // séparateurs des réponses composées : un losange posé au milieu du trait
+  // entre les deux cases, la bordure gardant son épaisseur normale; une forme
+  // reste reconnaissable à toutes les échelles là où une épaisseur se noie
+  const D = 6.5;
+  const diamond = (cx, cy) => `<path class="wordbar" shape-rendering="geometricPrecision" d="M ${cx} ${cy-D} L ${cx+D} ${cy} L ${cx} ${cy+D} L ${cx-D} ${cy} Z" fill="#211E17"/>`;
+  for(const kk in bars){
+    const ci = kk.indexOf(",");
+    const r = +kk.slice(0, ci), c = +kk.slice(ci + 1);
+    if(!filled(r, c)) continue;
+    if(bars[kk].left) s += diamond(c*CELL, r*CELL + CELL/2);
+    if(bars[kk].top) s += diamond(c*CELL + CELL/2, r*CELL);
+  }
+  s += `</svg>`;
+  return s;
+}
+function escapeXml(s){ return (s||"").replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
+
+/* =========================================================
+   Rendering the UI
+   ========================================================= */
+const $ = id => document.getElementById(id);
+
+function renderLists(){
+  const sel = $("listSelect");
+  sel.innerHTML = "";
+  for(const l of state.lists){
+    const o = document.createElement("option");
+    o.value = l.id; o.textContent = l.name || "Sans titre";
+    if(l.id === state.currentId) o.selected = true;
+    sel.appendChild(o);
+  }
+  $("listName").value = currentList().name || "";
+  $("delList").disabled = state.lists.length <= 1;
+}
+
+function renderEntries(){
+  const box = $("entries");
+  const l = currentList();
+  box.innerHTML = "";
+  if(!l.entries.length){
+    box.innerHTML = `<div class="empty-hint">Aucun mot pour l'instant. Ajoutez-en un ci-dessus, ou collez une liste.</div>`;
+  } else {
+    // affichage par ordre alphabétique (l'ordre de saisie est conservé dans les données)
+    const sorted = l.entries.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
+    for(const e of sorted){
+      const row = document.createElement("div");
+      row.className = "entry";
+      row.dataset.id = e.id;
+      const word = document.createElement("span");
+      word.className = "word"; word.textContent = e.word;
+      const def = defaultClueOf(e);
+      const clue = document.createElement("span");
+      clue.className = "clue" + (def ? "" : " none");
+      if(def) clue.innerHTML = fmtClue(def.text);
+      else clue.textContent = "encore sans définition";
+      clue.title = def ? def.text : "";
+      const cnt = document.createElement("span");
+      cnt.className = "cluecount" + (e.clues.length ? "" : " zero");
+      cnt.textContent = e.clues.length + (e.clues.length > 1 ? " définitions" : " définition");
+      const acts = document.createElement("span");
+      acts.className = "acts";
+      // pas de suppression directe depuis la ligne : trop facile à toucher par
+      // erreur sur mobile; elle vit dans l'éditeur, avec confirmation
+      acts.innerHTML = `<button class="icon-btn edit" title="Modifier">✎</button>`;
+      acts.querySelector(".edit").onclick = ev => { ev.stopPropagation(); startEdit(row, e); };
+      row.onclick = () => startEdit(row, e);
+      row.append(word, clue, cnt, acts);
+      box.appendChild(row);
+    }
+  }
+  $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
+  // les champs vides se préremplissent au défaut ferme : 14 x 14 (format du jeu)
+  if(!$("maxW").value) $("maxW").value = "14";
+  if(!$("maxH").value) $("maxH").value = "14";
+}
+
+// Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
+function startEdit(row, e){
+  const l = currentList();
+  const ed = document.createElement("div");
+  ed.className = "entry-editor";
+
+  const wlab = document.createElement("label"); wlab.className = "f"; wlab.textContent = "Mot";
+  const winp = document.createElement("input"); winp.type = "text"; winp.value = e.word; winp.spellcheck = false;
+  const dlab = document.createElement("label"); dlab.className = "f"; dlab.textContent = "Définitions";
+  const list = document.createElement("div");
+  list.style.display = "flex"; list.style.flexDirection = "column"; list.style.gap = "6px";
+
+  const rows = [];   // { id: id de la définition existante ou null, input }
+  function commit(){
+    const word = winp.value.trim();
+    if(word && findDuplicate(l, word, e.id)){
+      flash(`« ${word} » est déjà dans cette liste.`, true);
+      winp.focus(); winp.select();
+      return;
+    }
+    e.word = word;
+    const clues = [];
+    for(const r of rows){
+      const txt = r.input.value.trim();
+      if(txt) clues.push({ id: r.id || uid(), text: txt });
+    }
+    e.clues = clues;
+    if(e.lastClueId && !clues.some(c => c.id === e.lastClueId)) delete e.lastClueId;
+    if(!e.word){ l.entries = l.entries.filter(x => x.id !== e.id); }
+    afterMutate();
+  }
+  function addRow(clue){
+    const r = document.createElement("div"); r.className = "cluerow";
+    const inp = document.createElement("input"); inp.type = "text";
+    inp.value = clue ? clue.text : "";
+    inp.placeholder = "Nouvelle définition";
+    const rec = { id: clue ? clue.id : null, input: inp };
+    const del = document.createElement("button");
+    del.className = "icon-btn del"; del.textContent = "✕"; del.title = "Supprimer cette définition";
+    del.onclick = () => { rows.splice(rows.indexOf(rec), 1); r.remove(); };
+    inp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
+    rows.push(rec);
+    r.append(inp, del);
+    list.appendChild(r);
+    return rec;
+  }
+  for(const c of e.clues) addRow(c);
+  if(!e.clues.length) addRow(null);
+
+  const acts = document.createElement("div"); acts.className = "ed-acts";
+  const add = document.createElement("button");
+  add.className = "btn-out"; add.textContent = "＋ Ajouter une définition";
+  add.onclick = () => { addRow(null).input.focus(); };
+  const ok = document.createElement("button");
+  ok.className = "btn-primary"; ok.textContent = "OK"; ok.onclick = commit;
+  const cancel = document.createElement("button");
+  cancel.className = "btn-ghost"; cancel.textContent = "Annuler"; cancel.onclick = () => renderEntries();
+  // suppression du mot : uniquement ici, en deux touches
+  const del = document.createElement("button");
+  del.className = "btn-out btn-danger"; del.textContent = "Supprimer le mot";
+  let delArmedW = false, delTimerW = null;
+  del.onclick = () => {
+    if(!delArmedW){
+      delArmedW = true; del.classList.add("armed"); del.textContent = "Confirmer la suppression ?";
+      delTimerW = setTimeout(() => { delArmedW = false; del.classList.remove("armed"); del.textContent = "Supprimer le mot"; }, 3000);
+      return;
+    }
+    if(delTimerW) clearTimeout(delTimerW);
+    l.entries = l.entries.filter(x => x.id !== e.id);
+    flash("Mot supprimé.");
+    afterMutate();
+  };
+  acts.append(ok, add, cancel, del);
+
+  winp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderEntries(); };
+  ed.append(wlab, winp, dlab, list, acts);
+  row.replaceWith(ed);
+  winp.focus(); winp.select();
+}
+
+function renderGrid(animate){
+  const board = $("board");
+  if(!currentModel){
+    board.className = "board empty";
+    board.textContent = "Ajoutez des mots, puis générez votre grille.";
+    $("gstats").hidden = true; $("gexport").hidden = true; $("clues").hidden = true;
+    return;
+  }
+  board.className = "board";
+  board.innerHTML = svgString(currentModel, $("showSol").checked, animate);
+
+  // stats
+  $("gstats").hidden = false;
+  const samp = currentModel.sampled;
+  // maillage : taux de cases croisées, et mots faiblement ancrés (0-1 croisement)
+  const dens = currentModel.checkedRatio != null
+    ? `<span class="fillinfo"> · ${Math.round(currentModel.checkedRatio*100)} % de cases croisées</span>`
+      + (currentModel.weak ? ` · <span class="warn">${currentModel.weak} mot${currentModel.weak>1?"s":""} peu ancré${currentModel.weak>1?"s":""}</span>` : "")
+    : "";
+  $("placedStat").innerHTML = `<span class="fillinfo">Grille ${currentModel.cols}×${currentModel.rows} · </span>${currentModel.across.length + currentModel.down.length} mots · ${currentModel.crossings} croisements`
+    + dens
+    + (samp ? `<span class="fillinfo"> · ${samp.rotated ? "rotation : les mots les moins utilisés dans vos grilles d'abord" : "tirage dans le dictionnaire"} (${samp.total} mots au total)${samp.extended ? ` · extension : +${samp.extended} de la réserve` : ""}</span>` : "");
+  const up = currentModel.unplaced || [];
+  $("unplacedStat").textContent = up.length
+    ? (up.length > 6
+        ? `· ${up.length} mots en réserve pour de prochaines grilles`
+        : `· ${up.length} non ${up.length>1?"placés":"placé"} : ${up.map(e=>e.display.join("")).join(", ")}`)
+    : "";
+
+  // clues
+  $("clues").hidden = false;
+  const fill = (ol, items) => {
+    ol.innerHTML = "";
+    for(const it of items) ol.appendChild(clueLine(it));
+    if(!items.length) ol.innerHTML = `<li style="color:var(--muted);font-style:italic">·</li>`;
+  };
+  fill($("acrossList"), currentModel.across);
+  fill($("downList"), currentModel.down);
+
+  $("gexport").hidden = false;
+  $("printTitle").textContent = currentModel.listName || currentList().name || "Mots croisés";
+}
+function escapeHtml(s){ return (s||"").replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m])); }
+// Mise en forme façon Markdown des définitions : *italique* et **gras**.
+// Le texte brut, astérisques comprises, reste la source (données et exports).
+function fmtClue(s){
+  let h = escapeHtml(s);
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  h = h.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  return h;
+}
+
+/* =========================================================
+   Lignes de définitions interactives (définitions différées)
+   ========================================================= */
+function iconBtn(sym, title, fn){
+  const b = document.createElement("button");
+  b.className = "icon-btn"; b.textContent = sym; b.title = title; b.onclick = fn;
+  return b;
+}
+function clueLine(it){
+  const li = document.createElement("li");
+  const n = document.createElement("span");
+  n.className = "n"; n.textContent = it.num;
+  const body = document.createElement("span");
+  body.className = "cluebody";
+  li.append(n, body);
+  renderClueBody(body, it);
+  return li;
+}
+// mode : undefined (texte), "edit" (modifier le texte), "choose" (sélecteur), "new" (nouvelle définition)
+function renderClueBody(body, it, mode){
+  body.innerHTML = "";
+  const entry = findEntry(it.entryId);
+
+  // Champ de saisie : mot encore sans définition, nouvelle définition, ou modification du texte.
+  if(mode === "edit" || mode === "new" || (!mode && !it.clue && entry)){
+    const isEdit = mode === "edit";
+    const box = document.createElement("span");
+    box.className = "definebox";
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.placeholder = isEdit ? "" : "Définir « " + it.word + " »…";
+    if(isEdit) inp.value = it.clue;
+    const ok = document.createElement("button");
+    ok.className = "btn-primary"; ok.textContent = "OK";
+    const commit = () => {
+      const txt = inp.value.trim();
+      if(!txt){ renderClueBody(body, it); return; }
+      const existing = isEdit && it.clueId ? entry.clues.find(x => x.id === it.clueId) : null;
+      if(existing){
+        existing.text = txt;
+        it.clue = txt;
+        flash("Définition mise à jour au dictionnaire.");
+      } else {
+        const c = { id: uid(), text: txt };
+        entry.clues.push(c);
+        entry.lastClueId = c.id;
+        it.clueId = c.id; it.clue = txt;
+        flash("Définition enregistrée au dictionnaire.");
+      }
+      renderEntries(); scheduleSave();
+      renderClueBody(body, it);
+    };
+    ok.onclick = commit;
+    inp.onkeydown = ev => { if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderClueBody(body, it); };
+    box.append(inp, ok);
+    body.appendChild(box);
+    if(!isEdit){
+      const miss = document.createElement("span");
+      miss.className = "miss print-fallback";
+      miss.textContent = "(définition à compléter : " + it.word + ")";
+      body.appendChild(miss);
+    }
+    if(mode) inp.focus();
+    return;
+  }
+
+  // Sélecteur : choisir, pour cette grille, parmi les définitions du mot.
+  if(mode === "choose" && entry && entry.clues.length){
+    const sel = document.createElement("select");
+    sel.className = "clue-select";
+    for(const c of entry.clues){
+      const o = document.createElement("option");
+      o.value = c.id; o.textContent = c.text;
+      if(c.id === it.clueId) o.selected = true;
+      sel.appendChild(o);
+    }
+    const oNew = document.createElement("option");
+    oNew.value = "__new__"; oNew.textContent = "Nouvelle définition…";
+    sel.appendChild(oNew);
+    sel.onchange = () => {
+      if(sel.value === "__new__"){ renderClueBody(body, it, "new"); return; }
+      const c = entry.clues.find(x => x.id === sel.value);
+      if(c){
+        it.clueId = c.id; it.clue = c.text;
+        entry.lastClueId = c.id;
+        renderEntries(); scheduleSave();
+        flash("Définition choisie pour cette grille.");
+      }
+      renderClueBody(body, it);
+    };
+    sel.onkeydown = ev => { if(ev.key==="Escape") renderClueBody(body, it); };
+    body.appendChild(sel);
+    sel.focus();
+    return;
+  }
+
+  // Affichage : le mot (toujours visible pour l'auteur), sa définition courante,
+  // puis les outils (modifier, choisir parmi les définitions, en ajouter une).
+  const w = document.createElement("span");
+  w.className = "clue-word"; w.textContent = it.word;
+  body.appendChild(w);
+
+  const txt = document.createElement("span");
+  if(it.clue){ txt.innerHTML = fmtClue(it.clue); }
+  else { txt.className = "miss"; txt.textContent = "(définition à compléter)"; }
+  body.appendChild(txt);
+
+  if(entry){
+    const tools = document.createElement("span");
+    tools.className = "ctools";
+    if(it.clue && it.clueId){
+      tools.appendChild(iconBtn("✎", "Modifier cette définition", () => renderClueBody(body, it, "edit")));
+    }
+    if(entry.clues.length > 1){
+      tools.appendChild(iconBtn("⇅", "Choisir la définition (" + entry.clues.length + ")", () => renderClueBody(body, it, "choose")));
+    }
+    tools.appendChild(iconBtn("＋", "Ajouter une définition (ajoutée aussi au dictionnaire)", () => renderClueBody(body, it, "new")));
+    body.appendChild(tools);
+  }
+}
+
+/* =========================================================
+   Generation flow
+   ========================================================= */
+// Nombre d'apparitions de chaque mot du dictionnaire dans les grilles enregistrées.
+function savedGridUsage(){
+  const byId = new Map(), byWord = new Map();
+  for(const g of state.savedGrids || []){
+    for(const it of [].concat(g.across || [], g.down || [])){
+      if(it.entryId) byId.set(it.entryId, (byId.get(it.entryId) || 0) + 1);
+      else if(it.word) byWord.set(it.word, (byWord.get(it.word) || 0) + 1);
+    }
+  }
+  return ge => (byId.get(ge.entryId) || 0) + (byWord.get(ge.display.join("")) || 0);
+}
+// Candidats d'une grille : autant de mots que la boîte peut en accueillir.
+// Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
+// les grilles enregistrées passent d'abord (hasard à égalité). Jamais deux
+// formes d'un même mot (singulier et pluriel) dans une même grille. Un mot
+// plus long que la boîte n'est pas utilisé.
+function stemOf(letters){ return letters.length > 2 && letters.endsWith("S") ? letters.slice(0, -1) : letters; }
+function selectPool(out, W, H){
+  // aire/6 : réserve mesurée au banc d'essai, environ 13 % de croisements de
+  // plus qu'aire/8 sur une 15×15 pour un surcoût minime
+  const cap = Math.max(20, Math.round((W * H) / 6));
+  const usage = savedGridUsage();
+  const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
+  scored.sort((a,b) => a.u - b.u || a.r - b.r);
+  const pool = [];
+  const stems = new Set();
+  for(const { e } of scored){
+    if(e.letters.length > Math.max(W, H)) continue;
+    const st = stemOf(e.letters);
+    if(stems.has(st)) continue;
+    stems.add(st);
+    pool.push(e);
+    if(pool.length >= cap) break;
+  }
+  return { pool, rotated: out.length > cap && scored.some(x => x.u > 0) };
+}
+
+// Passe de densification : une fois la meilleure grille retenue, la réserve
+// tente de se glisser dans les trous — mais on n'accepte que ce qui resserre le
+// maillage sans étaler la grille : un mot qui croise au moins deux réponses (ou
+// une seule sans agrandir la boîte). Les mots les moins utilisés d'abord.
+function extendGrid(res, extras, W, H, target){
+  const grid = res.grid;
+  let bb = bbox(grid);
+  let added = 0;
+  const ceiling = target + 4;                 // marge de densification au-dessus de la cible
+  const stems = new Set(res.placed.map(p => stemOf(p.letters)));
+  const tryOne = (e) => {
+    if(stems.has(stemOf(e.letters))) return false;
+    const cand = bestPlacement(grid, bb, e, W, H);
+    // densifier, pas étaler : deux croisements, ou un seul mais sans agrandir
+    if(!cand || !((cand.x >= 2 && cand.growth <= 2) || (cand.x >= 1 && cand.growth <= 0))) return false;
+    put(grid, e, cand.r, cand.c, cand.dir);
+    res.placed.push(Object.assign({}, e, { r: cand.r, c: cand.c, dir: cand.dir }));
+    stems.add(stemOf(e.letters));
+    bb = { minR:cand.nMinR, minC:cand.nMinC, maxR:cand.nMaxR, maxC:cand.nMaxC, rows:cand.nMaxR-cand.nMinR+1, cols:cand.nMaxC-cand.nMinC+1 };
+    added++;
+    return true;
+  };
+  let rest = extras.slice();
+  for(let p = 0; p < 2; p++){
+    const still = [];
+    for(const e of rest){ if(res.placed.length >= ceiling || !tryOne(e)) still.push(e); }
+    rest = still;
+    if(res.placed.length >= ceiling) break;
+  }
+  res.minR = bb.minR; res.minC = bb.minC; res.rows = bb.rows; res.cols = bb.cols; res.filled = grid.size;
+  let sumLen = 0; for(const p of res.placed) sumLen += p.letters.length;
+  res.crossings = sumLen - res.filled;
+  return added;
+}
+function doGenerate(){
+  const l = currentList();
+  const { out, skipped } = prep(l.entries.map(toGenEntry));
+  if(out.length < 2){
+    flash("Il faut au moins deux mots valides pour générer une grille.", true);
+    currentModel = null; renderGrid(false); return;
+  }
+  // dimensions (bounding box). Empty or too-small fields fall back to the
+  // default: 14 x 14 ferme (format du jeu); un mot plus long que la boîte n'est pas utilisé
+  let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
+  if(!W || W < 2){ W = 14; $("maxW").value = "14"; }
+  if(!H || H < 2){ H = 14; $("maxH").value = "14"; }
+  const { pool, rotated } = selectPool(out, W, H);
+  const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
+  // cible de mots avant élagage : ~16 sur une 14×14 (aire/12). L'élagage des
+  // épines en retire deux ou trois, la grille publiée tombe autour de 14 mots
+  // tous bien croisés. Adaptable à la taille de la boîte et au vivier disponible.
+  const target = Math.max(6, Math.min(pool.length, Math.round((W * H) / 12)));
+  // le glouton global est plus lourd par tirage : on module le nombre de tirages
+  const attempts = Math.max(pool.length > 60 ? 40 : 60, Math.min(140, Math.round(2600 / pool.length)));
+
+  $("genBtn").disabled = true; $("regenBtn").disabled = true;
+  $("board").className = "board empty";
+  $("board").textContent = pool.length > 60 ? "Génération… (beaucoup de mots, cela peut prendre quelques secondes)" : "Génération…";
+  setTimeout(() => {
+    const best = generate(pool, W, H, attempts, target);
+    // extension : la réserve entière tente de se glisser dans les trous,
+    // les mots les moins présents dans les grilles enregistrées d'abord
+    const inPool = new Set(pool.map(e => e.letters));
+    let extras = out.filter(e => !inPool.has(e.letters) && e.letters.length <= Math.max(W, H));
+    let extended = 0;
+    if(extras.length){
+      const usage = savedGridUsage();
+      extras = extras.map(e => ({ e, u: usage(e), r: Math.random() }))
+        .sort((a,b) => a.u - b.u || a.r - b.r).map(x => x.e);
+      extended = extendGrid(best, extras, W, H, target);
+    }
+    corePrune(best);            // la densification a pu réintroduire une épine : dernier passage avant publication
+    currentModel = buildModel(best);
+    const eligible = out.length - tooLong.length;
+    currentModel.sampled = pool.length < eligible ? { total: eligible, rotated, extended } : null;
+    $("genBtn").disabled = false; $("regenBtn").disabled = false;
+    renderGrid(true);
+    const notes = [];
+    if(skipped.length) notes.push(`${skipped.length} trop courte(s) ignorée(s)`);
+    if(tooLong.length) notes.push(`${tooLong.length} mot(s) plus long(s) que la grille, non utilisé(s)`);
+    if(notes.length) flash(notes.join(" · "), true);
+  }, 30);
+}
+
+/* =========================================================
+   Save / reload grids
+   ========================================================= */
+function saveCurrentGrid(){
+  if(!currentModel) return;
+  state.savedGrids = state.savedGrids || [];
+  const g = {
+    id: uid(),
+    name: currentList().name || "Grille",
+    listName: currentList().name || "",
+    date: new Date().toISOString(),
+    rows: currentModel.rows, cols: currentModel.cols,
+    cells: currentModel.cells, number: currentModel.number,
+    bars: currentModel.bars || {},
+    // copie des lignes : la grille enregistrée fige l'instantané (clueId + texte)
+    across: currentModel.across.map(it => Object.assign({}, it)),
+    down: currentModel.down.map(it => Object.assign({}, it)),
+    crossings: currentModel.crossings
+  };
+  state.savedGrids.unshift(g);
+  renderSaved();
+  // en ligne, les grilles ont leurs propres documents : le dictionnaire n'est pas réécrit
+  if(CLOUD) cloudSaveGrid(g); else scheduleSave();
+  flash("Grille enregistrée.");
+}
+function loadSavedGrid(id){
+  const g = (state.savedGrids || []).find(x => x.id === id);
+  if(!g) return;
+  currentModel = ensureFilled({
+    rows: g.rows, cols: g.cols, cells: g.cells, number: g.number,
+    bars: g.bars || {},
+    // copie des lignes : les interactions sur la grille affichée ne modifient pas l'instantané
+    across: g.across.map(it => Object.assign({}, it)),
+    down: g.down.map(it => Object.assign({}, it)),
+    crossings: g.crossings || 0,
+    unplaced: [], listName: g.listName
+  });
+  renderGrid(true);
+  flash("Grille chargée.");
+}
+function renderSaved(){
+  const wrap = $("savedWrap"), list = $("savedList");
+  const gs = state.savedGrids || [];
+  wrap.hidden = gs.length === 0;
+  list.innerHTML = "";
+  for(const g of gs){
+    const d = new Date(g.date);
+    const when = isNaN(d.getTime()) ? "" :
+      d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) + " · " +
+      d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    const row = document.createElement("div");
+    row.className = "saved-row";
+    const meta = document.createElement("div");
+    meta.className = "saved-meta";
+    meta.innerHTML = `<span class="saved-name">${escapeHtml(g.name||"Grille")}</span><span class="saved-sub">${g.cols}×${g.rows} · ${g.crossings||0} croisements · ${when}</span>`;
+    const acts = document.createElement("div");
+    acts.className = "saved-acts";
+    const load = document.createElement("button"); load.className="btn-out"; load.textContent="Charger"; load.onclick=()=>loadSavedGrid(g.id);
+    const del = document.createElement("button"); del.className="icon-btn del"; del.textContent="✕"; del.title="Supprimer"; del.onclick=()=>{ state.savedGrids = state.savedGrids.filter(x=>x.id!==g.id); renderSaved(); if(CLOUD) cloudDeleteGrid(g.id); else scheduleSave(); flash("Grille supprimée."); };
+    acts.append(load, del);
+    row.append(meta, acts);
+    list.appendChild(row);
+  }
+}
+
+/* =========================================================
+   Import / export
+   ========================================================= */
+function parsePaste(){
+  const l = currentList();
+  let added = 0, dups = 0, merged = 0;
+  const byKey = new Map();
+  for(const e of l.entries){ const k = letterKey(e.word); if(k && !byKey.has(k)) byKey.set(k, e); }
+  const push = (word, clue) => {
+    const k = letterKey(word);
+    const dup = k ? byKey.get(k) : null;
+    if(dup){
+      if(clue && !dup.clues.some(c => c.text === clue)){ dup.clues.push({ id: uid(), text: clue }); merged++; }
+      else dups++;
+      return;
+    }
+    const e = newEntry(word, clue);
+    l.entries.push(e); added++;
+    if(k) byKey.set(k, e);
+  };
+  const lines = $("pasteArea").value.split(/\r?\n/);
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line) continue;
+    const tab = line.indexOf("\t");
+    const col = line.indexOf(":");
+    if(tab >= 0 || col >= 0){
+      // word + definition on this line (definition may contain ; or ,)
+      const sep = (tab >= 0 && (col < 0 || tab < col)) ? tab : col;
+      const word = line.slice(0, sep).trim();
+      const clue = line.slice(sep + 1).trim();
+      if(word) push(word, clue);
+    } else {
+      // bare word(s): one or several separated by ";"
+      for(const part of line.split(";")){
+        const word = part.trim();
+        if(word) push(word, "");
+      }
+    }
+  }
+  $("pasteArea").value = "";
+  $("importBox").hidden = true;
+  const bits = [`${added} mot(s) ajouté(s)`];
+  if(merged) bits.push(`${merged} définition(s) ajoutée(s) à des mots existants`);
+  if(dups) bits.push(`${dups} doublon(s) ignoré(s)`);
+  flash(bits.join(" · ") + ".");
+  afterMutate();
+}
+function download(filename, text, type){
+  const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function exportJson(){
+  download("verbicruciste-sauvegarde.json", JSON.stringify(state, null, 2), "application/json");
+  flash("Sauvegarde exportée.");
+}
+function exportTsv(){
+  const l = currentList();
+  const sorted = l.entries.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
+  const tsv = sorted.map(e => [e.word].concat(e.clues.map(c => c.text)).join("\t")).join("\n");
+  const safe = (l.name||"liste").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "liste";
+  download(safe + ".tsv", tsv, "text/tab-separated-values;charset=utf-8");
+  flash("Liste exportée en .tsv");
+}
+// Texte des définitions de la grille courante, prêt à coller (numéro + texte,
+// par sens). Le texte brut des définitions est conservé, astérisques comprises.
+function cluesText(){
+  if(!currentModel) return "";
+  const lines = [(currentModel.listName || currentList().name || "Mots croisés").trim()];
+  const block = (label, items) => {
+    if(!items || !items.length) return;
+    lines.push("", label);
+    for(const it of items){
+      const def = it.clue ? it.clue : "(définition à compléter : " + it.word + ")";
+      lines.push(it.num + ". " + def);
+    }
+  };
+  block("HORIZONTALEMENT", currentModel.across);
+  block("VERTICALEMENT", currentModel.down);
+  return lines.join("\n");
+}
+// Copie dans le presse-papiers, avec repli si l'API moderne est indisponible.
+async function copyToClipboard(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){ /* on tente le repli */ }
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.top = "0"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+async function copyClues(){
+  if(!currentModel) return;
+  const ok = await copyToClipboard(cluesText());
+  flash(ok ? "Définitions copiées, prêtes à coller." : "Copie impossible sur ce navigateur.", !ok);
+}
+// Grille courante au format attendu par le jeu Donjons & Définitions :
+// solution, numéros, séparateurs, et pour chaque définition ses coordonnées.
+function puzzleForGame(){
+  if(!currentModel) return null;
+  const g = currentModel;
+  const numPos = {};
+  for(const k in g.number){ const [r,c] = k.split(",").map(Number); numPos[g.number[k]] = [r,c]; }
+  const cellsOf = (item, dir) => {
+    const [r,c] = numPos[item.num];
+    const len = [...item.word].length;
+    const out = [];
+    for(let i=0;i<len;i++) out.push(dir === "down" ? [r+i, c] : [r, c+i]);
+    return out;
+  };
+  const solution = {};
+  for(const k in g.cells) solution[k] = g.cells[k].display;
+  return {
+    title: currentList().name || "Grille",
+    rows: g.rows, cols: g.cols,
+    solution, numbers: g.number, bars: g.bars || {},
+    across: g.across.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "across") })),
+    down: g.down.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "down") }))
+  };
+}
+async function copyGamePuzzle(){
+  const p = puzzleForGame();
+  if(!p) return;
+  const undef = p.across.concat(p.down).filter(w => !w.clue).length;
+  const ok = await copyToClipboard(JSON.stringify(p));
+  if(!ok){ flash("Copie impossible sur ce navigateur.", true); return; }
+  flash(undef ? `Grille copiée pour le jeu (${undef} définition(s) manquante(s)).` : "Grille copiée pour le jeu, à coller dans la page de publication.", !!undef);
+}
+function importJsonFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      const st = migrateState(data);
+      if(!st) throw new Error("format");
+      const prevIds = state.savedGrids.map(g => g.id);
+      state = st;
+      currentModel = null;
+      flash("Sauvegarde importée.");
+      renderAll();
+      if(CLOUD){
+        try{ localStorage.setItem("vc-current", state.currentId || ""); }catch(err){}
+        cloudReplaceAll(prevIds);
+      } else {
+        doSave();
+      }
+    }catch(e){ flash("Fichier illisible : sauvegarde non importée.", true); }
+  };
+  reader.readAsText(file);
+}
+
+/* =========================================================
+   Helpers: status + mutation
+   ========================================================= */
+let flashTimer = null;
+function flash(msg, warn){
+  const el = $("hstatus");
+  el.textContent = msg;
+  el.classList.toggle("warn", !!warn);
+  if(flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(()=>{ const fallback = (!CLOUD && !HAS_IDB) ? "Stockage local indisponible, pensez à exporter vos données." : ""; el.textContent = fallback; el.classList.toggle("warn", !!fallback); }, 3800);
+}
+function afterMutate(){
+  renderEntries();
+  scheduleSave();
+}
+function renderAll(){
+  renderLists(); renderEntries(); renderSaved(); renderGrid(false);
+}
+
+/* =========================================================
+   Two-click confirm for delete-list
+   ========================================================= */
+let delArmed = false, delTimer = null;
+function armDelete(){
+  const b = $("delList");
+  if(!delArmed){
+    delArmed = true; b.classList.add("armed"); b.textContent = "Confirmer ?";
+    delTimer = setTimeout(disarmDelete, 3000);
+    return;
+  }
+  disarmDelete();
+  const idx = state.lists.findIndex(l=>l.id===state.currentId);
+  state.lists.splice(idx,1);
+  state.currentId = state.lists[Math.max(0, idx-1)].id;
+  currentModel = null;
+  renderAll(); doSave();
+  flash("Liste supprimée.");
+}
+function disarmDelete(){
+  delArmed = false; const b=$("delList"); b.classList.remove("armed"); b.textContent="Suppr.";
+  if(delTimer) clearTimeout(delTimer);
+}
+
+/* =========================================================
+   Onglets : Dictionnaire · Grilles · Grilles publiées
+   ========================================================= */
+function showPane(id){
+  for(const p of ["paneDict", "paneGrids", "panePub"]) $(p).hidden = (p !== id);
+  for(const t of ["tabDict", "tabGrids", "tabPub"]){
+    const on = $(t).dataset.pane === id;
+    $(t).classList.toggle("is-active", on);
+    $(t).setAttribute("aria-selected", on ? "true" : "false");
+  }
+  // le plateau ne se dimensionne bien qu'une fois visible : on le redessine
+  if(id === "paneGrids" && currentModel) renderGrid(false);
+  if(id === "panePub") loadPublished();
+}
+
+// Liste des grilles déjà publiées dans le jeu (collection « puzzles »),
+// avec suppression. Réservée à l'auteur par les règles Firestore.
+async function loadPublished(){
+  const ul = $("pubList"), cnt = $("pubCount");
+  if(!ul) return;
+  if(!cloud || !cloud.getDocs){ ul.innerHTML = '<li class="pub-empty">Disponible une fois connecté.</li>'; cnt.textContent = ""; return; }
+  ul.innerHTML = '<li class="pub-empty">Chargement…</li>';
+  try{
+    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(80)));
+    ul.innerHTML = "";
+    cnt.textContent = snap.size ? (snap.size + (snap.size > 1 ? " grilles" : " grille")) : "";
+    if(!snap.size){ ul.innerHTML = '<li class="pub-empty">Aucune grille publiée pour l\'instant.</li>'; return; }
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const li = document.createElement("li");
+      const d = document.createElement("span"); d.className = "d"; d.textContent = docSnap.id;
+      const t = document.createElement("span"); t.className = "t"; t.textContent = data.title || "Sans titre";
+      const del = document.createElement("button"); del.className = "pub-del"; del.textContent = "Supprimer";
+      del.onclick = async () => {
+        if(!confirm("Retirer du jeu la grille du " + docSnap.id + " ?")) return;
+        try{ await cloud.deleteDoc(cloud.doc(cloud.db, "puzzles", docSnap.id)); loadPublished(); flash("Grille du " + docSnap.id + " retirée du jeu."); }
+        catch(e){ flash("Suppression impossible : " + ((e && e.code) || e), true); }
+      };
+      li.appendChild(d); li.appendChild(t); li.appendChild(del);
+      ul.appendChild(li);
+    });
+  }catch(e){ ul.innerHTML = '<li class="pub-empty">Lecture impossible : ' + ((e && e.code) || e) + "</li>"; cnt.textContent = ""; }
+}
+
+/* =========================================================
+   Publication directe d'une grille dans le jeu (collection puzzles)
+   ========================================================= */
+function parisDate(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function openPublish(){
+  if(!cloud || !cloud.setDoc){ flash("Connectez-vous pour publier au jeu.", true); return; }
+  if(!currentModel){ flash("Générez d'abord une grille.", true); return; }
+  const box = $("publishBox");
+  box.hidden = !box.hidden;
+  if(!box.hidden){
+    if(!$("pubDate").value) $("pubDate").value = parisDate();
+    $("pubTitle").placeholder = currentList().name || "Jeu de rôle";
+    $("pubMsg").textContent = ""; $("pubMsg").className = "pub-msg";
+    $("pubDate").focus();
+  }
+}
+async function publishToGame(){
+  const msg = $("pubMsg"); msg.className = "pub-msg";
+  const p = puzzleForGame();
+  if(!p){ msg.textContent = "Générez d'abord une grille."; msg.classList.add("warn"); return; }
+  const date = $("pubDate").value;
+  if(!date){ msg.textContent = "Choisissez une date de parution."; msg.classList.add("warn"); return; }
+  const title = ($("pubTitle").value || currentList().name || "").trim();
+  const undef = p.across.concat(p.down).filter(x => !x.clue).length;
+  $("pubConfirm").disabled = true; msg.textContent = "Publication…";
+  try{
+    // la grille est stockée en chaîne JSON : Firestore refuse les tableaux imbriqués (les cases)
+    await cloud.setDoc(cloud.doc(cloud.db, "puzzles", date), { date, title, puzzle: JSON.stringify(p), publishedAt: cloud.serverTimestamp() });
+    msg.classList.add("ok");
+    msg.textContent = "Grille publiée pour le " + date + (undef ? " (" + undef + " définition(s) manquante(s))" : "") + ".";
+    flash("Grille publiée au jeu pour le " + date + ".");
+    loadPublished();
+  }catch(e){
+    msg.classList.add("warn");
+    msg.textContent = "Publication refusée : " + ((e && e.code) || (e && e.message) || e);
+  }finally{ $("pubConfirm").disabled = false; }
+}
+
+// Aperçu : dépose la grille dans le stockage local et ouvre le vrai moteur du jeu.
+function previewGame(){
+  const p = puzzleForGame();
+  if(!p){ flash("Générez d'abord une grille.", true); return; }
+  try{ localStorage.setItem("dd-apercu", JSON.stringify(p)); }
+  catch(e){ flash("Aperçu impossible sur ce navigateur.", true); return; }
+  window.open("jouer.html", "_blank");
+}
+
+/* =========================================================
+   Wire up
+   ========================================================= */
+function bind(){
+  $("addBtn").onclick = () => {
+    const raw = $("wIn").value.trim();
+    if(!raw){ $("wIn").focus(); return; }
+    const l = currentList();
+    if(raw.includes(";")){
+      const keys = new Set(l.entries.map(e => letterKey(e.word)).filter(Boolean));
+      let n = 0, dups = 0;
+      for(const part of raw.split(";")){
+        const w = part.trim();
+        if(!w) continue;
+        const k = letterKey(w);
+        if(k && keys.has(k)){ dups++; continue; }
+        if(k) keys.add(k);
+        l.entries.push(newEntry(w, ""));
+        n++;
+      }
+      $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
+      flash(`${n} mots ajoutés` + (dups ? ` · ${dups} doublon${dups>1?"s":""} ignoré${dups>1?"s":""}` : "") + ".");
+      afterMutate();
+      return;
+    }
+    const clueTxt = $("cIn").value.trim();
+    const dup = findDuplicate(l, raw);
+    if(dup){
+      if(clueTxt && !dup.clues.some(c => c.text === clueTxt)){
+        dup.clues.push({ id: uid(), text: clueTxt });
+        flash(`« ${raw} » existait déjà : définition ajoutée à ce mot.`);
+        $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
+        afterMutate();
+      } else {
+        flash(`« ${raw} » est déjà dans cette liste.`, true);
+        $("wIn").focus(); $("wIn").select();
+      }
+      return;
+    }
+    l.entries.push(newEntry(raw, clueTxt));
+    $("wIn").value=""; $("cIn").value=""; $("wIn").focus();
+    afterMutate();
+  };
+  $("cIn").onkeydown = $("wIn").onkeydown = ev => { if(ev.key==="Enter") $("addBtn").click(); };
+
+  $("listSelect").onchange = e => {
+    state.currentId = e.target.value; currentModel = null;
+    disarmDelete(); renderAll(); scheduleSave();
+  };
+  $("listName").oninput = e => {
+    currentList().name = e.target.value;
+    const opt = [...$("listSelect").options].find(o=>o.value===state.currentId);
+    if(opt) opt.textContent = e.target.value || "Sans titre";
+    scheduleSave();
+  };
+  $("newList").onclick = () => {
+    const l = { id: uid(), name: "Nouvelle liste", entries: [] };
+    state.lists.push(l); state.currentId = l.id; currentModel = null;
+    disarmDelete(); renderAll(); scheduleSave();
+    $("listName").focus(); $("listName").select();
+  };
+  $("delList").onclick = armDelete;
+
+  $("genBtn").onclick = doGenerate;
+  $("regenBtn").onclick = doGenerate;
+  $("saveGrid").onclick = saveCurrentGrid;
+  $("showSol").onchange = () => { if(currentModel) renderGrid(false); };
+
+  $("toggleImport").onclick = () => { const b=$("importBox"); b.hidden = !b.hidden; if(!b.hidden) $("pasteArea").focus(); };
+  $("cancelImport").onclick = () => { $("importBox").hidden = true; };
+  $("parseBtn").onclick = parsePaste;
+  $("expJson").onclick = exportJson;
+  $("expTsv").onclick = exportTsv;
+  $("impJsonBtn").onclick = () => $("impJson").click();
+  $("impJson").onchange = e => { if(e.target.files[0]) importJsonFile(e.target.files[0]); e.target.value=""; };
+
+  $("svgEmpty").onclick = () => { if(currentModel) download((slug()+"-grille.svg"), svgString(currentModel,false,false), "image/svg+xml"); };
+  $("svgSolved").onclick = () => { if(currentModel) download((slug()+"-corrige.svg"), svgString(currentModel,true,false), "image/svg+xml"); };
+  $("copyClues").onclick = copyClues;
+  $("previewGame").onclick = previewGame;
+  $("publishGame").onclick = openPublish;
+  $("pubConfirm").onclick = publishToGame;
+  $("printBtn").onclick = () => window.print();
+
+  if(FLAT_MODE){
+    // mode test : toutes les sections dépliées, la barre d'onglets masquée
+    for(const p of ["paneDict", "paneGrids", "panePub"]) $(p).hidden = false;
+    const nav = document.querySelector(".tabs"); if(nav) nav.hidden = true;
+  } else {
+    $("tabDict").onclick = () => showPane("paneDict");
+    $("tabGrids").onclick = () => showPane("paneGrids");
+    $("tabPub").onclick = () => showPane("panePub");
+  }
+}
+function slug(){ return (currentList().name||"grille").replace(/[^\w\-À-ÿ ]+/g,"").trim().replace(/\s+/g,"-").toLowerCase() || "grille"; }
+
+// Petit accès en lecture seule pour les tests automatisés.
+window.__vcState = () => JSON.parse(JSON.stringify(state));
+window.__vcSanitize = w => { const s = sanitize(w); return { clean: s.clean, display: s.display.join(""), breaks: s.breaks }; };
+window.__vcPoolWords = (W, H) => {
+  const { out } = prep(currentList().entries.map(toGenEntry));
+  return selectPool(out, W, H).pool.map(e => e.display.join(""));
+};
+window.__vcCluesText = () => cluesText();
+window.__vcGamePuzzle = () => puzzleForGame();
+
+/* =========================================================
+   Boot
+   ========================================================= */
+(async function init(){
+  if(CLOUD){ bootCloud(); return; }
+  // mode local (#local) : comportement d'origine, stockage IndexedDB seul
+  const migrated = migrateState(await loadState());
+  if(migrated){
+    state = migrated;
+  } else {
+    seed();
+    doSave();
+  }
+  bind();
+  renderAll();
+  if(!HAS_IDB){ flash("Stockage local indisponible, pensez à exporter vos données.", true); }
+  // Auto-generate a first grid so the workspace opens on a real crossword.
+  if(prep(currentList().entries.map(toGenEntry)).out.length >= 2) doGenerate();
+})();
+</script>
+</body>
+</html>
