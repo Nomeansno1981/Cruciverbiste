@@ -30,6 +30,15 @@
   </div>
 </div>
 
+<div id="suspended" hidden>
+  <div class="gate-card">
+    <img class="mark" src="icones/heaume.svg" alt="">
+    <h2>Compte suspendu</h2>
+    <p class="gate-text">Votre accès à Donjons &amp; Définitions a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez l'auteur.</p>
+    <button class="gate-btn" id="suspSignOut">Se déconnecter</button>
+  </div>
+</div>
+
 <div class="wrap game">
   <header>
     <a class="brand" href="accueil.html" title="Retour à l'accueil">
@@ -582,6 +591,16 @@ m.onAuthStateChanged(auth, async user => {
     return;
   }
   CU = user;
+  // membre suspendu : on n'ouvre pas le jeu (les regles bloquent deja toute ecriture)
+  try{
+    const bs = await m.getDoc(m.doc(db, "banned", user.uid));
+    if(bs.exists()){
+      gate.hidden = true; $("suspended").hidden = false;
+      $("suspSignOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+      window.__ddef.suspended = true;
+      return;
+    }
+  }catch(e){ /* statut indetermine : on laisse jouer, les regles protegent */ }
   gate.hidden = true;   // connecte : on masque l'ecran de connexion sans attendre le chargement de la grille
   $("profileBtn").hidden = false;
   if(isAdmin(user)) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
