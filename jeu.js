@@ -537,6 +537,27 @@ export function monterJeu(PUZZLE, opts = {}){
       const label = cw.dir === "across" ? "Horizontal" : "Vertical";
       document.getElementById("cluebarTxt").innerHTML =
         `<span class="dir">${cw.num} ${label}</span>${formatClue(cw.clue)}`;
+      showDir(cw.dir, cw.id);
+    }
+  }
+
+  // Panneau des definitions (ordinateur) : n'affiche qu'une direction a la fois.
+  // Suit le mot courant (appel depuis render) et se pilote a la main via la
+  // bascule Horizontal/Vertical. activeId : garde la definition active en vue.
+  function showDir(dir, activeId){
+    const aside = document.getElementById("clueAside");
+    if(!aside) return;
+    aside.setAttribute("data-dir", dir);
+    const a = document.getElementById("dirAcross"), d = document.getElementById("dirDown");
+    if(a){ a.classList.toggle("on", dir === "across"); a.setAttribute("aria-selected", String(dir === "across")); }
+    if(d){ d.classList.toggle("on", dir === "down"); d.setAttribute("aria-selected", String(dir === "down")); }
+    if(activeId != null){
+      const li = document.getElementById("li-" + activeId);
+      if(li && aside.scrollHeight > aside.clientHeight + 2){
+        const at = aside.getBoundingClientRect(), lt = li.getBoundingClientRect();
+        if(lt.top < at.top) aside.scrollTop -= (at.top - lt.top) + 6;
+        else if(lt.bottom > at.bottom) aside.scrollTop += (lt.bottom - at.bottom) + 6;
+      }
     }
   }
 
@@ -553,6 +574,10 @@ export function monterJeu(PUZZLE, opts = {}){
     };
     fillList(document.getElementById("acrossList"), PUZZLE.across);
     fillList(document.getElementById("downList"), PUZZLE.down);
+    // bascule Horizontal/Vertical : change seulement la direction affichee
+    const da = document.getElementById("dirAcross"), dd = document.getElementById("dirDown");
+    if(da) da.addEventListener("click", () => showDir("across"));
+    if(dd) dd.addEventListener("click", () => showDir("down"));
   }
 
   function buildKeyboard(){
