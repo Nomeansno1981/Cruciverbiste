@@ -78,10 +78,15 @@ h1{font-family:var(--display); font-size:27px; letter-spacing:0; margin:0; font-
 .cluebar .txt{flex:1; min-width:0; font-family:var(--serif); font-size:17px; line-height:1.35}
 .cluebar .txt .dir{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:1px}
 
-/* listes (ordinateur) */
+/* liste des definitions (ordinateur) : une seule direction a la fois, avec
+   une bascule Horizontal/Vertical facon mots croises. Masquee sur mobile. */
 .aside{width:100%; max-width:760px}
-.cols{display:flex; gap:22px}
-.cols > div{flex:1; min-width:0}
+.dir-toggle{display:flex; gap:5px; margin:0 0 12px; background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:4px}
+.dir-btn{flex:1; font-family:var(--sans); font-size:13.5px; font-weight:600; padding:8px 10px; border:none; border-radius:8px; background:none; color:var(--muted); cursor:pointer}
+.dir-btn:hover{color:var(--ink)}
+.dir-btn.on{background:var(--accent); color:#fff}
+.aside[data-dir="across"] #downList{display:none}
+.aside[data-dir="down"] #acrossList{display:none}
 h2{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 8px; font-family:var(--mono)}
 ol{list-style:none; margin:0; padding:0}
 ol li{display:flex; gap:8px; padding:5px 8px; border-radius:7px; font-family:var(--serif); font-size:15.5px; line-height:1.4; cursor:pointer; color:#2c2a26}
@@ -272,6 +277,23 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .gl-item.done .gl-tag{color:#1E7A43}
 .gl-empty{color:var(--muted); font-style:italic; font-family:var(--serif); font-size:13.5px; padding:8px}
 .home-foot{text-align:center; margin-top:4px}
+
+/* ---- bureau : grille et definitions cote a cote (les deux visibles ensemble) ---- */
+@media (min-width:860px){
+  .wrap.game{max-width:1180px}
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) clamp(300px,30%,360px);
+    grid-template-areas:"grid defs" "clue defs" "tools defs";
+    grid-template-rows:auto auto auto;
+    align-items:start;
+    gap:16px 30px;
+  }
+  .gridarea{grid-area:grid; width:100%}
+  .cluebar{grid-area:clue; max-width:none}
+  .tools{grid-area:tools; justify-self:center}
+  .aside{grid-area:defs; max-width:none; align-self:start; position:sticky; top:14px; max-height:calc(100dvh - 40px); overflow:auto}
+}
 
 /* ---- mobile : trois zones fixes, aucune barre systeme, aucun defilement ---- */
 @media (max-width:859px){

@@ -36,7 +36,7 @@
   </div>
 </div>
 
-<div class="wrap">
+<div class="wrap game">
   <header>
     <a class="brand" href="accueil.html" title="Retour à l'accueil">
       <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
@@ -81,11 +81,13 @@
 
     <div class="kbd" id="kbd"></div>
 
-    <aside class="aside">
-      <div class="cols">
-        <div><h2>Horizontalement</h2><ol id="acrossList"></ol></div>
-        <div><h2>Verticalement</h2><ol id="downList"></ol></div>
+    <aside class="aside" id="clueAside" data-dir="across">
+      <div class="dir-toggle" role="tablist" aria-label="Sens des définitions">
+        <button class="dir-btn on" id="dirAcross" type="button" role="tab" aria-selected="true">Horizontalement</button>
+        <button class="dir-btn" id="dirDown" type="button" role="tab" aria-selected="false">Verticalement</button>
       </div>
+      <ol id="acrossList" class="clue-list"></ol>
+      <ol id="downList" class="clue-list"></ol>
     </aside>
   </div>
 
