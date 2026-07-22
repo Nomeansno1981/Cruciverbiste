@@ -117,21 +117,32 @@ await check("resolution : le resultat du joueur (avec XP) est enregistre en lign
   if (typeof r.words !== "number") throw new Error("nombre de mots absent du resultat");
 });
 
-await check("badges : la fenetre annonce les hauts faits gagnes a la resolution", async () => {
+await check("ecran de fin : score explique, niveau situe, hauts faits annonces", async () => {
   await page.waitForSelector("#badgeModal:not([hidden])", { timeout: 6000 });
+  await page.waitForSelector("#recapBadges:not([hidden]) #badgeWon li");
   const info = await page.evaluate(() => ({
     nouveaux: window.__ddef.newBadges || [],
     lignes: document.querySelectorAll("#badgeWon li").length,
-    titre: document.getElementById("badgeTitle").textContent
+    titre: document.getElementById("recapTitle").textContent,
+    xp: document.getElementById("recapXp").textContent,
+    scoreLines: document.querySelectorAll("#recapLines li").length,
+    levelShown: !document.getElementById("recapLevel").hidden,
+    rang: document.getElementById("recapRank").textContent,
+    retour: document.getElementById("recapReturn").textContent
   }));
   // demonstration resolue d'un coup, sans aide : au moins 1re grille, vitesse, puriste
   for (const id of ["grilles-1", "vitesse-3", "puriste"]) {
     if (!info.nouveaux.includes(id)) throw new Error("badge attendu absent (" + id + ") : " + JSON.stringify(info.nouveaux));
   }
-  if (info.lignes !== info.nouveaux.length) throw new Error("la fenetre ne liste pas tous les badges : " + info.lignes + " / " + info.nouveaux.length);
-  if (!/badge/i.test(info.titre)) throw new Error("titre de la fenetre inattendu : " + info.titre);
+  if (info.lignes !== info.nouveaux.length) throw new Error("l'ecran ne liste pas tous les hauts faits : " + info.lignes + " / " + info.nouveaux.length);
+  if (!/explor/i.test(info.titre)) throw new Error("titre de fin inattendu : " + info.titre);
+  const mx = info.xp.match(/\+(\d+)\s*XP/);
+  if (!mx || Number(mx[1]) <= 0) throw new Error("butin d'XP inattendu : " + info.xp);
+  if (info.scoreLines < 1) throw new Error("aucune ligne de detail du score");
+  if (!info.levelShown || !/Niveau\s*\d/.test(info.rang)) throw new Error("niveau non affiche a l'ecran de fin : " + info.rang);
+  if (!/Prochain donjon dans/.test(info.retour)) throw new Error("invitation a revenir absente : " + info.retour);
   const closed = await page.evaluate(() => { document.getElementById("closeBadge").click(); return document.getElementById("badgeModal").hidden; });
-  if (closed !== true) throw new Error("la fenetre de badge ne s'est pas fermee");
+  if (closed !== true) throw new Error("l'ecran de fin ne s'est pas ferme");
 });
 
 // Le niveau, les badges et l'historique ne s'affichent plus dans la fenetre du
