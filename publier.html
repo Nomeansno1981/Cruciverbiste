@@ -83,19 +83,7 @@
 </div>
 
 <script type="module">
-const EMU_MODE = location.hash.includes("emu");
-const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
-  authDomain: "donjons-definitions.firebaseapp.com",
-  projectId: "donjons-definitions",
-  storageBucket: "donjons-definitions.firebasestorage.app",
-  messagingSenderId: "1074510772699",
-  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
-  measurementId: "G-QJNJ1N0JCY"
-};
-const ADMIN_EMAIL = "nominesnow@gmail.com";
+import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
 
 window.__admin = { role: "checking", lastPublished: null, error: null };
 
@@ -108,24 +96,10 @@ function parisDate(){
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
-let m;
+let m, auth, db;
 try{
-  const [appM, authM, fsM] = await Promise.all([
-    import(FIREBASE_SDK + "/firebase-app.js"),
-    import(FIREBASE_SDK + "/firebase-auth.js"),
-    import(FIREBASE_SDK + "/firebase-firestore.js")
-  ]);
-  m = Object.assign({}, appM, authM, fsM);
+  ({ m, auth, db } = await initFirebase());
 }catch(e){ gwarn("Impossible de charger le module. Rechargez la page."); throw e; }
-
-const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
-const app = m.initializeApp(cfg);
-const auth = m.getAuth(app);
-const db = m.initializeFirestore(app, {});
-if(EMU_MODE){
-  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
-}
 
 // tentative d'ecriture directe, pour verifier en test que les regles refusent
 // bien un compte non administrateur.
@@ -141,16 +115,8 @@ window.__admin.provider = async () => {
 
 $("gGoogle").onclick = async () => {
   ginfo("Connexion...");
-  try{
-    if(EMU_MODE){
-      // en test, #emu-guest permet de simuler un compte non administrateur
-      const asGuest = location.hash.includes("guest");
-      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: asGuest ? "joueur-test" : "admin-test", email: asGuest ? "joueur@example.com" : ADMIN_EMAIL, email_verified: true }));
-      await m.signInWithCredential(auth, cred);
-    } else {
-      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
-    }
-  }catch(e){ gwarn("Connexion impossible : " + ((e && e.message) || e)); }
+  try{ await signInGoogle(auth, m, { admin: true }); }
+  catch(e){ gwarn(authError(e)); }
 };
 
 function validate(text){
