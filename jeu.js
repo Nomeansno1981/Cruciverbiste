@@ -265,10 +265,11 @@ export function monterJeu(PUZZLE, opts = {}){
     // on reserve la bande de rocher (bandCells() cases de chaque cote) dans le calcul
     const band = bandCells();
     let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*band)));
-    if(mobile){
-      const availH = gridarea.clientHeight - 2;
-      if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*band)));
-    }
+    // on borne aussi par la hauteur disponible (mobile ET bureau plein ecran) :
+    // la grille doit tenir dans sa zone sans pousser la barre d'indice / les
+    // outils hors de l'ecran.
+    const availH = gridarea.clientHeight - 2;
+    if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*band)));
     cell = Math.max(16, c);
     const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
     board.style.width = W + "px";
