@@ -11,6 +11,7 @@
   --paper:#FAF9F5; --panel:#FFFFFF; --ink:#1C1B19; --muted:#74706A;
   --line:#E7E1D5; --accent:#7C1D2E; --accent-weak:#F4E7E9; --accent-ink:#5E1522;
   --sun:#F2C14E; --sun-weak:#FBEFC9;
+  --brand-red:#C4161C;   /* rouge du logo (titre de marque), plus vif que l'accent */
   --forest:#40593C; --forest-ink:#2C4029; --forest-weak:#E8ECDD;   /* second accent : vert foret */
   --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
   --serif:"Crimson Pro",Iowan Old Style,Palatino,Georgia,serif;
@@ -41,8 +42,9 @@ header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6
 .dv-mark{flex:none; width:42px; height:16px; fill:currentColor}
 .brand{display:flex; align-items:center; gap:9px; min-width:0}
 a.brand{text-decoration:none; color:inherit}
-.mark{width:26px; height:26px; flex:none}
-h1{font-family:var(--display); font-size:27px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap}
+.mark{width:32px; height:32px; flex:none}
+h1{font-family:var(--display); font-size:27px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap; color:var(--brand-red)}
+.amp{color:var(--ink); font-size:.8em; font-weight:400}   /* & du logo : noir et plus petit */
 .spacer{flex:1}
 .meta{display:flex; align-items:center; gap:12px}
 .timer{font-family:var(--mono); font-size:15px; color:var(--accent-ink); font-weight:600; font-variant-numeric:tabular-nums}
@@ -120,7 +122,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 #authGate[hidden]{display:none}
 .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 3px rgba(30,27,20,.05); padding:28px 28px; max-width:400px; width:100%; text-align:center; display:flex; flex-direction:column; gap:12px; align-items:stretch}
 .gate-card .mark{width:40px; height:40px; margin:0 auto}
-.gate-card h2{margin:0; font-size:20px; letter-spacing:-.02em; text-align:center}
+.gate-card h2{margin:0; font-family:var(--display); font-weight:400; text-transform:none; font-size:28px; letter-spacing:0; text-align:center; color:var(--brand-red)}
 .gate-text{margin:0 0 2px; font-family:var(--serif); font-size:14px; color:#3a3833; line-height:1.5; text-align:center}
 .gate-btn{font-family:var(--sans); font-size:14.5px; padding:11px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer; font-weight:600}
 .gate-btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}

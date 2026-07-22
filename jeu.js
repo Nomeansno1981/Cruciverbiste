@@ -341,6 +341,17 @@ export function monterJeu(PUZZLE, opts = {}){
     };
     const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
     const small = cell < 26;                          // allege le rendu quand les cases sont petites (mobile)
+    // leger tremblement « fait main » des murs epais : chaque segment de mur
+    // (une arete de case) est tres legerement bombe perpendiculairement, d'une
+    // quantite deterministe proportionnelle a sa longueur. Les extremites
+    // restent exactes, donc les murs restent joints (aucun trou).
+    const wobAmp = cell * 0.045;
+    const wob = (x0,y0,x1,y1) => {
+      const dx=x1-x0, dy=y1-y0, len=Math.hypot(dx,dy)||1;
+      const off=(rnd(x0+x1+1.3, y0+y1+2.7)*2-1)*wobAmp*(len/cell);
+      const cx=(x0+x1)/2 - dy/len*off, cy=(y0+y1)/2 + dx/len*off;
+      return `M ${x0} ${y0} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x1} ${y1} `;
+    };
     let interior="", outer="", doors="", hatch="", greyRects="", pebbles="";
     // 1) murs exterieurs epais, bords interieurs pointilles et portes : parcours des cases pleines.
     for(let r=0;r<PUZZLE.rows;r++) for(let c=0;c<PUZZLE.cols;c++){
@@ -358,11 +369,11 @@ export function monterJeu(PUZZLE, opts = {}){
           const tx=(x1-x0)/cell, ty=(y1-y0)/cell;
           const mx=(x0+x1)/2, my=(y0+y1)/2, half=cell*0.20, d=cell*0.11;
           const ax=mx-tx*half, ay=my-ty*half, bx=mx+tx*half, by=my+ty*half;
-          doors += `M ${x0} ${y0} L ${ax.toFixed(1)} ${ay.toFixed(1)} M ${bx.toFixed(1)} ${by.toFixed(1)} L ${x1} ${y1} `;   // mur de part et d'autre de l'ouverture
+          doors += wob(x0,y0,ax,ay) + wob(bx,by,x1,y1);   // mur de part et d'autre de l'ouverture
           doors += `M ${(ax+e.nx*d).toFixed(1)} ${(ay+e.ny*d).toFixed(1)} L ${(bx+e.nx*d).toFixed(1)} ${(by+e.ny*d).toFixed(1)} L ${(bx-e.nx*d).toFixed(1)} ${(by-e.ny*d).toFixed(1)} L ${(ax-e.nx*d).toFixed(1)} ${(ay-e.ny*d).toFixed(1)} Z `;   // cadre de la porte
           continue;
         }
-        outer += `M ${x0} ${y0} L ${x1} ${y1} `;   // mur exterieur
+        outer += wob(x0,y0,x1,y1);   // mur exterieur (leger trace fait main)
       }
     }
     // 2) bande de rocher : tout l'espace vide est de la roche hachuree. Son bord
