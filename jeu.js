@@ -321,12 +321,37 @@ export function dessinerDonjon(svgEl, { rows, cols, cell, band = 1, has, bars = 
 // Apercu statique d'une grille (forme du donjon) dans un conteneur, a partir
 // d'un objet grille ou de son JSON (champ `puzzle` de Firestore). Ne montre
 // jamais les lettres : seule la presence d'une case (cle de `solution`) sert.
+// La forme est recentree dans la grille (decalage entier de cases) pour que
+// toutes les vignettes soient homogenes, meme si la grille n'occupe qu'une
+// partie de l'espace (format fixe 15x15 a la creation).
 export function apercuDonjon(container, puzzle, opts = {}){
   if(!container) return false;
   let p = puzzle;
   if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){ p = null; } }
   if(!p || !p.solution || !(p.rows > 0) || !(p.cols > 0)){ container.innerHTML = ""; return false; }
-  const has = (r,c) => Object.prototype.hasOwnProperty.call(p.solution, r + "," + c);
+  // cases occupees (cle "r,c") et leur boite englobante
+  const cases = new Set();
+  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+  for(const k in p.solution){
+    const i = k.indexOf(",");
+    if(i < 0) continue;
+    const r = +k.slice(0, i), c = +k.slice(i + 1);
+    if(!Number.isFinite(r) || !Number.isFinite(c)) continue;
+    cases.add(r + "," + c);
+    if(r < minR) minR = r; if(r > maxR) maxR = r;
+    if(c < minC) minC = c; if(c > maxC) maxC = c;
+  }
+  if(!cases.size){ container.innerHTML = ""; return false; }
+  // decalage entier pour centrer la boite englobante dans la grille
+  const offR = Math.round(((p.rows - 1) - (minR + maxR)) / 2);
+  const offC = Math.round(((p.cols - 1) - (minC + maxC)) / 2);
+  const has = (r, c) => cases.has((r - offR) + "," + (c - offC));
+  let bars = p.bars || {};
+  if((offR || offC) && bars){
+    const shifted = {};
+    for(const k in bars){ const i = k.indexOf(","); if(i < 0) continue; shifted[(+k.slice(0, i) + offR) + "," + (+k.slice(i + 1) + offC)] = bars[k]; }
+    bars = shifted;
+  }
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "donjon-preview");
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -335,7 +360,7 @@ export function apercuDonjon(container, puzzle, opts = {}){
     rows: p.rows, cols: p.cols,
     cell: opts.cell || 22,
     band: (opts.band != null ? opts.band : 1),
-    has, bars: p.bars || {}, simple: !!opts.simple
+    has, bars, simple: !!opts.simple
   });
   container.innerHTML = "";
   container.appendChild(svg);

@@ -158,6 +158,8 @@ function validate(text){
   if(!p || typeof p !== "object") throw new Error("format invalide");
   if(!p.solution || !p.rows || !p.cols) throw new Error("il manque solution / rows / cols");
   if(!Array.isArray(p.across) || !Array.isArray(p.down)) throw new Error("il manque across / down");
+  // format impose pour des vignettes homogenes (contournable seulement en test)
+  if(!EMU_MODE && (p.rows !== 15 || p.cols !== 15)) throw new Error("format impose : 15×15 (rows et cols doivent valoir 15)");
   return p;
 }
 $("pjson").addEventListener("input", () => {
