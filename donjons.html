@@ -106,11 +106,25 @@
   </div>
 </div>
 
+<!-- Ecran de fin de partie : le score explique, le niveau, les eventuels hauts
+     faits gagnes, et l'invitation a revenir pour le prochain donjon. -->
 <div id="badgeModal" hidden>
-  <div class="badge-card">
+  <div class="badge-card recap-card">
     <div class="badge-burst" aria-hidden="true">✦</div>
-    <h2 id="badgeTitle">Nouveau badge !</h2>
-    <ul class="badge-won" id="badgeWon"></ul>
+    <h2 id="recapTitle">Donjon exploré !</h2>
+    <p class="recap-sub" id="recapSub"></p>
+    <ul class="recap-lines" id="recapLines"></ul>
+    <div class="recap-total"><span>Butin</span><b id="recapXp">+0&nbsp;XP</b></div>
+    <div class="recap-level" id="recapLevel" hidden>
+      <div class="recap-level-head"><span id="recapRank"></span><span id="recapRankXp"></span></div>
+      <div class="level-bar"><div class="level-fill" id="recapFill"></div></div>
+      <div class="level-next" id="recapNext"></div>
+    </div>
+    <div class="recap-badges" id="recapBadges" hidden>
+      <h3 id="badgeTitle">Nouveau haut fait !</h3>
+      <ul class="badge-won" id="badgeWon"></ul>
+    </div>
+    <p class="recap-return" id="recapReturn"></p>
     <div class="profile-row"><button class="gate-btn primary" id="closeBadge" type="button">Superbe !</button></div>
   </div>
 </div>
@@ -408,12 +422,12 @@ async function awardBadges(ctx){
   try{ await m.setDoc(m.doc(db, "users", CU.uid, "state", "badges"), { earned }, { merge: true }); }
   catch(e){ window.__ddef.badgeError = String(e); }
   window.__ddef.badges = earned;
-  showBadgePopup(nouveaux);
   return nouveaux;
 }
-function showBadgePopup(ids){
+// remplit la liste des hauts faits gagnes ; renvoie leur nombre
+function renderBadgeList(ids){
   const list = $("badgeWon"); list.innerHTML = "";
-  const defs = ids.map(id => BADGES.find(b => b.id === id)).filter(Boolean);
+  const defs = (ids || []).map(id => BADGES.find(b => b.id === id)).filter(Boolean);
   for(const b of defs){
     const ico = b.icon ? '<img class="badge-img" alt="" src="' + b.icon + '">' : b.emoji;
     const li = document.createElement("li");
@@ -423,10 +437,56 @@ function showBadgePopup(ids){
     li.querySelector(".badge-won-desc").textContent = b.desc;
     list.appendChild(li);
   }
-  $("badgeTitle").textContent = defs.length > 1 ? (defs.length + " nouveaux badges !") : "Nouveau badge !";
+  $("badgeTitle").textContent = defs.length > 1 ? (defs.length + " nouveaux hauts faits !") : "Nouveau haut fait !";
+  return defs.length;
+}
+function fmtDuree(s){ s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
+function pluriel(n){ return n > 1 ? "s" : ""; }
+// secondes avant le prochain donjon : minuit, heure de Paris
+function secsAvantProchainDonjon(){
+  try{
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date());
+    const [h, mi, s] = p.split(":").map(Number);
+    return (24 - h) * 3600 - mi * 60 - s;
+  }catch(e){ return 0; }
+}
+function fmtHms(t){ t = Math.max(0, t); const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = Math.floor(t%60); return h + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0"); }
+let recapTick = null;
+// ecran de fin : detaille le score, situe le niveau, annonce les hauts faits et
+// invite a revenir. detail = objet renvoye par le moteur (detailScore).
+function showRecap(seconds, detail, nouveaux, totalXp){
+  detail = detail || {};
+  $("recapSub").textContent = typeof seconds === "number" ? ("Résolu en " + fmtDuree(seconds)) : "";
+  const seuls = detail.seuls || 0, aides = detail.aides || 0, reveles = detail.reveles || 0;
+  const baseSeuls = seuls * 20, baseAides = (detail.base || 0) - baseSeuls;
+  const lignes = [];
+  if(seuls)         lignes.push([seuls + " mot" + pluriel(seuls) + " trouvé" + pluriel(seuls) + " seul" + pluriel(seuls), "+" + baseSeuls]);
+  if(aides)         lignes.push([aides + " mot" + pluriel(aides) + " avec indice" + pluriel(aides), "+" + baseAides]);
+  if(reveles)       lignes.push([reveles + " mot" + pluriel(reveles) + " révélé" + pluriel(reveles), "0"]);
+  if(detail.bonus)  lignes.push(["Bonus de rapidité", "+" + detail.bonus]);
+  const ul = $("recapLines"); ul.innerHTML = "";
+  for(const [libelle, val] of lignes){
+    const li = document.createElement("li");
+    const a = document.createElement("span"); a.textContent = libelle;
+    const b = document.createElement("b"); b.textContent = val;
+    li.append(a, b); ul.appendChild(li);
+  }
+  $("recapXp").textContent = "+" + (detail.xp || 0) + " XP";
+  if(typeof totalXp === "number"){
+    const nv = niveauPourXp(totalXp);
+    $("recapRank").textContent = "Niveau " + nv.niveau + " · " + nv.titre;
+    $("recapRankXp").textContent = totalXp + " XP";
+    $("recapFill").style.width = Math.round((nv.progression || 0) * 100) + "%";
+    $("recapNext").textContent = nv.max ? "Rang maximal atteint." : ("Plus que " + (nv.prochain - totalXp) + " XP avant « " + nv.titreProchain + " »");
+    $("recapLevel").hidden = false;
+  } else $("recapLevel").hidden = true;
+  $("recapBadges").hidden = renderBadgeList(nouveaux) === 0;
+  if(recapTick){ clearInterval(recapTick); recapTick = null; }
+  const majRetour = () => { $("recapReturn").innerHTML = 'Prochain donjon dans <b>' + fmtHms(secsAvantProchainDonjon()) + '</b> — reviens l\'explorer pour monter en XP.'; };
+  majRetour(); recapTick = setInterval(majRetour, 1000);
   $("badgeModal").hidden = false;
 }
-function closeBadge(){ $("badgeModal").hidden = true; }
+function closeBadge(){ $("badgeModal").hidden = true; if(recapTick){ clearInterval(recapTick); recapTick = null; } }
 // « Aux aguets » : verrou « premier arrive » pour la grille d'une date. La
 // transaction atomique garantit qu'un seul joueur (le tout premier a resoudre)
 // pose le verrou et decroche le badge, meme en cas de resolutions simultanees.
@@ -590,6 +650,7 @@ m.onAuthStateChanged(auth, async user => {
       }catch(e){ window.__ddef.streakError = String(e); }
     }
     // badges : on compte les grilles reussies et on decerne les nouveaux hauts faits
+    let nouveaux = [];
     try{
       let totalSolved = 0;
       const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
@@ -597,12 +658,18 @@ m.onAuthStateChanged(auth, async user => {
       const noAid = (stats.hints === 0 && stats.solutions === 0);
       // « Aux aguets » : seul le tout premier a finir la grille du jour l'obtient
       const isFirstOfDay = isToday ? await claimFirst(todayStr) : false;
-      await awardBadges({
+      nouveaux = await awardBadges({
         totalSolved, seconds, streak: streakNow,
         noAid, isArchive: !isToday, lateFinish: isToday && parisAvantMinuit(),
         isFirstOfDay
       });
     }catch(e){ window.__ddef.badgeError = String(e); }
+    // ecran de fin : score explique, niveau, hauts faits, invitation a revenir.
+    // Le total d'XP cumule est celui que vient de recalculer updateLeaderboard.
+    const totalXp = (window.__ddef.myBoard && typeof window.__ddef.myBoard.total === "number")
+      ? window.__ddef.myBoard.total
+      : (typeof stats.xp === "number" ? stats.xp : null);
+    try{ showRecap(seconds, stats.detail, nouveaux, totalXp); }catch(e){ window.__ddef.recapError = String(e); }
     homeLink();
   };
 

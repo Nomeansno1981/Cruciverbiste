@@ -7,42 +7,58 @@
 // de controle (aussi exposee en window.__play pour les tests).
 
 // Score d'une grille resolue (XP), fonction pure et reutilisable (banniere,
-// historique, futurs classements) :
-//   - base fixe de 100 points pour la reussite ;
-//   - bonus de rapidite +60 / +30 / +10 sous 3 / 6 / 10 min, le temps etant
-//     d'abord ramene a une grille de 20 mots (une petite grille doit etre
-//     resolue proportionnellement plus vite pour le meme bonus) ;
-//   - bonus « sans aide » de +40 si ni indice ni solution ;
-//   - malus de 5 par indice et de 20 par mot revele en entier ;
-//   - plancher a 20 points.
-export function scoreXP({ seconds = 0, hints = 0, solutions = 0, words = 20 } = {}){
-  const w = words > 0 ? words : 20;
-  const normTime = seconds * 20 / w;
-  let speed = 0;
-  if(normTime < 180) speed = 60;
-  else if(normTime < 360) speed = 30;
-  else if(normTime < 600) speed = 10;
-  const clean = (hints === 0 && solutions === 0) ? 40 : 0;
-  const malus = hints * 5 + solutions * 20;
-  return Math.max(20, 100 + speed + clean - malus);
+// ecran de fin, historique, classement). Bareme « par mot » :
+//   - chaque mot trouve rapporte 20 points ;
+//   - chaque indice demande sur un mot lui coute 5 points (plancher a 0) ;
+//   - un mot revele par « Solution », ou dont TOUTES les lettres ont ete
+//     demandees en indices, ne rapporte rien ;
+//   - bonus de rapidite +50 / +75 / +100 sous 10 / 5 / 3 minutes, multiplie
+//     par la part de mots trouves entierement seul : reveler la grille (ou la
+//     completer surtout a coups d'indices) ne rapporte donc aucun bonus.
+// `words` est soit la liste des mots [{ cells, hints, solution }], soit un
+// simple nombre (grille supposee sans aide, pour un appel de commodite).
+// detailScore renvoie le detail (pour l'ecran de fin) ; scoreXP juste l'XP.
+export function detailScore({ seconds = 0, words = 20 } = {}){
+  const liste = Array.isArray(words)
+    ? words
+    : Array.from({ length: Math.max(1, words) }, () => ({ cells: 5, hints: 0, solution: false }));
+  let base = 0, seuls = 0, aides = 0, reveles = 0;
+  for(const w of liste){
+    const cells = w.cells || 0, hints = w.hints || 0;
+    // mot entierement devoile (Solution, ou toutes ses lettres en indices) : 0 point
+    if(w.solution || (cells > 0 && hints >= cells)){ reveles++; continue; }
+    base += Math.max(0, 20 - 5 * hints);
+    if(hints === 0) seuls++; else aides++;
+  }
+  let seuilVitesse = 0;
+  if(seconds < 180) seuilVitesse = 100;
+  else if(seconds < 300) seuilVitesse = 75;
+  else if(seconds < 600) seuilVitesse = 50;
+  const part = liste.length ? seuls / liste.length : 0;
+  const bonus = Math.round(seuilVitesse * part);
+  return { xp: base + bonus, base, bonus, seuilVitesse, part, seuls, aides, reveles, mots: liste.length };
 }
+export function scoreXP(args){ return detailScore(args).xp; }
 
 // Echelle de progression facon jeu de role : titres et seuils d'XP cumulee.
 // Donnees volontairement isolees pour etre faciles a retoucher (renommer un
 // rang, ajuster un palier) sans toucher a la logique.
+// Seuils calibres pour le bareme « par mot » (une grille propre et rapide vaut
+// quelques centaines d'XP) : environ le double de l'ancienne echelle, pour que
+// la progression garde le meme rythme qu'avant sur plusieurs mois de jeu.
 export const NIVEAUX = [
   { seuil: 0,     titre: "Roturier" },
-  { seuil: 150,   titre: "Apprenti" },
-  { seuil: 450,   titre: "Aventurier" },
-  { seuil: 900,   titre: "Éclaireur" },
-  { seuil: 1600,  titre: "Vétéran" },
-  { seuil: 2600,  titre: "Chevalier" },
-  { seuil: 4000,  titre: "Héros" },
-  { seuil: 6000,  titre: "Champion" },
-  { seuil: 8500,  titre: "Maître" },
-  { seuil: 12000, titre: "Grand Maître" },
-  { seuil: 17000, titre: "Légende" },
-  { seuil: 25000, titre: "Mythe" }
+  { seuil: 300,   titre: "Apprenti" },
+  { seuil: 900,   titre: "Aventurier" },
+  { seuil: 1800,  titre: "Éclaireur" },
+  { seuil: 3200,  titre: "Vétéran" },
+  { seuil: 5200,  titre: "Chevalier" },
+  { seuil: 8000,  titre: "Héros" },
+  { seuil: 12000, titre: "Champion" },
+  { seuil: 17000, titre: "Maître" },
+  { seuil: 24000, titre: "Grand Maître" },
+  { seuil: 34000, titre: "Légende" },
+  { seuil: 50000, titre: "Mythe" }
 ];
 
 // Niveau atteint pour une XP cumulee : renvoie le rang (1..N), son titre, le
@@ -662,11 +678,19 @@ export function monterJeu(PUZZLE, opts = {}){
     for(const k in cellEls) cellEls[k].classList.remove("here", "word");
     beep(660, 0.14); setTimeout(() => beep(988, 0.3), 150);
     const secs = elapsed(), words = orderedClues.length;
-    const xp = scoreXP({ seconds: secs, hints: hintCount, solutions: solutionCount, words });
+    // detail par mot pour le bareme : nombre de lettres, lettres devoilees en
+    // indice, et mot revele en entier par « Solution »
+    const parMot = orderedClues.map(w => ({
+      cells: w.cells.length,
+      hints: w.cells.reduce((n, [r, c]) => n + (given[K(r, c)] ? 1 : 0), 0),
+      solution: solvedWords.has(w.id)
+    }));
+    const detail = detailScore({ seconds: secs, words: parMot });
+    const xp = detail.xp;
     const b = document.getElementById("banner");
     b.innerHTML = `<b>Bravo !</b> Grille résolue en ${fmt(secs)}. <b>+${xp} XP</b>`;
     b.classList.add("show");
-    if(opts.onSolved && !noSave){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp, given: Object.keys(given), solvedWords: [...solvedWords] }); }catch(e){ /* la page hote gere */ } }
+    if(opts.onSolved && !noSave){ try{ opts.onSolved(secs, { hints: hintCount, solutions: solutionCount, words, xp, detail, given: Object.keys(given), solvedWords: [...solvedWords] }); }catch(e){ /* la page hote gere */ } }
   }
   // Rejouer (outil d'auteur) : remet la grille a zero pour la retester. On
   // n'enregistre plus de resultat ensuite — un essai ne doit pas ecraser le
