@@ -268,7 +268,20 @@ export function monterJeu(PUZZLE, opts = {}){
     // on borne aussi par la hauteur disponible (mobile ET bureau plein ecran) :
     // la grille doit tenir dans sa zone sans pousser la barre d'indice / les
     // outils hors de l'ecran.
-    const availH = gridarea.clientHeight - 2;
+    // hauteur disponible pour la grille. Attention : sur bureau, .gridarea
+    // grandit avec la grille qu'elle contient (dependance circulaire), donc on
+    // ne peut pas lire sa hauteur. On lit celle du conteneur .layout (bornee par
+    // la fenetre) moins la rangee d'outils : la grille tient ainsi toujours dans
+    // l'ecran, sans deborder sur l'entete ni sur les boutons.
+    let availH;
+    if(mobile){
+      availH = gridarea.clientHeight - 8;
+    } else {
+      const toolsEl = document.querySelector(".tools");
+      const layEl = gridarea.parentElement;
+      availH = (layEl ? layEl.clientHeight : gridarea.clientHeight)
+             - (toolsEl ? toolsEl.offsetHeight : 0) - 22;
+    }
     if(availH > 0) c = Math.min(c, Math.floor(availH / (PUZZLE.rows + 2*band)));
     cell = Math.max(16, c);
     const W = cell * PUZZLE.cols, H = cell * PUZZLE.rows;
@@ -733,6 +746,9 @@ export function monterJeu(PUZZLE, opts = {}){
   let relayoutTimer = null;
   window.addEventListener("resize", () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(layout, 60); });
   if(window.visualViewport) window.visualViewport.addEventListener("resize", () => setTimeout(layout, 60));
+  // les titres (Pirata One) changent la hauteur de l'entete une fois charges :
+  // on recalcule alors la taille de la grille pour qu'elle tienne juste.
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => layout());
 
   // Safari iOS : meme avec touch-action, un double-appui rapproche declenche
   // parfois le zoom. On neutralise le second appui s'il suit de trop pres le

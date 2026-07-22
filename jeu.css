@@ -89,7 +89,7 @@ h1{font-family:var(--display); font-size:27px; letter-spacing:0; margin:0; font-
 .aside[data-dir="down"] #acrossList{display:none}
 h2{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 8px; font-family:var(--mono)}
 ol{list-style:none; margin:0; padding:0}
-ol li{display:flex; gap:8px; padding:6px 8px; border-radius:7px; font-family:var(--serif); font-size:17px; line-height:1.4; cursor:pointer; color:#2c2a26}
+ol li{display:flex; gap:8px; padding:6px 8px; border-radius:7px; font-family:var(--serif); font-size:18px; line-height:1.4; cursor:pointer; color:#2c2a26}
 ol li .ln{font-family:var(--mono); font-weight:600; color:var(--accent); min-width:20px; text-align:right; font-size:13.5px}
 ol li:hover{background:#F3EEE4}
 ol li.on{background:var(--sun-weak)}
@@ -289,12 +289,14 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
     flex:1; min-height:0;
     display:grid;
     grid-template-columns:minmax(0,1fr) clamp(300px,30%,360px);
-    grid-template-rows:minmax(0,1fr) auto auto;
-    grid-template-areas:"grid defs" "clue defs" "tools defs";
-    gap:12px 30px;
+    grid-template-rows:minmax(0,1fr) auto;
+    grid-template-areas:"grid defs" "tools defs";
+    gap:10px 30px;
   }
   .gridarea{grid-area:grid; width:100%; min-height:0}
-  .cluebar{grid-area:clue; max-width:none}
+  /* le mot courant est surligne dans le panneau lateral : la barre d'indice du
+     bas (redondante et de hauteur variable) est retiree sur ordinateur. */
+  .wrap.game .cluebar{display:none}
   .tools{grid-area:tools; justify-self:center}
   .aside{grid-area:defs; max-width:none; align-self:stretch; min-height:0; overflow:auto}
   .wrap.game .stamp{display:none}
