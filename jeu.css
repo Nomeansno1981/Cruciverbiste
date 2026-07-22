@@ -23,11 +23,14 @@ html,body{margin:0}
 html{touch-action:manipulation}
 body{background:var(--paper); color:var(--ink); font-family:var(--sans); -webkit-text-size-adjust:100%}
 /* grain de papier : bruit tres subtil fige derriere tout le contenu */
-body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.4;
+/* grain de papier recycle : quasi blanc, tres legerement moucheté par endroits.
+   3 couches (alpha bakee) : taches eparses + fines taches rares + grain fin. */
+body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.34 0 0 0 0 0.24 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.20 0 0 0 0 0.16 0 0 0 0 0.11 0 0 0 0.3 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-size:320px 320px, 160px 160px}
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='sp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.13 0 0 0 0 0.13 0 0 0 13 -9.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23sp)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='185' height='185'%3E%3Cfilter id='sf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.0' numOctaves='1' seed='21' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 16 -12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23sf)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='gr'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gr)'/%3E%3C/svg%3E");
+  background-size:240px 240px, 185px 185px, 140px 140px}
 .wrap{max-width:1040px; margin:0 auto; padding:16px 16px 40px}
 
 /* filet dessine a la main (ondule, encre verte), reutilise pour l'entete et les separateurs */
@@ -39,8 +42,7 @@ header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6
 .brand{display:flex; align-items:center; gap:9px; min-width:0}
 a.brand{text-decoration:none; color:inherit}
 .mark{width:26px; height:26px; flex:none}
-h1{font-family:var(--display); font-size:23px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap}
-.date{font-family:var(--serif); font-size:13.5px; color:var(--muted); text-transform:capitalize}
+h1{font-family:var(--display); font-size:27px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap}
 .spacer{flex:1}
 .meta{display:flex; align-items:center; gap:12px}
 .timer{font-family:var(--mono); font-size:15px; color:var(--accent-ink); font-weight:600; font-variant-numeric:tabular-nums}
@@ -73,7 +75,7 @@ h1{font-family:var(--display); font-size:23px; letter-spacing:0; margin:0; font-
 .cluebar{display:flex; align-items:center; gap:10px; width:100%; max-width:620px; background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:10px 12px}
 .cluebar .arrow{flex:none; width:40px; height:40px; border:1px solid var(--line); border-radius:9px; background:var(--panel); font-size:19px; color:var(--accent-ink); cursor:pointer; display:flex; align-items:center; justify-content:center}
 .cluebar .arrow:active{background:var(--accent-weak)}
-.cluebar .txt{flex:1; min-width:0; font-family:var(--serif); font-size:15.5px; line-height:1.35}
+.cluebar .txt{flex:1; min-width:0; font-family:var(--serif); font-size:17px; line-height:1.35}
 .cluebar .txt .dir{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:1px}
 
 /* listes (ordinateur) */
@@ -82,7 +84,7 @@ h1{font-family:var(--display); font-size:23px; letter-spacing:0; margin:0; font-
 .cols > div{flex:1; min-width:0}
 h2{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 8px; font-family:var(--mono)}
 ol{list-style:none; margin:0; padding:0}
-ol li{display:flex; gap:8px; padding:5px 8px; border-radius:7px; font-family:var(--serif); font-size:14px; line-height:1.4; cursor:pointer; color:#2c2a26}
+ol li{display:flex; gap:8px; padding:5px 8px; border-radius:7px; font-family:var(--serif); font-size:15.5px; line-height:1.4; cursor:pointer; color:#2c2a26}
 ol li .ln{font-family:var(--mono); font-weight:600; color:var(--accent); min-width:20px; text-align:right; font-size:12.5px}
 ol li:hover{background:#F3EEE4}
 ol li.on{background:var(--sun-weak)}
@@ -181,7 +183,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .profile-row .gate-btn{flex:1}
 .hist h3{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-family:var(--mono); margin:6px 0 8px}
 .hist ul{list-style:none; margin:0; padding:0; max-height:210px; overflow:auto}
-.hist li{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-family:var(--serif); font-size:14px}
+.hist li{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-family:var(--serif); font-size:15px}
 .hist li .t{font-family:var(--mono); color:var(--muted); font-size:12.5px; flex:none}
 .hist .empty{color:var(--muted); font-style:italic; font-family:var(--serif); font-size:13.5px}
 /* ---- niveau (profil), echelle facon jeu de role ---- */
@@ -256,7 +258,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .stat-s{font-size:11.5px; color:var(--muted)}
 .archive h2{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-family:var(--mono); margin:4px 0 10px}
 /* titres de section facon chapitre : police d'affichage, encre verte */
-.archive h2, .badges h3, .hist h3{font-family:var(--display); font-weight:400; text-transform:none; letter-spacing:.01em; font-size:19px; color:var(--forest-ink); margin:2px 0 10px}
+.archive h2, .badges h3, .hist h3{font-family:var(--display); font-weight:400; text-transform:none; letter-spacing:.01em; font-size:22px; color:var(--forest-ink); margin:2px 0 10px}
 .grid-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px}
 .gl-item a{display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; text-decoration:none; color:var(--ink); background:var(--panel)}
 .gl-item a:hover{border-color:#d8cfbe; background:#fbf7f0}
@@ -264,7 +266,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .gl-item.done .gl-mark{background:#EAF3E9; color:#1E7A43}
 .gl-item.todo .gl-mark{background:var(--accent-weak); color:var(--accent)}
 .gl-txt{flex:1; min-width:0; display:flex; flex-direction:column}
-.gl-title{font-family:var(--serif); font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.gl-title{font-family:var(--serif); font-size:15.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .gl-date{font-size:11.5px; color:var(--muted); text-transform:capitalize}
 .gl-tag{flex:none; font-family:var(--mono); font-size:11px; color:var(--muted)}
 .gl-item.done .gl-tag{color:#1E7A43}
@@ -278,18 +280,16 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   /* la page d'accueil defile normalement (ce n'est pas le jeu plein ecran) */
   html:has(.page-accueil), body.page-accueil{height:auto; min-height:100%; overflow:visible}
   .wrap.home{height:auto; overflow:visible; padding:8px 10px 34px; gap:14px}
-  .home .date{display:block}
   .home-stats{grid-template-columns:repeat(2,1fr)}
   .hero{padding:16px 18px}
   .hero-count{padding-left:0; border-left:none; border-top:1px solid var(--line); padding-top:12px; width:100%}
   header{flex:none; border:none; padding:2px 2px 0; margin:0; gap:8px}
-  .date{display:none}
   .acct .mail{display:none}
   .mode{display:none}
   .timer{display:none}                                  /* barre du haut allégée : le temps est masqué */
   .brand > div{display:none}                             /* ne garder que l'icône du titre partout (le lien de navigation reste visible) */
   .acct-btn{max-width:130px}
-  h1{font-size:16px}
+  h1{font-size:19px}
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
   .gridarea{flex:1; min-height:0}
   .aside{display:none}

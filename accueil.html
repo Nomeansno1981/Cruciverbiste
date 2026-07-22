@@ -49,7 +49,6 @@
       </svg>
       <div>
         <h1>Donjons &amp; Définitions</h1>
-        <div class="date" id="today"></div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -503,7 +502,6 @@ function startCountdown(){
 
 async function buildHome(user){
   const todayKey = parisDate();
-  $("today").textContent = labelFromKey(todayKey);
   $("heroDate").textContent = labelFromKey(todayKey);
   startCountdown();
 
