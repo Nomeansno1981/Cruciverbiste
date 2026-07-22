@@ -295,6 +295,7 @@ async function openMember(uid){
   return window.__mod.detail;
 }
 function renderDetail(){
+  disarmAll();   // on change de fiche : aucune action destructrice ne reste armée
   const d = window.__mod.detail; if(!d) return;
   $("detail").hidden = false;
   $("dPseudo").textContent = d.pseudo;
@@ -331,6 +332,9 @@ async function fixPseudo(uid, pseudo){
     // la fiche de classement peut ne plus exister (membre retiré/suspendu)
     const lb = await m.getDoc(m.doc(db, "leaderboard", uid));
     if(lb.exists()) await m.setDoc(m.doc(db, "leaderboard", uid), { pseudo }, { merge: true });
+    // si le membre est suspendu, sa fiche /banned porte aussi le pseudo (affiché dans la liste)
+    const bn = await m.getDoc(m.doc(db, "banned", uid));
+    if(bn.exists()) await m.setDoc(m.doc(db, "banned", uid), { pseudo }, { merge: true });
     await logMod("pseudo", uid, pseudo, "pseudo corrigé");
     dok("Pseudo corrigé.");
     await loadMembers(); await openMember(uid);
@@ -341,7 +345,7 @@ async function removeFromBoard(uid){
   try{
     await m.deleteDoc(m.doc(db, "leaderboard", uid));
     await logMod("classement", uid, (window.__mod.detail || {}).pseudo, "retiré du classement");
-    dok("Retiré du classement (recalculé si le membre rejoue).");
+    dok("Retiré du classement — recalculé depuis ses résultats s'il rejoue. Pour un retrait durable, suspends le membre.");
     await loadMembers(); await openMember(uid);
     return true;
   }catch(e){ dwarn("Retrait impossible : " + ((e && e.code) || e)); return false; }
@@ -404,14 +408,21 @@ async function loadJournal(){
 }
 
 // ---- confirmations à deux temps sur les actions destructrices ----
+// Chaque bouton armé s'annule seul apres 3,5 s ET des qu'on change de fiche
+// (renderDetail appelle disarmAll), pour ne jamais agir sur un autre membre que
+// celui affiche.
+const disarmers = [];
 function arm(btn, label, run){
   let armed = false, timer = null;
+  const disarm = () => { armed = false; if(timer){ clearTimeout(timer); timer = null; } btn.classList.remove("armed"); btn.textContent = label; };
+  disarmers.push(disarm);
   btn.onclick = async () => {
-    if(!armed){ armed = true; btn.classList.add("armed"); btn.textContent = "Confirmer ?"; timer = setTimeout(() => { armed = false; btn.classList.remove("armed"); btn.textContent = label; }, 3500); return; }
-    clearTimeout(timer); armed = false; btn.classList.remove("armed"); btn.textContent = label;
+    if(!armed){ armed = true; btn.classList.add("armed"); btn.textContent = "Confirmer ?"; timer = setTimeout(disarm, 3500); return; }
+    disarm();
     await run();
   };
 }
+function disarmAll(){ for(const d of disarmers) d(); }
 
 // ---- probes pour les tests de regles (echouent proprement si refuse) ----
 // seedSelf : ecrit SES PROPRES donnees (classement, profil, un resultat) — un

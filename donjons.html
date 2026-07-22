@@ -139,7 +139,7 @@
 </div>
 
 <script type="module">
-import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, badgesRetroactifs, rendreBadges, compterBadges } from "./jeu.js";
+import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, badgesRetroactifs } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -369,7 +369,7 @@ async function updateLeaderboard(){
       const mk = String(d.date || ds.id || "").slice(0, 7);
       if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
     });
-    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0] : "Joueur");
+    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0].slice(0, 40) : "Joueur");
     window.__ddef.myBoard = { pseudo, total, months };
     if(total > 0){
       await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() });
