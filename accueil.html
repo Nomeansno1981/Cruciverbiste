@@ -165,21 +165,7 @@
 <script type="module">
 import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges, apercuDonjon } from "./jeu.js";
 
-const EMU_MODE = location.hash.includes("emu");
-const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
-// Compte auteur : accès direct à l'atelier réservé (affichage seul ; la
-// sécurité de publication reste côté règles Firestore).
-const ADMIN_EMAIL = "nominesnow@gmail.com";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
-  authDomain: "donjons-definitions.firebaseapp.com",
-  projectId: "donjons-definitions",
-  storageBucket: "donjons-definitions.firebasestorage.app",
-  messagingSenderId: "1074510772699",
-  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
-  measurementId: "G-QJNJ1N0JCY"
-};
+import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
 
 window.__home = { ready: false };
 const $ = id => document.getElementById(id);
@@ -196,44 +182,18 @@ function labelFromKey(key){
   catch(e){ return key; }
 }
 
-let m;
+let m, auth, db;
 try{
-  const [appM, authM, fsM] = await Promise.all([
-    import(FIREBASE_SDK + "/firebase-app.js"),
-    import(FIREBASE_SDK + "/firebase-auth.js"),
-    import(FIREBASE_SDK + "/firebase-firestore.js")
-  ]);
-  m = Object.assign({}, appM, authM, fsM);
+  ({ m, auth, db } = await initFirebase());
 }catch(e){
   warn("Impossible de charger le module de connexion. Verifiez votre connexion, puis rechargez la page.");
   throw e;
 }
 
-const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
-const app = m.initializeApp(cfg);
-const auth = m.getAuth(app);
-// Cache mémoire seul (pas de persistance IndexedDB). La persistance multi-onglets
-// fait planter les lectures Firestore sur Safari : l'utilisateur se retrouvait
-// « connecté mais sans données » (profil, série, points, grilles vides). Les
-// lectures vont au serveur, ce qui convient à un jeu en ligne.
-const db = m.initializeFirestore(app, {});
-if(EMU_MODE){
-  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
-}
-
 async function googleLogin(){
   info("Connexion...");
-  try{
-    if(EMU_MODE){
-      // en test, #emu-admin simule le compte auteur (lien atelier réservé)
-      const asAdmin = location.hash.includes("admin");
-      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: asAdmin ? "admin-test" : "joueur-test", email: asAdmin ? ADMIN_EMAIL : "joueur@example.com", email_verified: true }));
-      await m.signInWithCredential(auth, cred);
-    } else {
-      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
-    }
-  }catch(e){ authError(e); }
+  try{ await signInGoogle(auth, m); }
+  catch(e){ warn(authError(e)); }
 }
 async function emailLogin(create){
   const email = $("gEmail").value.trim(), pass = $("gPass").value;
@@ -242,19 +202,7 @@ async function emailLogin(create){
   try{
     if(create) await m.createUserWithEmailAndPassword(auth, email, pass);
     else await m.signInWithEmailAndPassword(auth, email, pass);
-  }catch(e){ authError(e); }
-}
-function authError(e){
-  const code = (e && e.code) || "";
-  if(code === "auth/popup-blocked") warn("La fenetre de connexion a ete bloquee. Autorisez les fenetres surgissantes, puis reessayez.");
-  else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") warn("Fenetre refermee avant la fin de la connexion. Reessayez.");
-  else if(code === "auth/operation-not-allowed") warn("Ce mode de connexion n'est pas active dans la console Firebase.");
-  else if(code === "auth/unauthorized-domain") warn("Ce domaine n'est pas autorise dans la console Firebase.");
-  else if(code === "auth/invalid-email") warn("Adresse e-mail invalide.");
-  else if(code === "auth/weak-password") warn("Mot de passe trop court (au moins 6 caracteres).");
-  else if(code === "auth/email-already-in-use") warn("Un compte existe deja avec cette adresse. Utilisez Se connecter.");
-  else if(code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") warn("Adresse ou mot de passe incorrect.");
-  else warn("Connexion impossible : " + (e && e.message ? e.message : e));
+  }catch(e){ warn(authError(e)); }
 }
 $("gGoogle").onclick = googleLogin;
 $("gSignin").onclick = () => emailLogin(false);
