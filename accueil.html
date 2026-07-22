@@ -166,21 +166,13 @@
 import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges, apercuDonjon } from "./jeu.js";
 
 import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
+import { parisDate, labelForKey, effectiveStreak, FLAME, initial, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement } from "./commun.js";
 
 window.__home = { ready: false };
 const $ = id => document.getElementById(id);
 const gate = $("authGate"), status = $("gStatus");
 function warn(msg){ status.textContent = msg; status.classList.add("warn"); }
 function info(msg){ status.textContent = msg; status.classList.remove("warn"); }
-
-// date du jour (heure de Paris) : cle des grilles
-function parisDate(d){
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(d || new Date());
-}
-function labelFromKey(key){
-  try{ const [y, mo, da] = key.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }
-  catch(e){ return key; }
-}
 
 let m, auth, db;
 try{
@@ -249,14 +241,6 @@ $("tabProfil").onclick = () => showTab("profil");
 window.__home.resize = resizeImage;
 window.__home.setPendingAvatar = d => { pendingAvatar = d; };
 
-// ---- serie ----
-function prevDate(ds){ const [y,mo,d] = ds.split("-").map(Number); const dt = new Date(Date.UTC(y, mo-1, d, 12, 0, 0)); dt.setUTCDate(dt.getUTCDate() - 1); return dt.toISOString().slice(0, 10); }
-function effectiveStreak(doc, today){ if(!doc || !doc.lastDate) return 0; if(doc.lastDate === today || doc.lastDate === prevDate(today)) return doc.count || 0; return 0; }
-const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2c.5 4-2.5 5.5-2.5 8.5A2.5 2.5 0 0 0 15 11c0-.6-.1-1 .3-1.6 1.4 1.6 2.7 3.5 2.7 6.1a6 6 0 1 1-12 0c0-4.8 6-7 7-13.5z"/></svg>';
-
-function initial(s){ return ((s || "?").trim().charAt(0) || "?").toUpperCase(); }
-function fillAvatar(el, av, txt){ if(av){ el.innerHTML = '<img alt="" src="' + av + '">'; } else { el.textContent = initial(txt); } }
-
 // ---- profil (avatar, pseudo, historique, niveau), editable depuis l'entete ----
 let CU = null;                 // utilisateur courant
 let profile = { pseudo: "", avatar: "" };
@@ -266,25 +250,6 @@ function setHeaderProfile(){
   const name = profile.pseudo || (CU && CU.email ? CU.email.split("@")[0] : "Joueur");
   $("hdrPseudo").textContent = name;
   fillAvatar($("hdrAvatar"), profile.avatar, name);
-}
-// redimensionne l'image cote navigateur en un petit carre (data URL), rangee
-// avec le profil sans service de stockage
-function resizeImage(file, size){
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const s = Math.min(img.width, img.height);
-      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = size;
-      canvas.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
-    img.src = url;
-  });
 }
 function renderLevel(total){
   const box = $("levelBox");
@@ -360,23 +325,13 @@ function renderBadges(){
 // ---- classement (mensuel + cumule), affiche directement sur l'accueil ----
 function escapeHtml(s){ return (s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
 function monthKeyNow(){ return parisDate().slice(0, 7); }
-// (re)publie la fiche de classement du joueur : pseudo, XP totale et XP par mois,
-// recalculees a partir de toutes ses grilles reussies (robuste aux reprises).
+// publie la fiche de classement (voir publierClassement dans commun.js) puis
+// reflete aussitot le nouveau pseudo/total dans le tableau deja affiche.
 async function updateLeaderboard(){
   if(!CU) return;
   try{
-    const snap = await m.getDocs(m.collection(db, "users", CU.uid, "results"));
-    let total = 0; const months = {};
-    snap.forEach(ds => {
-      const d = ds.data();
-      if(typeof d.xp !== "number") return;
-      total += d.xp;
-      const mk = String(d.date || ds.id || "").slice(0, 7);
-      if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
-    });
-    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0].slice(0, 40) : "Joueur");
+    const { pseudo, total, months } = await publierClassement(m, db, CU, profile);
     window.__home.myBoard = { pseudo, total, months };
-    if(total > 0){ await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() }); }
     // refleter aussitot le nouveau pseudo/total dans le tableau deja affiche (sans recharger)
     if(lbCache){
       const mine = lbCache.find(e => e.uid === CU.uid);
@@ -430,27 +385,15 @@ function renderBoard(){
 }
 
 // ---- compte a rebours jusqu'a la prochaine grille (minuit, heure de Paris) ----
-function msToNextParisMidnight(){
-  const now = new Date();
-  const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
-  const next = new Date(parisNow); next.setHours(24, 0, 0, 0);
-  return Math.max(0, next - parisNow);
-}
-function fmtCountdown(ms){
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600), mi = Math.floor((s % 3600) / 60), se = s % 60;
-  const p = n => String(n).padStart(2, "0");
-  return p(h) + ":" + p(mi) + ":" + p(se);
-}
 let countTimer = null;
 function startCountdown(){
-  const tick = () => { $("countdown").textContent = fmtCountdown(msToNextParisMidnight()); };
+  const tick = () => { $("countdown").textContent = fmtHms(secsToNextParisMidnight()); };
   tick(); if(countTimer) clearInterval(countTimer); countTimer = setInterval(tick, 1000);
 }
 
 async function buildHome(user){
   const todayKey = parisDate();
-  $("heroDate").textContent = labelFromKey(todayKey);
+  $("heroDate").textContent = labelForKey(todayKey);
   // apercu du donjon du jour (forme seule, sans lettres) dans le cadre du jour
   try{
     const ts = await m.getDoc(m.doc(db, "puzzles", todayKey));
@@ -537,13 +480,13 @@ async function buildHome(user){
       const fait = done.has(key);
       const li = document.createElement("li");
       li.className = "gl-item " + (fait ? "done" : "todo");
-      const title = (d.title && String(d.title).trim()) ? String(d.title).trim() : "Grille du " + labelFromKey(key);
+      const title = (d.title && String(d.title).trim()) ? String(d.title).trim() : "Grille du " + labelForKey(key);
       li.innerHTML = '<a href="donjons.html?d=' + encodeURIComponent(key) + '">'
         + '<span class="gl-preview" aria-hidden="true"></span>'
         + '<span class="gl-txt"><span class="gl-title"></span><span class="gl-date"></span></span>'
         + '<span class="gl-tag">' + (fait ? "✓ Faite" : "À faire") + '</span></a>';
       li.querySelector(".gl-title").textContent = title;
-      li.querySelector(".gl-date").textContent = labelFromKey(key);
+      li.querySelector(".gl-date").textContent = labelForKey(key);
       // apercu de la forme du donjon (petit, sans rocher ni lettres)
       const prev = li.querySelector(".gl-preview");
       if(!apercuDonjon(prev, d.puzzle, { cell: 15, band: 0.5, simple: true })) prev.hidden = true;

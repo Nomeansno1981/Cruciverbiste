@@ -142,6 +142,7 @@
 import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, badgesRetroactifs } from "./jeu.js";
 
 import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
+import { parisDate, labelForKey, prevDate, effectiveStreak, FLAME, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement } from "./commun.js";
 const isAdmin = u => !!(u && u.email === ADMIN_EMAIL);
 
 window.__ddef = { ready: false, source: null, result: null };
@@ -152,9 +153,6 @@ function warn(msg){ status.textContent = msg; status.classList.add("warn"); }
 function info(msg){ status.textContent = msg; status.classList.remove("warn"); }
 
 // date du jour (heure de Paris) : cle de la grille et libelle affiche
-function parisDate(){
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-}
 function parisLabel(){
   try{ return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()); }
   catch(e){ return ""; }
@@ -163,10 +161,6 @@ function parisLabel(){
 function requestedDate(){
   const p = new URLSearchParams(location.search).get("d");
   return (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) ? p : null;
-}
-function labelForKey(key){
-  try{ const [y, mo, da] = key.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }
-  catch(e){ return key; }
 }
 
 let m, auth, db;
@@ -227,19 +221,7 @@ async function loadPuzzle(dateStr){
 }
 
 // ---- serie (streak) facon Duolingo ----
-function prevDate(ds){
-  const [y,mo,d] = ds.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, mo-1, d, 12, 0, 0));
-  dt.setUTCDate(dt.getUTCDate() - 1);
-  return dt.toISOString().slice(0, 10);
-}
-// serie affichable : le compteur si le dernier jour reussi est aujourd'hui ou
-// hier (serie encore vivante), 0 si un jour a ete manque.
-function effectiveStreak(doc, today){
-  if(!doc || !doc.lastDate) return 0;
-  if(doc.lastDate === today || doc.lastDate === prevDate(today)) return doc.count || 0;
-  return 0;
-}
+// (prevDate et effectiveStreak sont partages via commun.js)
 // nouveau compteur apres une reussite du jour.
 function nextStreakCount(doc, today){
   if(!doc || !doc.lastDate) return 1;
@@ -247,7 +229,6 @@ function nextStreakCount(doc, today){
   if(doc.lastDate === prevDate(today)) return (doc.count || 0) + 1; // jour consecutif
   return 1;                                                          // serie rompue, on repart
 }
-const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2c.5 4-2.5 5.5-2.5 8.5A2.5 2.5 0 0 0 15 11c0-.6-.1-1 .3-1.6 1.4 1.6 2.7 3.5 2.7 6.1a6 6 0 1 1-12 0c0-4.8 6-7 7-13.5z"/></svg>';
 function setStreak(n){
   const el = $("streak");
   if(n > 0){ el.innerHTML = FLAME + " " + n; el.hidden = false; el.title = "Serie : " + n + " jour" + (n > 1 ? "s" : ""); }
@@ -262,11 +243,6 @@ let CU = null;                 // utilisateur courant
 let profile = { pseudo: "", avatar: "" };
 let pendingAvatar = null;      // avatar choisi mais pas encore enregistre
 
-function initial(s){ return ((s || "?").trim().charAt(0) || "?").toUpperCase(); }
-function fillAvatar(el, av, txt){
-  if(av){ el.innerHTML = '<img alt="" src="' + av + '">'; }
-  else { el.textContent = initial(txt); }
-}
 function setHeaderProfile(){
   const name = profile.pseudo || (CU && CU.email ? CU.email.split("@")[0] : "Joueur");
   $("hdrPseudo").textContent = name;
@@ -281,48 +257,13 @@ async function loadProfile(){
   window.__ddef.profile = { pseudo: profile.pseudo, avatar: profile.avatar };
   setHeaderProfile();
 }
-// redimensionne l'image cote navigateur en un petit carre (data URL), pour la
-// ranger avec le profil sans service de stockage
-function resizeImage(file, size){
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const s = Math.min(img.width, img.height);
-      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = size;
-      canvas.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
-    img.src = url;
-  });
-}
-
 // ---- classement : publication de la fiche du joueur ----
 // (le tableau se consulte desormais sur l'accueil, plus depuis le jeu)
-// publie la fiche de classement du joueur : pseudo, XP totale et XP par mois,
-// recalculees a partir de toutes ses grilles reussies (robuste aux reprises).
+// publie la fiche de classement du joueur (voir publierClassement dans commun.js)
 async function updateLeaderboard(){
   if(!CU) return;
-  try{
-    const snap = await m.getDocs(m.collection(db, "users", CU.uid, "results"));
-    let total = 0; const months = {};
-    snap.forEach(ds => {
-      const d = ds.data();
-      if(typeof d.xp !== "number") return;
-      total += d.xp;
-      const mk = String(d.date || ds.id || "").slice(0, 7);
-      if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
-    });
-    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0].slice(0, 40) : "Joueur");
-    window.__ddef.myBoard = { pseudo, total, months };
-    if(total > 0){
-      await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() });
-    }
-  }catch(e){ window.__ddef.leaderboardError = String(e); }
+  try{ window.__ddef.myBoard = await publierClassement(m, db, CU, profile); }
+  catch(e){ window.__ddef.leaderboardError = String(e); }
 }
 function openProfile(){
   if(!CU) return;
@@ -399,15 +340,6 @@ function renderBadgeList(ids){
 }
 function fmtDuree(s){ s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
 function pluriel(n){ return n > 1 ? "s" : ""; }
-// secondes avant le prochain donjon : minuit, heure de Paris
-function secsAvantProchainDonjon(){
-  try{
-    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date());
-    const [h, mi, s] = p.split(":").map(Number);
-    return (24 - h) * 3600 - mi * 60 - s;
-  }catch(e){ return 0; }
-}
-function fmtHms(t){ t = Math.max(0, t); const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = Math.floor(t%60); return h + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0"); }
 let recapTick = null;
 // ecran de fin : detaille le score, situe le niveau, annonce les hauts faits et
 // invite a revenir. detail = objet renvoye par le moteur (detailScore).
@@ -439,7 +371,7 @@ function showRecap(seconds, detail, nouveaux, totalXp){
   } else $("recapLevel").hidden = true;
   $("recapBadges").hidden = renderBadgeList(nouveaux) === 0;
   if(recapTick){ clearInterval(recapTick); recapTick = null; }
-  const majRetour = () => { $("recapReturn").innerHTML = 'Prochain donjon dans <b>' + fmtHms(secsAvantProchainDonjon()) + '</b> — reviens l\'explorer pour monter en XP.'; };
+  const majRetour = () => { $("recapReturn").innerHTML = 'Prochain donjon dans <b>' + fmtHms(secsToNextParisMidnight()) + '</b> — reviens l\'explorer pour monter en XP.'; };
   majRetour(); recapTick = setInterval(majRetour, 1000);
   $("badgeModal").hidden = false;
 }

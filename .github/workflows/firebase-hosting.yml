@@ -27,6 +27,7 @@ jobs:
           cp index.html _fire/atelier.html
           cp jeu.js _fire/jeu.js
           cp firebase-init.js _fire/firebase-init.js
+          cp commun.js _fire/commun.js
           cp jeu.css _fire/jeu.css
           cp -r icones _fire/icones
           cp -r fonts _fire/fonts
