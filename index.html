@@ -1072,6 +1072,15 @@ function buildModel(res){
   return { cells, number, filled, rows, cols, across, down, bars, unplaced:res.unplaced,
     crossings:res.crossings||0, checkedRatio, weak };
 }
+// Centre le donjon dans un canevas SIZE×SIZE (décalage entier des coordonnées),
+// pour que l'éditeur, les grilles enregistrées et la publication partagent le
+// même format carré (WYSIWYG). Si le donjon ne tient pas dans SIZE, on le laisse
+// tel quel : la publication le refusera.
+function centerRes(res, SIZE){
+  if(res.rows > SIZE || res.cols > SIZE) return res;
+  const oR = Math.floor((SIZE - res.rows) / 2), oC = Math.floor((SIZE - res.cols) / 2);
+  return Object.assign({}, res, { minR: res.minR - oR, minC: res.minC - oC, rows: SIZE, cols: SIZE });
+}
 function filledCount(cells){ return Object.keys(cells).length; }
 // Rebuild the filled() lookup for a grid model restored from storage.
 function ensureFilled(model){
@@ -1564,7 +1573,7 @@ function doGenerate(){
       extended = extendGrid(best, extras, W, H, target);
     }
     corePrune(best);            // la densification a pu réintroduire une épine : dernier passage avant publication
-    currentModel = buildModel(best);
+    currentModel = buildModel(centerRes(best, 15));   // canevas 15×15, donjon centré (WYSIWYG : éditeur = jeu = aperçu)
     const eligible = out.length - tooLong.length;
     currentModel.sampled = pool.length < eligible ? { total: eligible, rotated, extended } : null;
     $("genBtn").disabled = false; $("regenBtn").disabled = false;
