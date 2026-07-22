@@ -334,9 +334,11 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .acct .mail{display:none}
   .mode{display:none}
   .timer{display:none}                                  /* barre du haut allégée : le temps est masqué */
-  .brand > div{display:none}                             /* ne garder que l'icône du titre partout (le lien de navigation reste visible) */
-  .acct-btn{max-width:130px}
-  h1{font-size:21px}
+  .brand{gap:9px}                                       /* le titre revient à côté du logo : on resserre l'écart */
+  .hdr-btn-txt,.atelier-txt{display:none}               /* lien atelier : icône seule sur mobile, pour laisser la place au titre */
+  .hdr-btn,.atelier-link{gap:0; padding:4px 9px}        /* pastille atelier compacte (icône seule) */
+  .acct-btn,.who{max-width:112px}                       /* le pseudo se tronque (…) : le titre passe avant le compte */
+  h1{font-size:20px}
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
   .gridarea{flex:1; min-height:0}
   .aside{display:none}

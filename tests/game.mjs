@@ -134,54 +134,10 @@ await check("badges : la fenetre annonce les hauts faits gagnes a la resolution"
   if (closed !== true) throw new Error("la fenetre de badge ne s'est pas fermee");
 });
 
-await check("le profil affiche le niveau, l'XP totale et le detail par grille", async () => {
-  await page.click("#profileBtn");
-  await page.waitForSelector("#profileModal:not([hidden])");
-  await page.waitForSelector("#histList li");
-  const info = await page.evaluate(() => {
-    const box = document.getElementById("levelBox");
-    const first = document.querySelector("#histList li .t");
-    return {
-      boxHidden: box.hidden,
-      num: document.getElementById("levelNum").textContent,
-      title: document.getElementById("levelTitle").textContent,
-      total: document.getElementById("xpTotal").textContent,
-      next: document.getElementById("levelNext").textContent,
-      fill: document.getElementById("levelFill").style.width,
-      line: first ? first.textContent : ""
-    };
-  });
-  if (info.boxHidden) throw new Error("bloc de niveau masque dans le profil");
-  if (!/^\d+$/.test(info.num) || Number(info.num) < 1) throw new Error("numero de niveau invalide : " + info.num);
-  if (!info.title) throw new Error("titre de niveau absent");
-  if (!/^\d+$/.test(info.total) || Number(info.total) < 20) throw new Error("total d'XP invalide : " + info.total);
-  if (!/XP/.test(info.next)) throw new Error("indication du prochain palier absente : " + info.next);
-  if (!/%$/.test(info.fill)) throw new Error("barre de progression sans largeur : " + info.fill);
-  if (!/XP/.test(info.line)) throw new Error("XP absente de la ligne d'historique : " + info.line);
-  await page.click("#closeProfile");
-});
-
-await check("badges : le profil affiche les badges gagnes (couleur) et a debloquer (grises)", async () => {
-  await page.click("#profileBtn");
-  await page.waitForSelector("#profileModal:not([hidden])");
-  await page.waitForSelector("#badgeGrid .badge");
-  // les 13 icones SVG doivent effectivement se charger (chemins corrects, fichiers presents)
-  await page.waitForFunction(() => {
-    const imgs = document.querySelectorAll("#badgeGrid .badge img.badge-img");
-    return imgs.length === 13 && Array.from(imgs).every(im => im.complete);
-  }, null, { timeout: 5000 });
-  const info = await page.evaluate(() => ({
-    total: document.querySelectorAll("#badgeGrid .badge").length,
-    gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
-    compteur: document.getElementById("badgesCount").textContent,
-    imgCasses: Array.from(document.querySelectorAll("#badgeGrid .badge img.badge-img")).filter(im => im.naturalWidth === 0).length
-  }));
-  if (info.total !== 13) throw new Error("grille de badges incomplete : " + info.total + " (attendu 13)");
-  if (info.gagnes < 3) throw new Error("badges gagnes non mis en couleur : " + info.gagnes);
-  if (info.imgCasses > 0) throw new Error(info.imgCasses + " icone(s) de badge ne se chargent pas (chemin ou fichier manquant)");
-  if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
-  await page.click("#closeProfile");
-});
+// Le niveau, les badges et l'historique ne s'affichent plus dans la fenetre du
+// jeu (« Votre profil » ne concerne que le compte) : leur affichage est teste
+// sur l'accueil, onglet Profil (voir tests/accueil.mjs), y compris le controle
+// de chargement effectif des 13 icones SVG.
 
 await check("classement : la fiche du joueur est publiee (total et mois courant)", async () => {
   await page.waitForFunction(() => window.__ddef && window.__ddef.myBoard && window.__ddef.myBoard.total > 0);
@@ -253,15 +209,9 @@ await check("profil : pseudo et avatar enregistres et persistants apres recharge
   if (p2.pseudo !== "Rolista" || !/^data:image/.test(p2.avatar || "")) throw new Error("profil non persistant : " + JSON.stringify(p2).slice(0, 60));
 });
 
-await check("profil : l'historique liste la grille reussie", async () => {
-  await page.waitForSelector("#board .cell");
-  await page.click("#profileBtn");
-  await page.waitForSelector("#profileModal:not([hidden])");
-  await page.waitForSelector("#histList li");
-  const rows = await page.locator("#histList li:not(.empty)").count();
-  if (rows < 1) throw new Error("historique vide alors qu'une grille a ete reussie");
-  await page.click("#closeProfile");
-});
+// L'historique des grilles reussies ne s'affiche plus dans la fenetre du jeu
+// (« Votre profil » ne concerne que le compte) : il est teste sur l'accueil,
+// onglet Profil (voir tests/accueil.mjs).
 
 await check("badges : rattrapage retroactif au rechargement (grilles faites avant le systeme)", async () => {
   // on vide les badges pour simuler un joueur d'avant leur introduction, puis on
