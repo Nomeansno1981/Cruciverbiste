@@ -176,6 +176,172 @@ export function rendreBadges(container, earned = {}){
   }
 }
 
+// ---- Apercu du donjon (forme seule, sans lettres) ----
+// Dessine le plan de donjon facon plan dessine (methode Dyson Logos) dans un
+// <svg> : uniquement la forme (salles, murs interieurs pointilles, murs
+// exterieurs epais, portes et bande de rocher hachuree). Aucune lettre ni
+// definition. Partage par le jeu (grille interactive) et par l'accueil (apercus
+// statiques de la grille du jour et des grilles precedentes).
+//   svgEl : element <svg> a remplir (width/height/viewBox poses ici) ;
+//   cell  : taille d'une case (echelle interne ; le SVG est ensuite mis a
+//           l'echelle par son viewBox), band : marge de rocher en cases,
+//   has(r,c) : la case est-elle une salle jouable ?  bars : portes,
+//   simple : true = salles/murs/portes seulement (petits apercus, sans rocher).
+export function dessinerDonjon(svgEl, { rows, cols, cell, band = 1, has, bars = {}, simple = false } = {}){
+  if(!svgEl || !(rows > 0) || !(cols > 0) || typeof has !== "function") return;
+  const K = (r,c) => r + "," + c;
+  const M = Math.round(cell * band);
+  svgEl.setAttribute("width", cols*cell + 2*M);
+  svgEl.setAttribute("height", rows*cell + 2*M);
+  svgEl.setAttribute("viewBox", `${-M} ${-M} ${cols*cell + 2*M} ${rows*cell + 2*M}`);
+  const rnd = (a,b) => { const t = Math.sin(a*12.9898 + b*78.233) * 43758.5453; return t - Math.floor(t); };
+  const clip = (x1,y1,x2,y2, xmin,ymin,xmax,ymax) => {
+    let t0=0, t1=1; const dx=x2-x1, dy=y2-y1;
+    const p=[-dx,dx,-dy,dy], q=[x1-xmin,xmax-x1,y1-ymin,ymax-y1];
+    for(let k=0;k<4;k++){ if(p[k]===0){ if(q[k]<0) return null; } else { const rr=q[k]/p[k]; if(p[k]<0){ if(rr>t1) return null; if(rr>t0) t0=rr; } else { if(rr<t0) return null; if(rr<t1) t1=rr; } } }
+    return [x1+t0*dx, y1+t0*dy, x1+t1*dx, y1+t1*dy];
+  };
+  const EDGES = [ {ei:0,dr:-1,dc:0,nx:0,ny:-1}, {ei:1,dr:1,dc:0,nx:0,ny:1}, {ei:2,dr:0,dc:-1,nx:-1,ny:0}, {ei:3,dr:0,dc:1,nx:1,ny:0} ];
+  const pts = (r,c,e) => {
+    const x=c*cell, y=r*cell;
+    if(e.dr===-1) return [x,y, x+cell,y];
+    if(e.dr===1)  return [x,y+cell, x+cell,y+cell];
+    if(e.dc===-1) return [x,y, x,y+cell];
+    return [x+cell,y, x+cell,y+cell];
+  };
+  const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
+  const small = cell < 26;
+  const wobAmp = cell * 0.045;
+  const wob = (x0,y0,x1,y1) => {
+    const dx=x1-x0, dy=y1-y0, len=Math.hypot(dx,dy)||1;
+    const off=(rnd(x0+x1+1.3, y0+y1+2.7)*2-1)*wobAmp*(len/cell);
+    const cx=(x0+x1)/2 - dy/len*off, cy=(y0+y1)/2 + dx/len*off;
+    return `M ${x0} ${y0} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x1} ${y1} `;
+  };
+  let interior="", outer="", doors="", hatch="", greyRects="", pebbles="";
+  // 1) murs exterieurs epais, bords interieurs pointilles et portes.
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(!has(r,c)) continue;
+    for(const e of EDGES){
+      const [x0,y0,x1,y1] = pts(r,c,e);
+      const isBar = barAt(r,c,e);
+      if(has(r+e.dr, c+e.dc) && !isBar){
+        if(e.dr===-1 || e.dc===-1) interior += `M ${x0} ${y0} L ${x1} ${y1} `;
+        continue;
+      }
+      if(isBar){
+        const tx=(x1-x0)/cell, ty=(y1-y0)/cell;
+        const mx=(x0+x1)/2, my=(y0+y1)/2, half=cell*0.20, d=cell*0.11;
+        const ax=mx-tx*half, ay=my-ty*half, bx=mx+tx*half, by=my+ty*half;
+        doors += wob(x0,y0,ax,ay) + wob(bx,by,x1,y1);
+        doors += `M ${(ax+e.nx*d).toFixed(1)} ${(ay+e.ny*d).toFixed(1)} L ${(bx+e.nx*d).toFixed(1)} ${(by+e.ny*d).toFixed(1)} L ${(bx-e.nx*d).toFixed(1)} ${(by-e.ny*d).toFixed(1)} L ${(ax-e.nx*d).toFixed(1)} ${(ay-e.ny*d).toFixed(1)} Z `;
+        continue;
+      }
+      outer += wob(x0,y0,x1,y1);
+    }
+  }
+  // 2) bande de rocher hachuree (omise en mode simple : petits apercus).
+  if(!simple){
+    const bandN = cell ? M/cell : 2;
+    const winCells = Math.ceil(bandN) + 1;
+    const REACH = small ? 0.85 : 1.05, AMP = small ? 0.42 : 0.72, CORE = 0.5, JIT = small ? 0.3 : 0.5;
+    const fbm = (X,Y) => 0.34*Math.sin(X*1.4 + Y*0.9 + 0.5)
+                       + 0.38*Math.sin(X*2.8 - Y*1.8 + 2.4)
+                       + 0.32*Math.sin(X*1.7 + Y*3.2 + 4.1)
+                       + 0.18*Math.sin((X - Y)*4.6 + 1.1)
+                       + 0.10*Math.sin(X*7.1 + Y*6.0 + 2.7);
+    const NMAX = 1.32, maxReach = REACH + AMP*NMAX + JIT*0.5;
+    const distGrid = (px,py) => {
+      let best = Infinity;
+      const cc = Math.floor(px/cell), cr = Math.floor(py/cell);
+      for(let r=cr-winCells; r<=cr+winCells; r++) for(let c=cc-winCells; c<=cc+winCells; c++){
+        if(!has(r,c)) continue;
+        const dx = Math.max(c*cell - px, 0, px - (c+1)*cell), dy = Math.max(r*cell - py, 0, py - (r+1)*cell);
+        const d = dx*dx + dy*dy; if(d<best) best=d;
+      }
+      return Math.sqrt(best)/cell;
+    };
+    const contourAt = (X,Y,ti,tj) => {
+      const wx = X + 0.6*Math.sin(Y*1.9 + 0.7), wy = Y + 0.6*Math.sin(X*1.7 + 2.3);
+      const jit = (rnd(ti*13.1+7, tj*7.7+3) - 0.5) * JIT;
+      return REACH + AMP*fbm(wx, wy) + jit;
+    };
+    const nT = small ? 3 : 4, gap = cell*(small ? 0.15 : 0.115);
+    for(let r=-winCells;r<rows+winCells;r++) for(let c=-winCells;c<cols+winCells;c++){
+      if(has(r,c)) continue;
+      const x=c*cell, y=r*cell;
+      if(distGrid(x+cell/2, y+cell/2) - 0.72 > maxReach) continue;
+      for(let iu=0; iu<nT; iu++) for(let iv=0; iv<nT; iv++){
+        const u0=iu*cell/nT, u1=(iu+1)*cell/nT, v0=iv*cell/nT, v1=(iv+1)*cell/nT;
+        const cx=x+(u0+u1)/2, cy=y+(v0+v1)/2, dG=distGrid(cx,cy);
+        if(dG >= CORE && dG > contourAt(cx/cell, cy/cell, c*nT+iu, r*nT+iv)) continue;
+        const phi = rnd(r*7 + c*13 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + 1) * Math.PI;
+        const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
+        let sMin=Infinity, sMax=-Infinity;
+        for(const p of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const ss=p[0]*perp[0]+p[1]*perp[1]; if(ss<sMin)sMin=ss; if(ss>sMax)sMax=ss; }
+        const BIG=cell*2;
+        let si=0;
+        for(let sp=sMin+gap*0.5; sp<sMax; sp+=gap){
+          const bx=sp*perp[0], by=sp*perp[1];
+          const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,v0,u1,v1);
+          if(!cl) continue;
+          const t0=rnd(r*3+c*5+iu+iv*2+si*7+1, c*3+r*5+iu*2+iv+si*11+1)*0.34;
+          const t1=1 - rnd(r*5+c*3+iu*3+iv+si*13+2, c*7+r+iu+iv*3+si*5+2)*0.34;
+          const ax=cl[0]+(cl[2]-cl[0])*t0, ay=cl[1]+(cl[3]-cl[1])*t0;
+          const zx=cl[0]+(cl[2]-cl[0])*t1, zy=cl[1]+(cl[3]-cl[1])*t1;
+          hatch += `M ${(x+ax).toFixed(1)} ${(y+ay).toFixed(1)} L ${(x+zx).toFixed(1)} ${(y+zy).toFixed(1)} `;
+          si++;
+        }
+      }
+      const cgx=x+cell/2, cgy=y+cell/2, dGc=distGrid(cgx,cgy);
+      if((dGc < CORE || dGc <= REACH + AMP*fbm(cgx/cell, cgy/cell) - 0.2) && rnd(r*3+c*29+91, c*13+r*23+91) > 0.7){
+        const px=cgx + (rnd(r*5+c*7+3, c*3+r*9+3)-0.5)*cell*0.42, py=cgy + (rnd(r*9+c*3+5, c*7+r*5+5)-0.5)*cell*0.42;
+        const R0p=cell*(0.11+0.06*rnd(r+c+7, c+r+7)), nv=6+Math.floor(rnd(r*2+c*5+1, c*2+r*5+1)*4);
+        let dd="";
+        for(let k=0;k<nv;k++){
+          const ang=(k/nv)*6.2832 + (rnd(r*3+c+k*7, c*3+r+k*5)-0.5)*0.7;
+          const rad=R0p*(0.55 + 0.6*rnd(r+c*4+k*9, c+r*4+k*3));
+          dd += (k===0?"M ":"L ") + (px+Math.cos(ang)*rad).toFixed(1) + " " + (py+Math.sin(ang)*rad).toFixed(1) + " ";
+        }
+        pebbles += dd + "Z ";
+      }
+    }
+  }
+  const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032), pebbleW = Math.max(0.8, cell*0.045);
+  const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
+  svgEl.innerHTML =
+    greyRects +
+    (hatch ? `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` : "") +
+    (pebbles ? `<path d="${pebbles.trim()}" fill="#fff" stroke="#1a1712" stroke-width="${pebbleW.toFixed(2)}" stroke-linejoin="round"/>` : "") +
+    `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
+    `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+// Apercu statique d'une grille (forme du donjon) dans un conteneur, a partir
+// d'un objet grille ou de son JSON (champ `puzzle` de Firestore). Ne montre
+// jamais les lettres : seule la presence d'une case (cle de `solution`) sert.
+export function apercuDonjon(container, puzzle, opts = {}){
+  if(!container) return false;
+  let p = puzzle;
+  if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){ p = null; } }
+  if(!p || !p.solution || !(p.rows > 0) || !(p.cols > 0)){ container.innerHTML = ""; return false; }
+  const has = (r,c) => Object.prototype.hasOwnProperty.call(p.solution, r + "," + c);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "donjon-preview");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("aria-hidden", "true");
+  dessinerDonjon(svg, {
+    rows: p.rows, cols: p.cols,
+    cell: opts.cell || 22,
+    band: (opts.band != null ? opts.band : 1),
+    has, bars: p.bars || {}, simple: !!opts.simple
+  });
+  container.innerHTML = "";
+  container.appendChild(svg);
+  return true;
+}
+
 export function monterJeu(PUZZLE, opts = {}){
   // Grille absente ou malformee (document vide, sans cases ni mots) : on affiche
   // un message clair au lieu d'une page blanche, et on ne monte pas le reste.
@@ -326,159 +492,16 @@ export function monterJeu(PUZZLE, opts = {}){
     drawLattice(W, H);
   }
 
-  // Rendu facon plan de donjon dessine (methode Dyson Logos) :
-  //  - bords interieurs en pointilles ;
-  //  - murs exterieurs epais ;
-  //  - portes a la place des anciens diamants (frontieres entre mots) ;
-  //  - bande de rocher hachuree : tout l'espace vide est de la roche ; son bord
-  //    exterieur suit un champ de distance a la grille module par un bruit lisse
-  //    (cote organique, non aligne sur les cases) et le gris s'estompe au loin.
+  // La forme du donjon (salles, murs, portes, bande de rocher) est dessinee
+  // par dessinerDonjon (partagee avec les apercus de l'accueil) ; ici on place
+  // seulement le SVG sur le plateau et on lui passe la grille courante.
   function drawLattice(W, H){
     const M = Math.round(cell * bandCells());
-    latticeSvg.setAttribute("width", W + 2*M); latticeSvg.setAttribute("height", H + 2*M);
-    latticeSvg.setAttribute("viewBox", `${-M} ${-M} ${W + 2*M} ${H + 2*M}`);
     latticeSvg.style.left = -M + "px"; latticeSvg.style.top = -M + "px";
-    const has = (r,c) => filled(K(r,c));
-    const bars = PUZZLE.bars || {};
-    const rnd = (a,b) => { const s = Math.sin(a*12.9898 + b*78.233) * 43758.5453; return s - Math.floor(s); };
-    const clip = (x1,y1,x2,y2, xmin,ymin,xmax,ymax) => {
-      let t0=0, t1=1; const dx=x2-x1, dy=y2-y1;
-      const p=[-dx,dx,-dy,dy], q=[x1-xmin,xmax-x1,y1-ymin,ymax-y1];
-      for(let i=0;i<4;i++){ if(p[i]===0){ if(q[i]<0) return null; } else { const rr=q[i]/p[i]; if(p[i]<0){ if(rr>t1) return null; if(rr>t0) t0=rr; } else { if(rr<t0) return null; if(rr<t1) t1=rr; } } }
-      return [x1+t0*dx, y1+t0*dy, x1+t1*dx, y1+t1*dy];
-    };
-    const EDGES = [ {ei:0,dr:-1,dc:0,nx:0,ny:-1}, {ei:1,dr:1,dc:0,nx:0,ny:1}, {ei:2,dr:0,dc:-1,nx:-1,ny:0}, {ei:3,dr:0,dc:1,nx:1,ny:0} ];
-    const pts = (r,c,e) => {
-      const x=c*cell, y=r*cell;
-      if(e.dr===-1) return [x,y, x+cell,y];
-      if(e.dr===1)  return [x,y+cell, x+cell,y+cell];
-      if(e.dc===-1) return [x,y, x,y+cell];
-      return [x+cell,y, x+cell,y+cell];
-    };
-    const barAt = (r,c,e) => { const b = bars[K(r,c)]; return !!b && ((e.dc===-1 && b.left) || (e.dr===-1 && b.top)); };
-    const small = cell < 26;                          // allege le rendu quand les cases sont petites (mobile)
-    // leger tremblement « fait main » des murs epais : chaque segment de mur
-    // (une arete de case) est tres legerement bombe perpendiculairement, d'une
-    // quantite deterministe proportionnelle a sa longueur. Les extremites
-    // restent exactes, donc les murs restent joints (aucun trou).
-    const wobAmp = cell * 0.045;
-    const wob = (x0,y0,x1,y1) => {
-      const dx=x1-x0, dy=y1-y0, len=Math.hypot(dx,dy)||1;
-      const off=(rnd(x0+x1+1.3, y0+y1+2.7)*2-1)*wobAmp*(len/cell);
-      const cx=(x0+x1)/2 - dy/len*off, cy=(y0+y1)/2 + dx/len*off;
-      return `M ${x0} ${y0} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x1} ${y1} `;
-    };
-    let interior="", outer="", doors="", hatch="", greyRects="", pebbles="";
-    // 1) murs exterieurs epais, bords interieurs pointilles et portes : parcours des cases pleines.
-    for(let r=0;r<PUZZLE.rows;r++) for(let c=0;c<PUZZLE.cols;c++){
-      if(!has(r,c)) continue;
-      for(const e of EDGES){
-        const [x0,y0,x1,y1] = pts(r,c,e);
-        const isBar = barAt(r,c,e);
-        if(has(r+e.dr, c+e.dc) && !isBar){
-          if(e.dr===-1 || e.dc===-1) interior += `M ${x0} ${y0} L ${x1} ${y1} `;   // bord interieur (une seule fois)
-          continue;
-        }
-        if(isBar){
-          // porte facon plan de donjon (grimrock) : une ouverture au milieu du mur,
-          // encadree par un petit cadre rectangulaire a cheval sur le mur.
-          const tx=(x1-x0)/cell, ty=(y1-y0)/cell;
-          const mx=(x0+x1)/2, my=(y0+y1)/2, half=cell*0.20, d=cell*0.11;
-          const ax=mx-tx*half, ay=my-ty*half, bx=mx+tx*half, by=my+ty*half;
-          doors += wob(x0,y0,ax,ay) + wob(bx,by,x1,y1);   // mur de part et d'autre de l'ouverture
-          doors += `M ${(ax+e.nx*d).toFixed(1)} ${(ay+e.ny*d).toFixed(1)} L ${(bx+e.nx*d).toFixed(1)} ${(by+e.ny*d).toFixed(1)} L ${(bx-e.nx*d).toFixed(1)} ${(by-e.ny*d).toFixed(1)} L ${(ax-e.nx*d).toFixed(1)} ${(ay-e.ny*d).toFixed(1)} Z `;   // cadre de la porte
-          continue;
-        }
-        outer += wob(x0,y0,x1,y1);   // mur exterieur (leger trace fait main)
-      }
-    }
-    // 2) bande de rocher : tout l'espace vide est de la roche hachuree. Son bord
-    //    exterieur suit un champ de distance a la grille module par un bruit multi-
-    //    echelle, un gauchissement du domaine et un jitter par tuile -> lisiere tres
-    //    irreguliere et naturelle (facon Dyson Logos) ; quelques poches vides
-    //    subsistent au coeur (comme sur le modele). Deterministe (coord. de cases).
-    const bandN = cell ? M/cell : 2;
-    const winCells = Math.ceil(bandN) + 1;
-    const REACH = small ? 0.85 : 1.05, AMP = small ? 0.42 : 0.72, CORE = 0.5, JIT = small ? 0.3 : 0.5;
-    // bruit multi-echelle (grandes ondes -> details fins) en coordonnees de cases
-    const fbm = (X,Y) => 0.34*Math.sin(X*1.4 + Y*0.9 + 0.5)      // ondes larges (variation lente)
-                       + 0.38*Math.sin(X*2.8 - Y*1.8 + 2.4)      // festons principaux (~2 cases)
-                       + 0.32*Math.sin(X*1.7 + Y*3.2 + 4.1)      // festons transverses
-                       + 0.18*Math.sin((X - Y)*4.6 + 1.1)        // detail
-                       + 0.10*Math.sin(X*7.1 + Y*6.0 + 2.7);     // grain fin
-    const NMAX = 1.32, maxReach = REACH + AMP*NMAX + JIT*0.5;
-    const distGrid = (px,py) => {
-      let best = Infinity;
-      const cc = Math.floor(px/cell), cr = Math.floor(py/cell);
-      for(let r=cr-winCells; r<=cr+winCells; r++) for(let c=cc-winCells; c<=cc+winCells; c++){
-        if(!has(r,c)) continue;
-        const dx = Math.max(c*cell - px, 0, px - (c+1)*cell), dy = Math.max(r*cell - py, 0, py - (r+1)*cell);
-        const d = dx*dx + dy*dy; if(d<best) best=d;
-      }
-      return Math.sqrt(best)/cell;
-    };
-    // contour de la roche (profondeur en cases) : bruit gauchi + frange par tuile
-    const contourAt = (X,Y,ti,tj) => {
-      const wx = X + 0.6*Math.sin(Y*1.9 + 0.7), wy = Y + 0.6*Math.sin(X*1.7 + 2.3);   // gauchissement du domaine
-      const jit = (rnd(ti*13.1+7, tj*7.7+3) - 0.5) * JIT;                              // frange par tuile
-      return REACH + AMP*fbm(wx, wy) + jit;
-    };
-    const nT = small ? 3 : 4, gap = cell*(small ? 0.15 : 0.115);
-    const WASH = false;                                 // fond gris : true = degrade confine, false = supprime
-    for(let r=-winCells;r<PUZZLE.rows+winCells;r++) for(let c=-winCells;c<PUZZLE.cols+winCells;c++){
-      if(has(r,c)) continue;                            // case pleine = salle jouable
-      const x=c*cell, y=r*cell;
-      if(distGrid(x+cell/2, y+cell/2) - 0.72 > maxReach) continue;   // case hors de portee
-      for(let iu=0; iu<nT; iu++) for(let iv=0; iv<nT; iv++){
-        const u0=iu*cell/nT, u1=(iu+1)*cell/nT, v0=iv*cell/nT, v1=(iv+1)*cell/nT;
-        const cx=x+(u0+u1)/2, cy=y+(v0+v1)/2, dG=distGrid(cx,cy);
-        if(dG >= CORE && dG > contourAt(cx/cell, cy/cell, c*nT+iu, r*nT+iv)) continue;   // page ou poche interne
-        // fond gris confine pres des murs, degrade fort : nul des ~1 case -> plus de tuiles isolees au bord
-        const op = WASH ? 0.9*(1 - dG/1.05) : 0;
-        if(op > 0.05) greyRects += `<rect x="${(x+u0).toFixed(1)}" y="${(y+v0).toFixed(1)}" width="${(u1-u0).toFixed(1)}" height="${(v1-v0).toFixed(1)}" fill="#e5ddca" fill-opacity="${op.toFixed(2)}"/>`;
-        // hachures : traits courts a un angle propre a la tuile
-        const phi = rnd(r*7 + c*13 + iu*29 + iv*53 + 1, c*11 + r*17 + iu*23 + iv*7 + 1) * Math.PI;
-        const dir=[Math.cos(phi),Math.sin(phi)], perp=[-Math.sin(phi),Math.cos(phi)];
-        let sMin=Infinity, sMax=-Infinity;
-        for(const q of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const s=q[0]*perp[0]+q[1]*perp[1]; if(s<sMin)sMin=s; if(s>sMax)sMax=s; }
-        const BIG=cell*2;
-        let si=0;
-        for(let s=sMin+gap*0.5; s<sMax; s+=gap){
-          const bx=s*perp[0], by=s*perp[1];
-          const cl=clip(bx-BIG*dir[0], by-BIG*dir[1], bx+BIG*dir[0], by+BIG*dir[1], u0,v0,u1,v1);
-          if(!cl) continue;
-          // longueur irreguliere : on rogne chaque extremite d'une fraction aleatoire
-          const t0=rnd(r*3+c*5+iu+iv*2+si*7+1, c*3+r*5+iu*2+iv+si*11+1)*0.34;
-          const t1=1 - rnd(r*5+c*3+iu*3+iv+si*13+2, c*7+r+iu+iv*3+si*5+2)*0.34;
-          const ax=cl[0]+(cl[2]-cl[0])*t0, ay=cl[1]+(cl[3]-cl[1])*t0;
-          const zx=cl[0]+(cl[2]-cl[0])*t1, zy=cl[1]+(cl[3]-cl[1])*t1;
-          hatch += `M ${(x+ax).toFixed(1)} ${(y+ay).toFixed(1)} L ${(x+zx).toFixed(1)} ${(y+zy).toFixed(1)} `;
-          si++;
-        }
-      }
-      // gros caillou de forme irreguliere (polygone a rayons varies), bien dans la roche
-      const cgx=x+cell/2, cgy=y+cell/2, dGc=distGrid(cgx,cgy);
-      if((dGc < CORE || dGc <= REACH + AMP*fbm(cgx/cell, cgy/cell) - 0.2) && rnd(r*3+c*29+91, c*13+r*23+91) > 0.7){
-        const px=cgx + (rnd(r*5+c*7+3, c*3+r*9+3)-0.5)*cell*0.42, py=cgy + (rnd(r*9+c*3+5, c*7+r*5+5)-0.5)*cell*0.42;
-        const R0p=cell*(0.11+0.06*rnd(r+c+7, c+r+7)), nv=6+Math.floor(rnd(r*2+c*5+1, c*2+r*5+1)*4);
-        let dd="";
-        for(let k=0;k<nv;k++){
-          const ang=(k/nv)*6.2832 + (rnd(r*3+c+k*7, c*3+r+k*5)-0.5)*0.7;
-          const rad=R0p*(0.55 + 0.6*rnd(r+c*4+k*9, c+r*4+k*3));
-          dd += (k===0?"M ":"L ") + (px+Math.cos(ang)*rad).toFixed(1) + " " + (py+Math.sin(ang)*rad).toFixed(1) + " ";
-        }
-        pebbles += dd + "Z ";
-      }
-    }
-    const wallW = Math.max(2, cell*0.08), hatchW = Math.max(0.7, cell*0.032), pebbleW = Math.max(0.8, cell*0.045);
-    const dash = Math.max(1, cell*0.03).toFixed(1) + " " + Math.max(2, cell*0.07).toFixed(1);
-    latticeSvg.innerHTML =
-      greyRects +
-      `<path d="${hatch.trim()}" fill="none" stroke="#1a1712" stroke-width="${hatchW.toFixed(2)}" stroke-linecap="round"/>` +
-      `<path d="${pebbles.trim()}" fill="#fff" stroke="#1a1712" stroke-width="${pebbleW.toFixed(2)}" stroke-linejoin="round"/>` +
-      `<path d="${interior.trim()}" fill="none" stroke="#8f8674" stroke-width="1" stroke-dasharray="${dash}" stroke-linecap="round"/>` +
-      `<path d="${outer.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>` +
-      `<path d="${doors.trim()}" fill="none" stroke="#1a1712" stroke-width="${wallW.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    dessinerDonjon(latticeSvg, {
+      rows: PUZZLE.rows, cols: PUZZLE.cols, cell, band: bandCells(),
+      has: (r,c) => filled(K(r,c)), bars: PUZZLE.bars || {}
+    });
   }
 
   function currentWord(){

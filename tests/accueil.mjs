@@ -151,6 +151,26 @@ await check("la liste des grilles precedentes montre l'ancienne, pas encore fait
   if (info.hrefs.some(h => h.includes(today))) throw new Error("la grille du jour ne devrait pas figurer dans les precedentes");
 });
 
+await check("les apercus du donjon s'affichent (grille du jour en grand, precedentes en vignette)", async () => {
+  const info = await player.evaluate(() => {
+    const hero = document.getElementById("heroPreview");
+    const heroSvg = document.querySelector("#heroPreview .donjon-preview");
+    const cards = document.querySelectorAll("#gridList .gl-item").length;
+    const previews = document.querySelectorAll("#gridList .gl-item .gl-preview .donjon-preview").length;
+    const firstCard = document.querySelector("#gridList .gl-item .gl-preview .donjon-preview");
+    return {
+      heroShown: !!hero && !hero.hidden,
+      heroPaths: heroSvg ? heroSvg.querySelectorAll("path").length : 0,
+      cards, previews,
+      cardPaths: firstCard ? firstCard.querySelectorAll("path").length : 0
+    };
+  });
+  if (!info.heroShown) throw new Error("l'apercu de la grille du jour n'est pas affiche");
+  if (info.heroPaths < 1) throw new Error("l'apercu de la grille du jour n'a pas de trace SVG");
+  if (info.previews < info.cards) throw new Error("apercus manquants dans la liste : " + info.previews + " / " + info.cards);
+  if (info.cardPaths < 1) throw new Error("l'apercu d'une grille precedente n'a pas de trace SVG");
+});
+
 await check("le classement est affiche sur l'accueil, le joueur mis en avant (mois puis cumul)", async () => {
   await player.click("#tabClassement");
   await player.waitForSelector("#lbList li.me", { timeout: 8000 });
