@@ -151,6 +151,7 @@ await check("la liste des grilles precedentes montre l'ancienne, pas encore fait
 });
 
 await check("le classement est affiche sur l'accueil, le joueur mis en avant (mois puis cumul)", async () => {
+  await player.click("#tabClassement");
   await player.waitForSelector("#lbList li.me", { timeout: 8000 });
   const month = await player.evaluate(() => {
     const me = document.querySelector("#lbList li.me");
@@ -167,9 +168,9 @@ await check("le classement est affiche sur l'accueil, le joueur mis en avant (mo
   await player.evaluate(() => document.getElementById("lbTabMonth").click());   // on revient au mois pour la suite
 });
 
-await check("le profil s'ouvre depuis l'entete : niveau, badges, et enregistrement du pseudo", async () => {
-  await player.click("#who");
-  await player.waitForSelector("#profileModal:not([hidden])");
+await check("l'onglet Profil affiche le niveau, les badges et l'historique", async () => {
+  await player.click("#tabProfil");
+  await player.waitForSelector("#panelProfil:not([hidden])");
   await player.waitForSelector("#histList li");
   await player.waitForSelector("#badgeGrid .badge.on");
   const info = await player.evaluate(() => ({
@@ -178,10 +179,15 @@ await check("le profil s'ouvre depuis l'entete : niveau, badges, et enregistreme
     gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
     compteur: document.getElementById("badgesCount").textContent
   }));
-  if (info.boxHidden) throw new Error("bloc de niveau masque dans le profil");
+  if (info.boxHidden) throw new Error("bloc de niveau masque dans l'onglet Profil");
   if (info.total !== 13) throw new Error("grille de badges incomplete au profil : " + info.total);
   if (info.gagnes < 1) throw new Error("aucun badge gagne affiche au profil : " + info.gagnes);
   if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
+});
+
+await check("la fenetre de compte enregistre le pseudo et se referme", async () => {
+  await player.click("#who");
+  await player.waitForSelector("#profileModal:not([hidden])");
   await player.fill("#pseudoInput", "Rolista");
   await player.click("#saveProfile");
   await player.waitForFunction(() => window.__home.profile && window.__home.profile.pseudo === "Rolista");
@@ -189,7 +195,7 @@ await check("le profil s'ouvre depuis l'entete : niveau, badges, et enregistreme
   if (hp !== "Rolista") throw new Error("pseudo entete apres enregistrement : " + hp);
   // saveProfile ferme la fenetre de lui-meme
   const closed = await player.evaluate(() => document.getElementById("profileModal").hidden);
-  if (closed !== true) throw new Error("la fenetre de profil devrait se fermer apres enregistrement");
+  if (closed !== true) throw new Error("la fenetre de compte devrait se fermer apres enregistrement");
 });
 
 await check("depuis l'accueil connecte, la grille du jour s'ouvre sans redemander la connexion", async () => {
