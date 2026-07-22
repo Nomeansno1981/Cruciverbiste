@@ -572,6 +572,7 @@ m.onAuthStateChanged(auth, async user => {
     homeLink();
   };
 
+  window.__ddef.puzzle = puzzle;   // grille effectivement montée (repère de test)
   const play = monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr), review });
   // Rejouer (auteur seul) : remet la grille à zéro pour la retester, sans rien enregistrer
   if(isAdmin(user)){

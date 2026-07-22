@@ -115,6 +115,34 @@ await check("le joueur reçoit la grille publiée (et non la démonstration)", a
   if (src !== "firestore") throw new Error("source de la grille : " + src + " (attendu firestore)");
 });
 
+await check("« Éditer » corrige le titre et une définition d'une grille publiée", async () => {
+  await auteur.click("#tabPub");
+  await auteur.waitForSelector("#pubList li .pub-del");
+  await auteur.locator("#pubList button", { hasText: "Éditer" }).first().click();
+  await auteur.waitForSelector("#editPubBox:not([hidden])");
+  await auteur.fill("#editPubTitle", "Titre corrigé");
+  await auteur.locator("#editClueList input").first().fill("Définition corrigée (test)");
+  await auteur.click("#editPubSave");
+  // succès : la liste se réaffiche avec le titre corrigé
+  await auteur.waitForFunction(() => {
+    const t = document.querySelector("#pubList li .t");
+    return t && t.textContent === "Titre corrigé";
+  }, { timeout: 15000 });
+  // la correction a persisté : on rouvre l'éditeur et on relit la définition
+  await auteur.locator("#pubList button", { hasText: "Éditer" }).first().click();
+  await auteur.waitForSelector("#editPubBox:not([hidden])");
+  const val = await auteur.locator("#editClueList input").first().inputValue();
+  if (val !== "Définition corrigée (test)") throw new Error("définition non persistée : " + val);
+  // le joueur reçoit bien la définition corrigée
+  await joueur.reload();
+  await joueur.waitForSelector("#board .cell");
+  const clues = await joueur.evaluate(() => {
+    const p = window.__ddef && window.__ddef.puzzle;
+    return p ? p.across.concat(p.down).map(w => w.clue) : [];
+  });
+  if (!clues.includes("Définition corrigée (test)")) throw new Error("définition corrigée absente côté joueur : " + JSON.stringify(clues));
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });

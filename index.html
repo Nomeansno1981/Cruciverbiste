@@ -67,6 +67,14 @@
   .plist .pub-del{font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer}
   .plist .pub-del:hover{border-color:#cfccc4; background:#fbfaf7}
   .plist .pub-empty{color:var(--muted); border:none; font-family:var(--serif)}
+  .edit-h{margin:2px 0 12px; font-size:14px}
+  .edit-h .d{font-family:var(--mono); color:var(--accent)}
+  .edit-clues{display:flex; flex-direction:column; gap:8px; margin:14px 0}
+  .edit-clues h4{margin:8px 0 0; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  .editclue{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .editclue .w{font-family:var(--mono); font-weight:600; color:var(--accent); font-size:13px; min-width:92px}
+  .editclue input{flex:1 1 200px; min-width:0}
+  .edit-actions{display:flex; gap:10px; margin-top:8px}
 
   /* ---- publier au jeu ---- */
   .pub-box{margin-top:12px; padding:14px 16px; background:var(--accent-weak); border:1px solid var(--line); border-radius:var(--r)}
@@ -383,8 +391,19 @@
         <span class="count" id="pubCount"></span>
       </div>
       <div class="body">
-        <p class="fineprint" id="pubHint">Les grilles déjà en ligne dans le jeu, par date de parution. Vous pouvez en supprimer.</p>
+        <p class="fineprint" id="pubHint">Les grilles déjà en ligne dans le jeu, par date de parution. Vous pouvez corriger leurs définitions ou les supprimer.</p>
         <ul class="plist" id="pubList"></ul>
+
+        <div class="disclosure pub-box" id="editPubBox" hidden>
+          <div class="edit-h"><strong>Corriger les définitions</strong> — <span class="d" id="editPubDate"></span></div>
+          <div><label class="f" for="editPubTitle">Titre</label><input type="text" id="editPubTitle" placeholder="Jeu de rôle"></div>
+          <div class="edit-clues" id="editClueList"></div>
+          <div class="edit-actions">
+            <button class="btn-primary" id="editPubSave">Enregistrer les corrections</button>
+            <button class="btn-out" id="editPubCancel">Annuler</button>
+          </div>
+          <p class="pub-msg" id="editPubMsg"></p>
+        </div>
       </div>
     </section>
   </div>
@@ -1891,16 +1910,83 @@ async function loadPublished(){
       const li = document.createElement("li");
       const d = document.createElement("span"); d.className = "d"; d.textContent = docSnap.id;
       const t = document.createElement("span"); t.className = "t"; t.textContent = data.title || "Sans titre";
+      const edit = document.createElement("button"); edit.className = "pub-del"; edit.textContent = "Éditer";
+      edit.onclick = () => openEditPublished(docSnap.id, data);
       const del = document.createElement("button"); del.className = "pub-del"; del.textContent = "Supprimer";
       del.onclick = async () => {
         if(!confirm("Retirer du jeu la grille du " + docSnap.id + " ?")) return;
         try{ await cloud.deleteDoc(cloud.doc(cloud.db, "puzzles", docSnap.id)); loadPublished(); flash("Grille du " + docSnap.id + " retirée du jeu."); }
         catch(e){ flash("Suppression impossible : " + ((e && e.code) || e), true); }
       };
-      li.appendChild(d); li.appendChild(t); li.appendChild(del);
+      li.appendChild(d); li.appendChild(t); li.appendChild(edit); li.appendChild(del);
       ul.appendChild(li);
     });
   }catch(e){ ul.innerHTML = '<li class="pub-empty">Lecture impossible : ' + ((e && e.code) || e) + "</li>"; cnt.textContent = ""; }
+}
+
+/* =========================================================
+   Correction des définitions d'une grille déjà publiée
+   (on ne touche ni à la disposition ni à la solution : seulement le titre et
+   les définitions ; on réécrit le document puzzles/{date})
+   ========================================================= */
+let editingPub = null;   // { docId, puzzle, publishedAt }
+// reconstruit le mot réponse à partir des cases et de la solution stockée
+function motReponse(cells, solution){
+  return (cells || []).map(([r, c]) => solution[r + "," + c] || "").join("");
+}
+function openEditPublished(docId, data){
+  let p;
+  try{ p = JSON.parse(data.puzzle); }
+  catch(e){ flash("Grille illisible, correction impossible.", true); return; }
+  if(!p || !Array.isArray(p.across) || !Array.isArray(p.down) || !p.solution){ flash("Format de grille inattendu.", true); return; }
+  editingPub = { docId, puzzle: p, publishedAt: data.publishedAt || null };
+  $("editPubDate").textContent = docId;
+  $("editPubTitle").value = data.title || p.title || "";
+  const host = $("editClueList"); host.innerHTML = "";
+  const section = (titre, mots, dir) => {
+    if(!mots.length) return;
+    const h = document.createElement("h4"); h.textContent = titre; host.appendChild(h);
+    mots.forEach((w, i) => {
+      const row = document.createElement("div"); row.className = "editclue";
+      const lab = document.createElement("span"); lab.className = "w";
+      lab.textContent = (w.num != null ? w.num + ". " : "") + motReponse(w.cells, p.solution);
+      const inp = document.createElement("input"); inp.type = "text"; inp.value = w.clue || "";
+      inp.dataset.dir = dir; inp.dataset.i = i;
+      row.appendChild(lab); row.appendChild(inp); host.appendChild(row);
+    });
+  };
+  section("Horizontalement", p.across, "across");
+  section("Verticalement", p.down, "down");
+  $("editPubMsg").textContent = ""; $("editPubMsg").className = "pub-msg";
+  $("editPubBox").hidden = false;
+  $("editPubBox").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function closeEditPublished(){ editingPub = null; $("editPubBox").hidden = true; }
+async function saveEditedPublished(){
+  if(!editingPub){ return; }
+  const { docId, puzzle, publishedAt } = editingPub;
+  const msg = $("editPubMsg"); msg.className = "pub-msg";
+  // reporter les corrections de définitions dans l'objet grille
+  for(const inp of $("editClueList").querySelectorAll("input")){
+    const list = inp.dataset.dir === "across" ? puzzle.across : puzzle.down;
+    const it = list[+inp.dataset.i];
+    if(it) it.clue = inp.value;
+  }
+  const title = ($("editPubTitle").value || "").trim();
+  puzzle.title = title || puzzle.title || "";
+  $("editPubSave").disabled = true; msg.textContent = "Enregistrement…";
+  try{
+    await cloud.setDoc(cloud.doc(cloud.db, "puzzles", docId), {
+      date: docId, title, puzzle: JSON.stringify(puzzle),
+      publishedAt: publishedAt || cloud.serverTimestamp()
+    });
+    msg.classList.add("ok"); msg.textContent = "Définitions corrigées pour le " + docId + ".";
+    flash("Définitions corrigées pour le " + docId + ".");
+    closeEditPublished();
+    loadPublished();
+  }catch(e){
+    msg.classList.add("warn"); msg.textContent = "Correction refusée : " + ((e && e.code) || (e && e.message) || e);
+  }finally{ $("editPubSave").disabled = false; }
 }
 
 /* =========================================================
@@ -2035,6 +2121,8 @@ function bind(){
   $("previewGame").onclick = previewGame;
   $("publishGame").onclick = openPublish;
   $("pubConfirm").onclick = publishToGame;
+  $("editPubSave").onclick = saveEditedPublished;
+  $("editPubCancel").onclick = closeEditPublished;
   $("printBtn").onclick = () => window.print();
 
   if(FLAT_MODE){
