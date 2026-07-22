@@ -42,7 +42,7 @@ header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6
 .dv-mark{flex:none; width:42px; height:16px; fill:currentColor}
 .brand{display:flex; align-items:center; gap:9px; min-width:0}
 a.brand{text-decoration:none; color:inherit}
-.mark{width:40px; height:40px; flex:none}
+.mark{height:40px; width:auto; flex:none}   /* logo heaume : plus haut que large, on cale sur la hauteur */
 h1{font-family:var(--display); font-size:31px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap; color:var(--brand-red)}
 .amp{color:var(--ink); font-size:.8em; font-weight:400}   /* & du logo : noir et plus petit */
 .spacer{flex:1}
@@ -121,7 +121,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 #authGate{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:22px}
 #authGate[hidden]{display:none}
 .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 3px rgba(30,27,20,.05); padding:28px 28px; max-width:400px; width:100%; text-align:center; display:flex; flex-direction:column; gap:12px; align-items:stretch}
-.gate-card .mark{width:54px; height:54px; margin:0 auto}
+.gate-card .mark{height:60px; width:auto; margin:0 auto}
 .gate-card h2{margin:0; font-family:var(--display); font-weight:400; text-transform:none; font-size:33px; letter-spacing:0; text-align:center; color:var(--brand-red)}
 .gate-text{margin:0 0 2px; font-family:var(--serif); font-size:14px; color:#3a3833; line-height:1.5; text-align:center}
 .gate-btn{font-family:var(--sans); font-size:14.5px; padding:11px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer; font-weight:600}
