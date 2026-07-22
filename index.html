@@ -67,6 +67,9 @@
   .plist .pub-del{font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer}
   .plist .pub-del:hover{border-color:#cfccc4; background:#fbfaf7}
   .plist .pub-empty{color:var(--muted); border:none; font-family:var(--serif)}
+  .plist .pub-group{display:block; border:none; padding:14px 0 2px; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:700}
+  .plist .pub-group.warn{color:var(--accent)}
+  .pub-slot{margin:8px 0 0; font-size:13px; color:var(--accent); font-family:var(--mono)}
   .edit-h{margin:2px 0 12px; font-size:14px}
   .edit-h .d{font-family:var(--mono); color:var(--accent)}
   .edit-clues{display:flex; flex-direction:column; gap:8px; margin:14px 0}
@@ -358,10 +361,10 @@
 
         <div class="disclosure pub-box" id="publishBox" hidden>
           <div class="pub-form">
-            <div><label class="f" for="pubDate">Date de parution</label><input type="date" id="pubDate"></div>
             <div class="grow"><label class="f" for="pubTitle">Titre (optionnel)</label><input type="text" id="pubTitle" placeholder="Jeu de rôle"></div>
-            <button class="btn-primary" id="pubConfirm">Confirmer la publication</button>
+            <button class="btn-primary" id="pubConfirm">Ajouter à la file</button>
           </div>
+          <p class="pub-slot" id="pubSlot"></p>
           <p class="pub-msg" id="pubMsg"></p>
         </div>
 
@@ -391,7 +394,7 @@
         <span class="count" id="pubCount"></span>
       </div>
       <div class="body">
-        <p class="fineprint" id="pubHint">Les grilles déjà en ligne dans le jeu, par date de parution. Vous pouvez corriger leurs définitions ou les supprimer.</p>
+        <p class="fineprint" id="pubHint">La file des grilles : celle du jour, les suivantes à venir, puis les passées. Chaque nouvelle grille prend le prochain jour libre — « ▲ Monter » avance une grille à venir. On peut aussi corriger les définitions ou supprimer.</p>
         <ul class="plist" id="pubList"></ul>
 
         <div class="disclosure pub-box" id="editPubBox" hidden>
@@ -1893,35 +1896,78 @@ function showPane(id){
   if(id === "panePub") loadPublished();
 }
 
-// Liste des grilles déjà publiées dans le jeu (collection « puzzles »),
-// avec suppression. Réservée à l'auteur par les règles Firestore.
+// File d'attente des grilles publiées (collection « puzzles »), groupée en
+// « en ligne aujourd'hui / à venir / passées ». La date du document EST le jour
+// de parution : réordonner la file revient donc à échanger deux dates.
+// Réservée à l'auteur par les règles Firestore.
+function pubRow(id, data, opts){
+  const li = document.createElement("li");
+  const d = document.createElement("span"); d.className = "d"; d.textContent = id;
+  const t = document.createElement("span"); t.className = "t"; t.textContent = data.title || "Sans titre";
+  li.appendChild(d); li.appendChild(t);
+  if(opts && opts.canMoveUp){
+    const up = document.createElement("button"); up.className = "pub-del"; up.textContent = "▲ Monter";
+    up.title = "Publier plus tôt : échange la date avec la grille précédente de la file";
+    up.onclick = () => moveUpQueue(id);
+    li.appendChild(up);
+  }
+  const edit = document.createElement("button"); edit.className = "pub-del"; edit.textContent = "Éditer";
+  edit.onclick = () => openEditPublished(id, data);
+  const del = document.createElement("button"); del.className = "pub-del"; del.textContent = "Supprimer";
+  del.onclick = async () => {
+    if(!confirm("Retirer du jeu la grille du " + id + " ?")) return;
+    try{ await cloud.deleteDoc(cloud.doc(cloud.db, "puzzles", id)); loadPublished(); flash("Grille du " + id + " retirée du jeu."); }
+    catch(e){ flash("Suppression impossible : " + ((e && e.code) || e), true); }
+  };
+  li.appendChild(edit); li.appendChild(del);
+  return li;
+}
+function pubGroup(txt, warn){
+  const li = document.createElement("li"); li.className = "pub-group" + (warn ? " warn" : ""); li.textContent = txt; return li;
+}
 async function loadPublished(){
   const ul = $("pubList"), cnt = $("pubCount");
   if(!ul) return;
   if(!cloud || !cloud.getDocs){ ul.innerHTML = '<li class="pub-empty">Disponible une fois connecté.</li>'; cnt.textContent = ""; return; }
   ul.innerHTML = '<li class="pub-empty">Chargement…</li>';
   try{
-    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(80)));
+    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(200)));
+    const today = parisDate();
+    const all = snap.docs.map(ds => ({ id: ds.id, data: ds.data() }));
+    const futur = all.filter(x => x.id > today).sort((a, b) => a.id < b.id ? -1 : 1);   // parution ascendante
+    const jour = all.filter(x => x.id === today);
+    const passe = all.filter(x => x.id < today);                                          // déjà en ordre décroissant
     ul.innerHTML = "";
-    cnt.textContent = snap.size ? (snap.size + (snap.size > 1 ? " grilles" : " grille")) : "";
-    if(!snap.size){ ul.innerHTML = '<li class="pub-empty">Aucune grille publiée pour l\'instant.</li>'; return; }
-    snap.forEach(docSnap => {
-      const data = docSnap.data();
-      const li = document.createElement("li");
-      const d = document.createElement("span"); d.className = "d"; d.textContent = docSnap.id;
-      const t = document.createElement("span"); t.className = "t"; t.textContent = data.title || "Sans titre";
-      const edit = document.createElement("button"); edit.className = "pub-del"; edit.textContent = "Éditer";
-      edit.onclick = () => openEditPublished(docSnap.id, data);
-      const del = document.createElement("button"); del.className = "pub-del"; del.textContent = "Supprimer";
-      del.onclick = async () => {
-        if(!confirm("Retirer du jeu la grille du " + docSnap.id + " ?")) return;
-        try{ await cloud.deleteDoc(cloud.doc(cloud.db, "puzzles", docSnap.id)); loadPublished(); flash("Grille du " + docSnap.id + " retirée du jeu."); }
-        catch(e){ flash("Suppression impossible : " + ((e && e.code) || e), true); }
-      };
-      li.appendChild(d); li.appendChild(t); li.appendChild(edit); li.appendChild(del);
-      ul.appendChild(li);
-    });
+    cnt.textContent = all.length ? (all.length + (all.length > 1 ? " grilles" : " grille")) : "";
+    if(!all.length){ ul.innerHTML = '<li class="pub-empty">Aucune grille. Générez-en une, puis « Ajouter à la file ».</li>'; return; }
+    if(jour.length){ ul.appendChild(pubGroup("En ligne aujourd'hui")); jour.forEach(x => ul.appendChild(pubRow(x.id, x.data))); }
+    else { ul.appendChild(pubGroup("Aujourd'hui : aucune grille — la démonstration s'affiche", true)); }
+    if(futur.length){
+      ul.appendChild(pubGroup("À venir · file d'attente"));
+      futur.forEach((x, i) => ul.appendChild(pubRow(x.id, x.data, { canMoveUp: i > 0 })));   // la 1re est déjà en tête
+    }
+    if(passe.length){ ul.appendChild(pubGroup("Passées")); passe.forEach(x => ul.appendChild(pubRow(x.id, x.data))); }
   }catch(e){ ul.innerHTML = '<li class="pub-empty">Lecture impossible : ' + ((e && e.code) || e) + "</li>"; cnt.textContent = ""; }
+}
+// Avance une grille dans la file : échange sa date de parution avec la grille
+// précédente de la file. On ne touche qu'aux grilles à venir (jamais celle du
+// jour ni les passées) : aucune partie déjà jouée n'est affectée.
+async function moveUpQueue(dateStr){
+  try{
+    const today = parisDate();
+    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(200)));
+    const futur = snap.docs.map(ds => ({ id: ds.id, data: ds.data() })).filter(x => x.id > today).sort((a, b) => a.id < b.id ? -1 : 1);
+    const i = futur.findIndex(x => x.id === dateStr);
+    if(i <= 0){ flash("Cette grille est déjà en tête de file.", true); return; }
+    const cur = futur[i], prev = futur[i - 1];
+    // échange le contenu des deux créneaux (les documents sont indexés par date)
+    const batch = cloud.writeBatch(cloud.db);
+    batch.set(cloud.doc(cloud.db, "puzzles", prev.id), { date: prev.id, title: cur.data.title || "", puzzle: cur.data.puzzle, publishedAt: cur.data.publishedAt || cloud.serverTimestamp() });
+    batch.set(cloud.doc(cloud.db, "puzzles", cur.id), { date: cur.id, title: prev.data.title || "", puzzle: prev.data.puzzle, publishedAt: prev.data.publishedAt || cloud.serverTimestamp() });
+    await batch.commit();
+    flash("Grille avancée au " + prev.id + ".");
+    loadPublished();
+  }catch(e){ flash("Déplacement impossible : " + ((e && e.code) || e), true); }
 }
 
 /* =========================================================
@@ -1995,34 +2041,62 @@ async function saveEditedPublished(){
 function parisDate(){
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
-function openPublish(){
+function addDaysKey(ds, n){
+  const [y, mo, d] = ds.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+// prochain jour libre à partir d'aujourd'hui : jamais un créneau déjà occupé
+// (c'est ce qui rend une publication accidentelle non destructrice)
+function nextFreeSlot(occupes, today){
+  let d = today;
+  while(occupes.has(d)) d = addDaysKey(d, 1);
+  return d;
+}
+function joursEntre(a, b){
+  const [ya, ma, da] = a.split("-").map(Number), [yb, mb, db] = b.split("-").map(Number);
+  return Math.round((Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86400000);
+}
+function quandLabel(slot){
+  const n = joursEntre(parisDate(), slot);
+  return n <= 0 ? "aujourd'hui" : n === 1 ? "demain" : "dans " + n + " jours";
+}
+async function puzzleDates(){
+  const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(400)));
+  return new Set(snap.docs.map(d => d.id));
+}
+async function openPublish(){
   if(!cloud || !cloud.setDoc){ flash("Connectez-vous pour publier au jeu.", true); return; }
   if(!currentModel){ flash("Générez d'abord une grille.", true); return; }
   const box = $("publishBox");
   box.hidden = !box.hidden;
-  if(!box.hidden){
-    if(!$("pubDate").value) $("pubDate").value = parisDate();
-    $("pubTitle").placeholder = currentList().name || "Jeu de rôle";
-    $("pubMsg").textContent = ""; $("pubMsg").className = "pub-msg";
-    $("pubDate").focus();
-  }
+  if(box.hidden) return;
+  $("pubTitle").placeholder = currentList().name || "Jeu de rôle";
+  $("pubMsg").textContent = ""; $("pubMsg").className = "pub-msg";
+  $("pubSlot").textContent = "Calcul du prochain créneau…";
+  try{
+    const slot = nextFreeSlot(await puzzleDates(), parisDate());
+    $("pubSlot").textContent = "Parution : " + slot + " (" + quandLabel(slot) + ").";
+  }catch(e){ $("pubSlot").textContent = "La grille prendra le prochain jour libre."; }
 }
 async function publishToGame(){
   const msg = $("pubMsg"); msg.className = "pub-msg";
   const p = puzzleForGame();
   if(!p){ msg.textContent = "Générez d'abord une grille."; msg.classList.add("warn"); return; }
   if(p.rows > 15 || p.cols > 15){ msg.textContent = "La grille dépasse 15×15. Réduisez la largeur/hauteur max, puis régénérez."; msg.classList.add("warn"); return; }
-  const date = $("pubDate").value;
-  if(!date){ msg.textContent = "Choisissez une date de parution."; msg.classList.add("warn"); return; }
   const title = ($("pubTitle").value || currentList().name || "").trim();
   const undef = p.across.concat(p.down).filter(x => !x.clue).length;
   $("pubConfirm").disabled = true; msg.textContent = "Publication…";
   try{
+    // date = prochain jour libre : on n'écrase jamais une grille déjà programmée
+    const date = nextFreeSlot(await puzzleDates(), parisDate());
     // la grille est stockée en chaîne JSON : Firestore refuse les tableaux imbriqués (les cases)
     await cloud.setDoc(cloud.doc(cloud.db, "puzzles", date), { date, title, puzzle: JSON.stringify(p), publishedAt: cloud.serverTimestamp() });
     msg.classList.add("ok");
-    msg.textContent = "Grille publiée pour le " + date + (undef ? " (" + undef + " définition(s) manquante(s))" : "") + ".";
-    flash("Grille publiée au jeu pour le " + date + ".");
+    msg.textContent = "Ajoutée à la file — parution " + quandLabel(date) + " (" + date + ")" + (undef ? " · " + undef + " définition(s) manquante(s)" : "") + ".";
+    flash("Grille ajoutée à la file pour le " + date + ".");
+    $("publishBox").hidden = true;
     loadPublished();
   }catch(e){
     msg.classList.add("warn");

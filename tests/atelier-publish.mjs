@@ -87,15 +87,16 @@ await check("l'auteur ouvre l'atelier et génère une grille", async () => {
   await auteur.waitForSelector("#board svg g.cell", { state: "visible" });
 });
 
-await check("« Publier au jeu » écrit la grille du jour dans le jeu", async () => {
+await check("« Ajouter à la file » publie au prochain jour libre (aujourd'hui, la file étant vide)", async () => {
   await auteur.click("#publishGame");
   await auteur.waitForSelector("#publishBox:not([hidden])");
-  const d = await auteur.inputValue("#pubDate");
-  if (d !== parisDate) throw new Error("date préremplie inattendue : " + d + " (attendu " + parisDate + ")");
+  // plus de champ date : le créneau est calculé automatiquement
+  if (await auteur.locator("#pubDate").count() !== 0) throw new Error("le champ date subsiste");
   await auteur.click("#pubConfirm");
-  await auteur.waitForFunction(() => /publiée|refusée/i.test(document.getElementById("pubMsg").textContent), { timeout: 15000 });
+  await auteur.waitForFunction(() => /file|refusée/i.test(document.getElementById("pubMsg").textContent), { timeout: 15000 });
   const msg = await auteur.evaluate(() => document.getElementById("pubMsg").textContent);
-  if (!/publiée/i.test(msg)) throw new Error("publication non confirmée : " + msg);
+  if (!/file/i.test(msg)) throw new Error("ajout à la file non confirmé : " + msg);
+  if (!msg.includes(parisDate)) throw new Error("créneau attendu aujourd'hui (" + parisDate + ") : " + msg);
 });
 
 await check("la grille apparaît dans l'onglet « Grilles publiées »", async () => {
@@ -140,7 +141,47 @@ await check("« Éditer » corrige le titre et une définition d'une grille publ
     const p = window.__ddef && window.__ddef.puzzle;
     return p ? p.across.concat(p.down).map(w => w.clue) : [];
   });
-  if (!clues.includes("Définition corrigée (test)")) throw new Error("définition corrigée absente côté joueur : " + JSON.stringify(clues));
+  if (clues.includes("Définition corrigée (test)")) return;
+  throw new Error("définition corrigée absente côté joueur : " + JSON.stringify(clues));
+});
+
+await check("file d'attente : les grilles suivantes prennent les jours suivants, « ▲ Monter » réordonne", async () => {
+  const pubOnce = async (titre) => {
+    await auteur.click("#tabGrids");
+    await auteur.waitForSelector("#board svg g.cell");
+    await auteur.click("#publishGame");
+    await auteur.waitForSelector("#publishBox:not([hidden])");
+    await auteur.fill("#pubTitle", titre);
+    await auteur.click("#pubConfirm");
+    await auteur.waitForFunction(() => /file|refusée/i.test(document.getElementById("pubMsg").textContent), { timeout: 15000 });
+    const m = await auteur.evaluate(() => document.getElementById("pubMsg").textContent);
+    if (!/file/i.test(m)) throw new Error("ajout à la file échoué (" + titre + ") : " + m);
+  };
+  await pubOnce("File B");   // demain (aujourd'hui déjà pris)
+  await pubOnce("File C");   // après-demain
+  await auteur.click("#tabPub");
+  await auteur.waitForSelector("#pubList button");
+  const dateOf = () => auteur.evaluate(() => {
+    const m = {};
+    document.querySelectorAll("#pubList li").forEach(li => {
+      const d = li.querySelector(".d"), t = li.querySelector(".t");
+      if (d && t) m[t.textContent] = d.textContent;
+    });
+    return m;
+  });
+  const avant = await dateOf();
+  if (!(avant["File B"] < avant["File C"])) throw new Error("ordre initial inattendu : B=" + avant["File B"] + " C=" + avant["File C"]);
+  // « ▲ Monter » sur File C : elle doit passer avant File B
+  await auteur.locator("#pubList li", { hasText: "File C" }).locator("button", { hasText: "Monter" }).click();
+  await auteur.waitForFunction(() => {
+    const rows = [...document.querySelectorAll("#pubList li")].filter(li => li.querySelector(".t"));
+    const b = rows.find(li => li.querySelector(".t").textContent === "File B");
+    const c = rows.find(li => li.querySelector(".t").textContent === "File C");
+    return b && c && c.querySelector(".d").textContent < b.querySelector(".d").textContent;
+  }, { timeout: 15000 });
+  // désormais en tête de file, File C ne peut plus remonter
+  const cMonter = await auteur.locator("#pubList li", { hasText: "File C" }).locator("button", { hasText: "Monter" }).count();
+  if (cMonter !== 0) throw new Error("la tête de file (File C) ne devrait plus avoir « Monter »");
 });
 
 await check("aucune erreur JavaScript", async () => {
