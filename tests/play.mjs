@@ -88,6 +88,14 @@ await check("bords : le quadrillage deborde d'une marge (epaisseur uniforme)", a
   if (r.left === "0px" || r.left === "") throw new Error("marge non appliquee : " + r.left);
 });
 
+await check("le chrono demarre des l'ouverture de la grille (avant toute saisie)", async () => {
+  const t1 = await page.evaluate(() => window.__play.elapsedShown());
+  if (!/^\d+:\d\d$/.test(t1)) throw new Error("chrono illisible : " + t1);
+  await page.waitForTimeout(1100);
+  const t2 = await page.evaluate(() => window.__play.elapsedShown());
+  if (t2 === t1) throw new Error("le chrono n'avance pas sans saisie : " + t1 + " -> " + t2);
+});
+
 await check("choisir une definition surligne le mot entier", async () => {
   await page.click("#li-A1"); // KOBOLD, 6 lettres
   const id = await page.evaluate(() => window.__play.currentClue());
@@ -100,11 +108,6 @@ await check("saisie au clavier : les lettres se posent et avancent", async () =>
   await page.keyboard.type("kobold");
   const letters = await page.evaluate(() => [[0,2],[0,3],[0,4],[0,5],[0,6],[0,7]].map(([r,c]) => window.__play.letterAt(r,c)).join(""));
   if (letters !== "KOBOLD") throw new Error("lettres posees : " + letters);
-});
-
-await check("le chrono se declenche a la premiere lettre", async () => {
-  const t = await page.evaluate(() => window.__play.elapsedShown());
-  if (!/^\d+:\d\d$/.test(t)) throw new Error("chrono illisible : " + t);
 });
 
 await check("un mot rempli correctement se valide (vert) et se verrouille", async () => {

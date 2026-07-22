@@ -794,6 +794,9 @@ export function monterJeu(PUZZLE, opts = {}){
   gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
   if(opts.review) enterReview(opts.review);   // grille déjà résolue : revue en lecture seule
   requestAnimationFrame(layout);
+  // le chrono démarre dès l'ouverture de la grille (et non à la première frappe),
+  // sauf en revue/lecture seule (grille déjà résolue).
+  if(!opts.review && !solved) startTimer();
 
   const api = {
     selectClue: (dir, num) => { const w = (dir==="across"?PUZZLE.across:PUZZLE.down).find(x => x.num===num); if(w) gotoClue(w, true); },
