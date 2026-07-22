@@ -60,8 +60,9 @@
         <div class="hero-state" id="todayState"></div>
       </div>
       <div class="hero-count">
-        <div class="count-label">Prochaine grille dans</div>
+        <div class="count-label" id="countLabel">Prochaine grille dans</div>
         <div class="count-val" id="countdown">--:--:--</div>
+        <div class="count-sub" id="countSub"></div>
       </div>
     </section>
 
@@ -541,14 +542,19 @@ async function buildHome(user){
     renderBadges();   // grille des badges (onglet Profil)
   }catch(e){}
 
-  // etat de la grille du jour
+  // etat de la grille du jour + libelle du compte a rebours (meme duree, message
+  // different selon que le donjon du jour est explore ou non)
   if(done.has(todayKey)){
     $("playToday").textContent = "Revoir la grille du jour";
     $("todayState").textContent = "Résolue. Revenez demain pour la prochaine.";
     $("todayState").classList.add("ok");
+    $("countLabel").textContent = "Prochain donjon dans";
+    $("countSub").textContent = "";
   } else {
     $("playToday").textContent = "Jouer";
     $("todayState").textContent = "";
+    $("countLabel").textContent = "Plus que";
+    $("countSub").textContent = "pour explorer le donjon";
   }
 
   // liste des grilles precedentes (publiees, hors aujourd'hui), faites / pas faites

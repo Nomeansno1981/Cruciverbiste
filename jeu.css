@@ -258,6 +258,8 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .hero-count{flex:0 0 auto; text-align:center; padding-left:10px; border-left:1px solid var(--line)}
 .count-label{font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em}
 .count-val{font-family:var(--mono); font-size:26px; font-weight:700; color:var(--accent-ink); font-variant-numeric:tabular-nums; margin-top:3px}
+.count-sub{font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em; margin-top:3px}
+.count-sub:empty{display:none}
 .home-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
 .stat{border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; background:var(--panel)}
 .stat-k{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
