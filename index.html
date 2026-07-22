@@ -322,11 +322,11 @@
           <button class="btn-out" id="regenBtn">Régénérer</button>
           <div class="grow" style="max-width:110px">
             <label class="f" for="maxW">Largeur max</label>
-            <input type="number" id="maxW" min="2" step="1" />
+            <input type="number" id="maxW" min="2" max="15" step="1" />
           </div>
           <div class="grow" style="max-width:110px">
             <label class="f" for="maxH">Hauteur max</label>
-            <input type="number" id="maxH" min="2" step="1" />
+            <input type="number" id="maxH" min="2" max="15" step="1" />
           </div>
           <label class="toggle" style="margin-bottom:2px"><input type="checkbox" id="showSol" /> Afficher les solutions</label>
         </div>
@@ -1190,9 +1190,9 @@ function renderEntries(){
     }
   }
   $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
-  // les champs vides se préremplissent au défaut ferme : 14 x 14 (format du jeu)
-  if(!$("maxW").value) $("maxW").value = "14";
-  if(!$("maxH").value) $("maxH").value = "14";
+  // les champs vides se préremplissent au format imposé : 15 x 15 (format du jeu)
+  if(!$("maxW").value) $("maxW").value = "15";
+  if(!$("maxH").value) $("maxH").value = "15";
 }
 
 // Éditeur dépliable d'une entrée : le mot et toutes ses définitions (ajouter, modifier, supprimer).
@@ -1532,8 +1532,12 @@ function doGenerate(){
   // dimensions (bounding box). Empty or too-small fields fall back to the
   // default: 14 x 14 ferme (format du jeu); un mot plus long que la boîte n'est pas utilisé
   let W = parseInt($("maxW").value, 10), H = parseInt($("maxH").value, 10);
-  if(!W || W < 2){ W = 14; $("maxW").value = "14"; }
-  if(!H || H < 2){ H = 14; $("maxH").value = "14"; }
+  if(!W || W < 2){ W = 15; $("maxW").value = "15"; }
+  if(!H || H < 2){ H = 15; $("maxH").value = "15"; }
+  // format publié imposé : le donjon doit tenir dans 15×15 (il est centré à la
+  // publication, quitte à n'occuper qu'une partie de la grille)
+  if(W > 15){ W = 15; $("maxW").value = "15"; }
+  if(H > 15){ H = 15; $("maxH").value = "15"; }
   const { pool, rotated } = selectPool(out, W, H);
   const tooLong = out.filter(e => e.letters.length > Math.max(W, H));
   // cible de mots avant élagage : ~16 sur une 14×14 (aire/12). L'élagage des
@@ -1751,8 +1755,17 @@ async function copyClues(){
 function puzzleForGame(){
   if(!currentModel) return null;
   const g = currentModel;
+  // Format publié imposé : 15×15, le donjon centré par un décalage entier (quitte
+  // à n'occuper qu'une partie de la grille). Uniformise les vignettes de l'accueil
+  // et le format de jeu. Si le donjon dépasse 15 (grille chargée hors norme), on
+  // garde ses dimensions sans recentrer : la publication le refusera.
+  const SIZE = 15;
+  const fits = g.rows <= SIZE && g.cols <= SIZE;
+  const offR = fits ? Math.floor((SIZE - g.rows) / 2) : 0;
+  const offC = fits ? Math.floor((SIZE - g.cols) / 2) : 0;
+  const shift = k => { const i = k.indexOf(","); return (+k.slice(0, i) + offR) + "," + (+k.slice(i + 1) + offC); };
   const numPos = {};
-  for(const k in g.number){ const [r,c] = k.split(",").map(Number); numPos[g.number[k]] = [r,c]; }
+  for(const k in g.number){ const [r,c] = k.split(",").map(Number); numPos[g.number[k]] = [r + offR, c + offC]; }
   const cellsOf = (item, dir) => {
     const [r,c] = numPos[item.num];
     const len = [...item.word].length;
@@ -1760,12 +1773,13 @@ function puzzleForGame(){
     for(let i=0;i<len;i++) out.push(dir === "down" ? [r+i, c] : [r, c+i]);
     return out;
   };
-  const solution = {};
-  for(const k in g.cells) solution[k] = g.cells[k].display;
+  const solution = {}; for(const k in g.cells) solution[shift(k)] = g.cells[k].display;
+  const numbers = {};  for(const k in g.number) numbers[shift(k)] = g.number[k];
+  const bars = {};     for(const k in (g.bars || {})) bars[shift(k)] = g.bars[k];
   return {
     title: currentList().name || "Grille",
-    rows: g.rows, cols: g.cols,
-    solution, numbers: g.number, bars: g.bars || {},
+    rows: fits ? SIZE : g.rows, cols: fits ? SIZE : g.cols,
+    solution, numbers, bars,
     across: g.across.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "across") })),
     down: g.down.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "down") }))
   };
@@ -1902,6 +1916,7 @@ async function publishToGame(){
   const msg = $("pubMsg"); msg.className = "pub-msg";
   const p = puzzleForGame();
   if(!p){ msg.textContent = "Générez d'abord une grille."; msg.classList.add("warn"); return; }
+  if(p.rows > 15 || p.cols > 15){ msg.textContent = "La grille dépasse 15×15. Réduisez la largeur/hauteur max, puis régénérez."; msg.classList.add("warn"); return; }
   const date = $("pubDate").value;
   if(!date){ msg.textContent = "Choisissez une date de parution."; msg.classList.add("warn"); return; }
   const title = ($("pubTitle").value || currentList().name || "").trim();
