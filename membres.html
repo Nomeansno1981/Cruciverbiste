@@ -1,0 +1,475 @@
+<!-- Donjons & Definitions : moderation des membres (auteur). Connexion Google,
+     liste des membres (classement + suspendus), fiche detaillee, et actions de
+     moderation : corriger un pseudo, retirer du classement, suspendre/reactiver,
+     supprimer les donnees. Chaque action est consignee au journal (moderation).
+     Reservee au compte administrateur par les regles de securite. -->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Membres - Donjons &amp; Définitions</title>
+<link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="jeu.css">
+<style>
+  .wrap{max-width:960px}
+  .tabsm{display:flex; gap:2px; margin:6px 0 16px; border-bottom:1px solid var(--line)}
+  .tabsm button{background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); font-family:var(--sans); font-size:14px; font-weight:600; padding:9px 15px 10px; margin-bottom:-1px; cursor:pointer}
+  .tabsm button:hover{color:var(--ink)}
+  .tabsm button.on{color:var(--accent); border-bottom-color:var(--accent)}
+  .pane[hidden]{display:none}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:16px}
+  .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
+  .toolbar input[type=text], .toolbar select{font-family:var(--sans); font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--ink)}
+  .toolbar input[type=text]{flex:1; min-width:150px}
+  .toolbar .cnt{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .mlist{list-style:none; margin:0; padding:0}
+  .mrow{display:flex; align-items:center; gap:12px; padding:10px 8px; border-bottom:1px solid var(--line); cursor:pointer; border-radius:8px}
+  .mrow:hover{background:#fbf7f0}
+  .mrow.sel{background:var(--accent-weak)}
+  .mrow .nm{flex:1; min-width:0; font-family:var(--serif); font-size:15.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mrow .xp{font-family:var(--mono); font-size:12.5px; color:var(--accent-ink); font-variant-numeric:tabular-nums}
+  .mrow .seen{font-family:var(--mono); font-size:11px; color:var(--muted); min-width:96px; text-align:right}
+  .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; padding:2px 7px; border-radius:999px; white-space:nowrap}
+  .tag.susp{background:#f3d9d9; color:var(--danger)}
+  .mempty{color:var(--muted); font-style:italic; font-family:var(--serif); padding:14px 8px}
+  /* fiche membre */
+  .detail[hidden]{display:none}
+  .dh{display:flex; align-items:center; gap:12px; margin-bottom:4px}
+  .dh .dpseudo{font-family:var(--display); font-size:26px; color:var(--brand-red); font-weight:400}
+  .dh .duid{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .dstats{display:flex; gap:18px; flex-wrap:wrap; margin:12px 0 4px; font-family:var(--serif)}
+  .dstat b{display:block; font-family:var(--mono); font-size:19px; color:var(--accent-ink); font-variant-numeric:tabular-nums}
+  .dstat span{font-size:12px; color:var(--muted)}
+  .hist{max-height:220px; overflow:auto; border:1px solid var(--line); border-radius:10px; margin-top:10px}
+  .hist table{width:100%; border-collapse:collapse; font-size:13px}
+  .hist th{position:sticky; top:0; background:var(--panel); text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:7px 10px; border-bottom:1px solid var(--line)}
+  .hist td{padding:6px 10px; border-bottom:1px solid var(--line, #efede6); font-family:var(--serif)}
+  .hist td.n{font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--accent-ink)}
+  .hist .hempty{color:var(--muted); font-style:italic; padding:12px}
+  .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+  .acts .fix{display:flex; gap:6px; flex:1 1 260px; min-width:0}
+  .acts .fix input{flex:1; min-width:0; font-family:var(--sans); font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:9px}
+  .abtn{font-family:var(--sans); font-size:13.5px; font-weight:600; padding:8px 13px; border-radius:9px; border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer}
+  .abtn:hover{border-color:#cfccc4; background:#fbfaf7}
+  .abtn.primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .abtn.primary:hover{background:var(--accent-ink)}
+  .abtn.warn{color:var(--danger); border-color:#e2b8ba}
+  .abtn.warn:hover{background:#f7ecec}
+  .abtn.armed{background:var(--danger); color:#fff; border-color:var(--danger)}
+  .abtn:disabled{opacity:.5; cursor:default}
+  .dmsg{font-family:var(--serif); font-size:13px; min-height:1.1em; margin-top:8px}
+  .dmsg.ok{color:#2c5a2a} .dmsg.warn{color:var(--danger)}
+  /* journal */
+  .jlist{list-style:none; margin:0; padding:0}
+  .jrow{display:flex; gap:12px; align-items:baseline; padding:9px 6px; border-bottom:1px solid var(--line); font-size:13.5px}
+  .jrow .jat{font-family:var(--mono); font-size:11px; color:var(--muted); min-width:118px}
+  .jrow .jact{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.03em; padding:2px 7px; border-radius:6px; background:var(--accent-weak); color:var(--accent-ink); white-space:nowrap}
+  .jrow .jtxt{flex:1; min-width:0; font-family:var(--serif)}
+  .jrow .jtgt{font-weight:700}
+  .hint{font-family:var(--serif); font-size:12.5px; color:var(--muted); margin:2px 0 10px}
+  .guest{font-family:var(--serif); color:#3a3833; line-height:1.55}
+</style>
+</head>
+<body>
+
+<div id="authGate">
+  <div class="gate-card">
+    <img class="mark" src="icones/heaume.svg" alt="">
+    <h2>Membres</h2>
+    <p class="gate-text">Modération des membres, réservée à l'auteur. Connectez-vous avec le compte Google administrateur.</p>
+    <button class="gate-btn primary" id="gGoogle">Se connecter avec Google</button>
+    <p class="gate-status" id="gStatus">Vérification de la session...</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="mark" src="icones/heaume.svg" alt="">
+      <h1>Membres</h1>
+    </div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span class="acct" id="acct" hidden><a class="hdr-btn" href="index.html" title="Retour à l'atelier"><span aria-hidden="true">🛠️</span> <span class="hdr-btn-txt">Atelier</span></a><span class="mail" id="acctMail"></span><button id="signOut">Deconnexion</button></span>
+    </div>
+  </header>
+
+  <div id="guestPanel" class="panel" hidden>
+    <p class="guest">Ce compte n'est pas administrateur : il ne peut pas modérer les membres. Connectez-vous avec le compte Google de l'auteur.</p>
+  </div>
+
+  <div id="adminPanel" hidden>
+    <nav class="tabsm">
+      <button id="tabMembres" class="on" type="button">Membres</button>
+      <button id="tabJournal" type="button">Journal</button>
+    </nav>
+
+    <div class="pane" id="paneMembres">
+      <div class="panel">
+        <div class="toolbar">
+          <input type="text" id="search" placeholder="Rechercher un pseudo…" autocomplete="off">
+          <select id="sort" aria-label="Trier">
+            <option value="xp">XP (décroissant)</option>
+            <option value="seen">Activité récente</option>
+            <option value="nom">Pseudo (A→Z)</option>
+          </select>
+          <span class="cnt" id="mcount"></span>
+        </div>
+        <ul class="mlist" id="mlist"><li class="mempty">Chargement…</li></ul>
+      </div>
+
+      <div class="panel detail" id="detail" hidden>
+        <div class="dh">
+          <span class="dpseudo" id="dPseudo"></span>
+          <span class="tag susp" id="dSusp" hidden>Suspendu</span>
+          <span class="duid" id="dUid"></span>
+        </div>
+        <div class="dstats">
+          <div class="dstat"><b id="dXp">0</b><span>XP au total</span></div>
+          <div class="dstat"><b id="dStreak">0</b><span>série (jours)</span></div>
+          <div class="dstat"><b id="dBadges">0</b><span>badges</span></div>
+          <div class="dstat"><b id="dGrids">0</b><span>grilles</span></div>
+        </div>
+        <div class="hist" id="dHist"></div>
+        <div class="acts">
+          <div class="fix">
+            <input type="text" id="pseudoIn" maxlength="40" placeholder="Nouveau pseudo" autocomplete="off">
+            <button class="abtn" id="btnPseudo" type="button">Corriger le pseudo</button>
+          </div>
+          <button class="abtn" id="btnBoard" type="button">Retirer du classement</button>
+          <button class="abtn warn" id="btnSuspend" type="button">Suspendre</button>
+          <button class="abtn warn" id="btnWipe" type="button">Supprimer les données</button>
+        </div>
+        <p class="dmsg" id="dMsg"></p>
+        <p class="hint">« Suspendre » bloque toute écriture du membre (score, profil) et le retire du classement ; il pourra encore se connecter mais verra « compte suspendu ». La suppression du compte de connexion lui-même se fait dans la console Firebase.</p>
+      </div>
+    </div>
+
+    <div class="pane" id="paneJournal" hidden>
+      <div class="panel">
+        <p class="hint">Historique des actions de modération, de la plus récente à la plus ancienne. Le journal est immuable.</p>
+        <ul class="jlist" id="jlist"><li class="mempty">Chargement…</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="stamp">version de travail</div>
+</div>
+
+<script type="module">
+const EMU_MODE = location.hash.includes("emu");
+const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
+const firebaseConfig = {
+  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
+  authDomain: "donjons-definitions.firebaseapp.com",
+  projectId: "donjons-definitions",
+  storageBucket: "donjons-definitions.firebasestorage.app",
+  messagingSenderId: "1074510772699",
+  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
+  measurementId: "G-QJNJ1N0JCY"
+};
+const ADMIN_EMAIL = "nominesnow@gmail.com";
+
+window.__mod = { role: "checking", members: [], detail: null, journal: [], error: null };
+
+const $ = id => document.getElementById(id);
+const gate = $("authGate"), status = $("gStatus");
+const gwarn = m => { status.textContent = m; status.classList.add("warn"); };
+const ginfo = m => { status.textContent = m; status.classList.remove("warn"); };
+const esc = s => (s == null ? "" : String(s)).replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+
+function fmtTs(ts){
+  try{ const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null); if(!d) return "—";
+    return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(d);
+  }catch(e){ return "—"; }
+}
+function fmtDuree(s){ s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+let m, db, auth, user = null;
+try{
+  const [appM, authM, fsM] = await Promise.all([
+    import(FIREBASE_SDK + "/firebase-app.js"),
+    import(FIREBASE_SDK + "/firebase-auth.js"),
+    import(FIREBASE_SDK + "/firebase-firestore.js")
+  ]);
+  m = Object.assign({}, appM, authM, fsM);
+}catch(e){ gwarn("Impossible de charger le module. Rechargez la page."); throw e; }
+
+const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
+const app = m.initializeApp(cfg);
+auth = m.getAuth(app);
+db = m.initializeFirestore(app, {});
+if(EMU_MODE){
+  m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
+$("gGoogle").onclick = async () => {
+  ginfo("Connexion...");
+  try{
+    if(EMU_MODE){
+      const asGuest = location.hash.includes("guest");
+      const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: asGuest ? "joueur-test" : "admin-test", email: asGuest ? "joueur@example.com" : ADMIN_EMAIL, email_verified: true }));
+      await m.signInWithCredential(auth, cred);
+    } else {
+      await m.signInWithPopup(auth, new m.GoogleAuthProvider());
+    }
+  }catch(e){ gwarn("Connexion impossible : " + ((e && e.message) || e)); }
+};
+
+// ---- consigne une action au journal de moderation (immuable) ----
+async function logMod(action, targetUid, targetPseudo, detail){
+  try{
+    const ref = m.doc(m.collection(db, "moderation"));
+    await m.setDoc(ref, { at: m.serverTimestamp(), action, targetUid, targetPseudo: targetPseudo || "", detail: detail || "", by: (user && user.email) || "" });
+  }catch(e){ window.__mod.error = "journal: " + ((e && e.code) || e); }
+}
+
+// ---- chargement de la liste des membres (classement ∪ suspendus) ----
+async function loadMembers(){
+  const [lbSnap, banSnap] = await Promise.all([
+    m.getDocs(m.collection(db, "leaderboard")),
+    m.getDocs(m.collection(db, "banned"))
+  ]);
+  const map = new Map();
+  lbSnap.forEach(d => { const x = d.data() || {}; map.set(d.id, { uid: d.id, pseudo: x.pseudo || "", total: x.total || 0, updatedAt: x.updatedAt || null, suspended: false }); });
+  banSnap.forEach(d => {
+    const x = d.data() || {};
+    if(map.has(d.id)){ map.get(d.id).suspended = true; }
+    else map.set(d.id, { uid: d.id, pseudo: x.pseudo || "(sans pseudo)", total: 0, updatedAt: x.at || null, suspended: true });
+  });
+  window.__mod.members = [...map.values()];
+  renderMembers();
+  return window.__mod.members;
+}
+function renderMembers(){
+  const q = ($("search").value || "").trim().toLowerCase();
+  const sort = $("sort").value;
+  let list = window.__mod.members.filter(x => !q || (x.pseudo || "").toLowerCase().includes(q));
+  list.sort((a, b) =>
+    sort === "nom" ? (a.pseudo || "").localeCompare(b.pseudo || "")
+    : sort === "seen" ? tsMs(b.updatedAt) - tsMs(a.updatedAt)
+    : (b.total - a.total));
+  const ul = $("mlist"); ul.innerHTML = "";
+  $("mcount").textContent = list.length + " membre" + (list.length > 1 ? "s" : "");
+  if(!list.length){ ul.innerHTML = '<li class="mempty">Aucun membre pour l\'instant.</li>'; return; }
+  for(const mem of list){
+    const li = document.createElement("li");
+    li.className = "mrow" + (window.__mod.detail && window.__mod.detail.uid === mem.uid ? " sel" : "");
+    li.innerHTML = '<span class="nm"></span>'
+      + (mem.suspended ? '<span class="tag susp">Suspendu</span>' : '')
+      + '<span class="xp">' + mem.total + ' XP</span>'
+      + '<span class="seen">' + fmtTs(mem.updatedAt) + '</span>';
+    li.querySelector(".nm").textContent = mem.pseudo || "(sans pseudo)";
+    li.onclick = () => openMember(mem.uid);
+    ul.appendChild(li);
+  }
+}
+function tsMs(ts){ try{ return ts && ts.toDate ? ts.toDate().getTime() : (ts ? new Date(ts).getTime() : 0); }catch(e){ return 0; } }
+
+// ---- fiche detaillee d'un membre ----
+async function openMember(uid){
+  const dmsg = $("dMsg"); dmsg.textContent = ""; dmsg.className = "dmsg";
+  let profile = {}, streak = {}, badges = {}, results = [], suspended = false;
+  try{
+    const [ps, ss, bs, rs, bn] = await Promise.all([
+      m.getDoc(m.doc(db, "users", uid, "state", "profile")),
+      m.getDoc(m.doc(db, "users", uid, "state", "streak")),
+      m.getDoc(m.doc(db, "users", uid, "state", "badges")),
+      m.getDocs(m.collection(db, "users", uid, "results")),
+      m.getDoc(m.doc(db, "banned", uid))
+    ]);
+    profile = ps.exists() ? ps.data() : {};
+    streak = ss.exists() ? ss.data() : {};
+    badges = (bs.exists() && bs.data().earned) ? bs.data().earned : {};
+    rs.forEach(d => { const x = d.data() || {}; if(x.solved) results.push(Object.assign({ date: d.id }, x)); });
+    suspended = bn.exists();
+  }catch(e){ dmsg.textContent = "Lecture impossible : " + ((e && e.code) || e); dmsg.classList.add("warn"); window.__mod.error = String(e); }
+  results.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const totalXp = results.reduce((s, r) => s + (typeof r.xp === "number" ? r.xp : 0), 0);
+  const pseudo = profile.pseudo || (window.__mod.members.find(x => x.uid === uid) || {}).pseudo || "(sans pseudo)";
+  window.__mod.detail = { uid, pseudo, suspended, totalXp, streak: streak.count || 0, badges: Object.keys(badges).length, grids: results.length, results };
+  renderDetail();
+  renderMembers();
+  return window.__mod.detail;
+}
+function renderDetail(){
+  const d = window.__mod.detail; if(!d) return;
+  $("detail").hidden = false;
+  $("dPseudo").textContent = d.pseudo;
+  $("dUid").textContent = d.uid.slice(0, 10) + "…";
+  $("dSusp").hidden = !d.suspended;
+  $("dXp").textContent = d.totalXp;
+  $("dStreak").textContent = d.streak;
+  $("dBadges").textContent = d.badges;
+  $("dGrids").textContent = d.grids;
+  $("pseudoIn").value = d.pseudo === "(sans pseudo)" ? "" : d.pseudo;
+  $("btnSuspend").textContent = d.suspended ? "Réactiver" : "Suspendre";
+  $("btnSuspend").classList.toggle("primary", d.suspended);
+  $("btnSuspend").classList.toggle("warn", !d.suspended);
+  const h = $("dHist");
+  if(!d.results.length){ h.innerHTML = '<div class="hempty">Aucune grille résolue.</div>'; }
+  else{
+    let rows = "";
+    for(const r of d.results){
+      const aide = (r.hints || 0) + (r.solutions || 0) === 0 ? "sans aide" : ((r.hints || 0) + " ind. / " + (r.solutions || 0) + " sol.");
+      rows += "<tr><td>" + esc(r.date) + "</td><td class='n'>" + fmtDuree(r.seconds) + "</td><td class='n'>" + (r.xp || 0) + "</td><td>" + aide + "</td></tr>";
+    }
+    h.innerHTML = "<table><thead><tr><th>Grille</th><th>Temps</th><th>XP</th><th>Aide</th></tr></thead><tbody>" + rows + "</tbody></table>";
+  }
+}
+function dok(msg){ const d = $("dMsg"); d.textContent = msg; d.className = "dmsg ok"; }
+function dwarn(msg){ const d = $("dMsg"); d.textContent = msg; d.className = "dmsg warn"; }
+
+// ---- actions de moderation ----
+async function fixPseudo(uid, pseudo){
+  pseudo = (pseudo || "").trim().slice(0, 40);
+  if(!pseudo){ dwarn("Indiquez un pseudo."); return false; }
+  try{
+    await m.setDoc(m.doc(db, "users", uid, "state", "profile"), { pseudo }, { merge: true });
+    // la fiche de classement peut ne plus exister (membre retiré/suspendu)
+    const lb = await m.getDoc(m.doc(db, "leaderboard", uid));
+    if(lb.exists()) await m.setDoc(m.doc(db, "leaderboard", uid), { pseudo }, { merge: true });
+    await logMod("pseudo", uid, pseudo, "pseudo corrigé");
+    dok("Pseudo corrigé.");
+    await loadMembers(); await openMember(uid);
+    return true;
+  }catch(e){ dwarn("Correction impossible : " + ((e && e.code) || e)); return false; }
+}
+async function removeFromBoard(uid){
+  try{
+    await m.deleteDoc(m.doc(db, "leaderboard", uid));
+    await logMod("classement", uid, (window.__mod.detail || {}).pseudo, "retiré du classement");
+    dok("Retiré du classement (recalculé si le membre rejoue).");
+    await loadMembers(); await openMember(uid);
+    return true;
+  }catch(e){ dwarn("Retrait impossible : " + ((e && e.code) || e)); return false; }
+}
+async function suspend(uid){
+  const pseudo = (window.__mod.detail || {}).pseudo || (window.__mod.members.find(x => x.uid === uid) || {}).pseudo || "";
+  try{
+    await m.setDoc(m.doc(db, "banned", uid), { at: m.serverTimestamp(), by: (user && user.email) || "", pseudo });
+    try{ await m.deleteDoc(m.doc(db, "leaderboard", uid)); }catch(e){}   // retrait immédiat du classement public
+    await logMod("suspendre", uid, pseudo, "compte suspendu");
+    dok("Membre suspendu et retiré du classement.");
+    await loadMembers(); await openMember(uid);
+    return true;
+  }catch(e){ dwarn("Suspension impossible : " + ((e && e.code) || e)); return false; }
+}
+async function reactivate(uid){
+  try{
+    await m.deleteDoc(m.doc(db, "banned", uid));
+    await logMod("reactiver", uid, (window.__mod.detail || {}).pseudo, "compte réactivé");
+    dok("Membre réactivé.");
+    await loadMembers(); await openMember(uid);
+    return true;
+  }catch(e){ dwarn("Réactivation impossible : " + ((e && e.code) || e)); return false; }
+}
+async function wipe(uid){
+  try{
+    const rs = await m.getDocs(m.collection(db, "users", uid, "results"));
+    const ops = [];
+    rs.forEach(d => ops.push(m.deleteDoc(m.doc(db, "users", uid, "results", d.id))));
+    for(const s of ["profile", "streak", "badges"]) ops.push(m.deleteDoc(m.doc(db, "users", uid, "state", s)));
+    ops.push(m.deleteDoc(m.doc(db, "leaderboard", uid)));
+    await Promise.all(ops);
+    await logMod("suppression", uid, (window.__mod.detail || {}).pseudo, "données supprimées");
+    dok("Données du membre supprimées.");
+    await loadMembers();
+    $("detail").hidden = true; window.__mod.detail = null;
+    return true;
+  }catch(e){ dwarn("Suppression impossible : " + ((e && e.code) || e)); return false; }
+}
+
+// ---- journal ----
+async function loadJournal(){
+  const jl = $("jlist");
+  try{
+    const snap = await m.getDocs(m.query(m.collection(db, "moderation"), m.orderBy("at", "desc"), m.limit(200)));
+    const rows = []; snap.forEach(d => rows.push(d.data()));
+    window.__mod.journal = rows;
+    jl.innerHTML = "";
+    if(!rows.length){ jl.innerHTML = '<li class="mempty">Aucune action pour l\'instant.</li>'; return rows; }
+    for(const r of rows){
+      const li = document.createElement("li"); li.className = "jrow";
+      li.innerHTML = '<span class="jat">' + fmtTs(r.at) + '</span>'
+        + '<span class="jact">' + esc(r.action) + '</span>'
+        + '<span class="jtxt"><span class="jtgt"></span> — ' + esc(r.detail || "") + '</span>';
+      li.querySelector(".jtgt").textContent = r.targetPseudo || (r.targetUid ? r.targetUid.slice(0, 8) + "…" : "");
+      jl.appendChild(li);
+    }
+    return rows;
+  }catch(e){ jl.innerHTML = '<li class="mempty">Journal indisponible.</li>'; window.__mod.error = String(e); return []; }
+}
+
+// ---- confirmations à deux temps sur les actions destructrices ----
+function arm(btn, label, run){
+  let armed = false, timer = null;
+  btn.onclick = async () => {
+    if(!armed){ armed = true; btn.classList.add("armed"); btn.textContent = "Confirmer ?"; timer = setTimeout(() => { armed = false; btn.classList.remove("armed"); btn.textContent = label; }, 3500); return; }
+    clearTimeout(timer); armed = false; btn.classList.remove("armed"); btn.textContent = label;
+    await run();
+  };
+}
+
+// ---- probes pour les tests de regles (echouent proprement si refuse) ----
+// seedSelf : ecrit SES PROPRES donnees (classement, profil, un resultat) — un
+// membre non suspendu en a le droit ; suspendu, l'ecriture est refusee.
+window.__mod.seedSelf = async (pseudo, total) => {
+  const u = auth.currentUser; if(!u) return { err: "no-user" };
+  const out = { uid: u.uid };
+  try{ await m.setDoc(m.doc(db, "leaderboard", u.uid), { pseudo, total: total || 0, months: {}, updatedAt: m.serverTimestamp() }); out.lb = "ok"; }catch(e){ out.lb = (e && e.code) || String(e); }
+  try{ await m.setDoc(m.doc(db, "users", u.uid, "state", "profile"), { pseudo }); out.profile = "ok"; }catch(e){ out.profile = (e && e.code) || String(e); }
+  try{ await m.setDoc(m.doc(db, "users", u.uid, "results", "2025-01-01"), { solved: true, seconds: 200, xp: total || 0, hints: 0, solutions: 0, words: 10, date: "2025-01-01" }); out.result = "ok"; }catch(e){ out.result = (e && e.code) || String(e); }
+  return out;
+};
+window.__mod.tryReadUser = async (uid) => { try{ await m.getDoc(m.doc(db, "users", uid, "state", "profile")); return "ok"; }catch(e){ return (e && e.code) || String(e); } };
+window.__mod.tryWriteBanned = async (uid) => { try{ await m.setDoc(m.doc(db, "banned", uid), { at: Date.now() }); return "ok"; }catch(e){ return (e && e.code) || String(e); } };
+window.__mod.tryWriteModeration = async () => { try{ await m.setDoc(m.doc(m.collection(db, "moderation")), { action: "x" }); return "ok"; }catch(e){ return (e && e.code) || String(e); } };
+window.__mod.load = loadMembers;
+window.__mod.open = openMember;
+window.__mod.fixPseudo = fixPseudo;
+window.__mod.removeFromBoard = removeFromBoard;
+window.__mod.suspend = suspend;
+window.__mod.reactivate = reactivate;
+window.__mod.wipe = wipe;
+window.__mod.loadJournal = loadJournal;
+
+// ---- onglets ----
+function showPane(which){
+  const mem = which === "membres";
+  $("paneMembres").hidden = !mem; $("paneJournal").hidden = mem;
+  $("tabMembres").classList.toggle("on", mem); $("tabJournal").classList.toggle("on", !mem);
+  if(!mem) loadJournal();
+}
+$("tabMembres").onclick = () => showPane("membres");
+$("tabJournal").onclick = () => showPane("journal");
+$("search").addEventListener("input", renderMembers);
+$("sort").addEventListener("change", renderMembers);
+$("btnPseudo").onclick = () => { if(window.__mod.detail) fixPseudo(window.__mod.detail.uid, $("pseudoIn").value); };
+$("btnSuspend").onclick = () => { const d = window.__mod.detail; if(!d) return; d.suspended ? reactivate(d.uid) : suspend(d.uid); };
+arm($("btnBoard"), "Retirer du classement", () => { if(window.__mod.detail) removeFromBoard(window.__mod.detail.uid); });
+arm($("btnWipe"), "Supprimer les données", () => { if(window.__mod.detail) wipe(window.__mod.detail.uid); });
+
+m.onAuthStateChanged(auth, async u => {
+  user = u;
+  if(!u){ gate.hidden = false; $("acct").hidden = true; $("adminPanel").hidden = true; $("guestPanel").hidden = true; window.__mod.role = "checking"; ginfo(""); return; }
+  $("acctMail").textContent = u.email || "";
+  $("acct").hidden = false;
+  $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+  const isAdmin = (u.email === ADMIN_EMAIL) && (u.providerData[0] && u.providerData[0].providerId === "google.com");
+  window.__mod.role = isAdmin ? "admin" : "guest";
+  gate.hidden = true;
+  if(isAdmin){
+    $("adminPanel").hidden = false; $("guestPanel").hidden = true;
+    try{ await loadMembers(); }catch(e){ window.__mod.error = String(e); }
+    window.__mod.ready = true;
+  } else {
+    $("guestPanel").hidden = false; $("adminPanel").hidden = true;
+    window.__mod.ready = true;
+  }
+});
+</script>
+</body>
+</html>

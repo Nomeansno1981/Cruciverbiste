@@ -30,6 +30,15 @@
   </div>
 </div>
 
+<div id="suspended" hidden>
+  <div class="gate-card">
+    <img class="mark" src="icones/heaume.svg" alt="">
+    <h2>Compte suspendu</h2>
+    <p class="gate-text">Votre accès à Donjons &amp; Définitions a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez l'auteur.</p>
+    <button class="gate-btn" id="suspSignOut">Se déconnecter</button>
+  </div>
+</div>
+
 <div class="wrap home" id="home" hidden>
   <header>
     <div class="brand">
@@ -604,8 +613,18 @@ async function buildHome(user){
 
 let mounted = false;
 m.onAuthStateChanged(auth, async user => {
-  if(!user){ CU = null; closeProfile(); gate.hidden = false; $("home").hidden = true; if(!mounted) info(""); return; }
+  if(!user){ CU = null; closeProfile(); gate.hidden = false; $("home").hidden = true; $("suspended").hidden = true; if(!mounted) info(""); return; }
   CU = user;
+  // membre suspendu : on n'ouvre pas le jeu (les regles bloquent deja toute ecriture)
+  try{
+    const bs = await m.getDoc(m.doc(db, "banned", user.uid));
+    if(bs.exists()){
+      gate.hidden = true; $("home").hidden = true; $("suspended").hidden = false;
+      $("suspSignOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
+      window.__home.suspended = true;
+      return;
+    }
+  }catch(e){ /* statut indetermine : on laisse jouer, les regles protegent */ }
   gate.hidden = true; $("home").hidden = false;
   if(user.email === ADMIN_EMAIL) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
   if(mounted) return; mounted = true;

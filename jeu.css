@@ -118,8 +118,8 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .stamp{margin-top:22px; font-size:11px; color:#b3ab9c; text-align:center; font-family:var(--mono)}
 
 /* ---- ecran de connexion (donjons.html) ---- */
-#authGate{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:22px}
-#authGate[hidden]{display:none}
+#authGate, #suspended{position:fixed; inset:0; z-index:50; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:22px}
+#authGate[hidden], #suspended[hidden]{display:none}
 .gate-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 3px rgba(30,27,20,.05); padding:28px 28px; max-width:400px; width:100%; text-align:center; display:flex; flex-direction:column; gap:12px; align-items:stretch}
 .gate-card .mark{height:60px; width:auto; margin:0 auto}
 .gate-card h2{margin:0; font-family:var(--display); font-weight:400; text-transform:none; font-size:33px; letter-spacing:0; text-align:center; color:var(--brand-red)}
