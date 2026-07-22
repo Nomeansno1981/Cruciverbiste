@@ -60,48 +60,81 @@
     </div>
   </header>
 
-  <section class="hero">
-    <div class="hero-main">
-      <div class="hero-label">La grille du jour</div>
-      <div class="hero-date" id="heroDate"></div>
-      <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
-      <div class="hero-state" id="todayState"></div>
+  <nav class="home-tabs" role="tablist" aria-label="Sections">
+    <button class="home-tab on" id="tabJouer" type="button" role="tab" aria-selected="true">Jouer</button>
+    <button class="home-tab" id="tabClassement" type="button" role="tab" aria-selected="false">Classement</button>
+    <button class="home-tab" id="tabProfil" type="button" role="tab" aria-selected="false">Profil</button>
+  </nav>
+
+  <div class="tabpanel" id="panelJouer">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="hero-label">La grille du jour</div>
+        <div class="hero-date" id="heroDate"></div>
+        <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
+        <div class="hero-state" id="todayState"></div>
+      </div>
+      <div class="hero-count">
+        <div class="count-label">Prochaine grille dans</div>
+        <div class="count-val" id="countdown">--:--:--</div>
+      </div>
+    </section>
+
+    <section class="archive">
+      <h2>Grilles précédentes</h2>
+      <ul class="grid-list" id="gridList"><li class="gl-empty">Chargement...</li></ul>
+    </section>
+  </div>
+
+  <div class="tabpanel" id="panelClassement" hidden>
+    <section class="archive board-home">
+      <h2>Classement</h2>
+      <div class="lb-tabs">
+        <button class="lb-tab on" id="lbTabMonth" type="button">Ce mois-ci</button>
+        <button class="lb-tab" id="lbTabAll" type="button">Depuis toujours</button>
+      </div>
+      <ol class="lb-list" id="lbList"><li class="lb-empty">Chargement...</li></ol>
+      <p class="lb-status" id="lbStatus"></p>
+    </section>
+  </div>
+
+  <div class="tabpanel" id="panelProfil" hidden>
+    <section class="home-stats">
+      <div class="stat"><div class="stat-k">Série</div><div class="stat-v" id="statStreak">0</div><div class="stat-s" id="statStreakSub">jour</div></div>
+      <div class="stat"><div class="stat-k">Niveau</div><div class="stat-v" id="statLevel">1</div><div class="stat-s" id="statLevelSub">Roturier</div></div>
+      <div class="stat"><div class="stat-k">Points</div><div class="stat-v" id="statXp">0</div><div class="stat-s">XP au total</div></div>
+      <div class="stat"><div class="stat-k">Badges</div><div class="stat-v" id="statBadges">0</div><div class="stat-s">à venir</div></div>
+    </section>
+
+    <div class="level" id="levelBox" hidden>
+      <div class="level-head">
+        <span class="level-rank" id="levelNum">1</span>
+        <div class="level-txt">
+          <div class="level-title" id="levelTitle">Roturier</div>
+          <div class="level-xp"><b id="xpTotal">0</b> XP au total</div>
+        </div>
+      </div>
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+      <div class="level-next" id="levelNext"></div>
     </div>
-    <div class="hero-count">
-      <div class="count-label">Prochaine grille dans</div>
-      <div class="count-val" id="countdown">--:--:--</div>
+
+    <div class="badges">
+      <h3>Vos badges <span class="badges-count" id="badgesCount"></span></h3>
+      <div class="badge-grid" id="badgeGrid"></div>
     </div>
-  </section>
 
-  <section class="home-stats">
-    <div class="stat"><div class="stat-k">Série</div><div class="stat-v" id="statStreak">0</div><div class="stat-s" id="statStreakSub">jour</div></div>
-    <div class="stat"><div class="stat-k">Niveau</div><div class="stat-v" id="statLevel">1</div><div class="stat-s" id="statLevelSub">Roturier</div></div>
-    <div class="stat"><div class="stat-k">Points</div><div class="stat-v" id="statXp">0</div><div class="stat-s">XP au total</div></div>
-    <div class="stat"><div class="stat-k">Badges</div><div class="stat-v" id="statBadges">0</div><div class="stat-s">à venir</div></div>
-  </section>
-
-  <section class="archive board-home">
-    <h2>Classement</h2>
-    <div class="lb-tabs">
-      <button class="lb-tab on" id="lbTabMonth" type="button">Ce mois-ci</button>
-      <button class="lb-tab" id="lbTabAll" type="button">Depuis toujours</button>
+    <div class="hist">
+      <h3>Vos grilles réussies</h3>
+      <ul id="histList"></ul>
     </div>
-    <ol class="lb-list" id="lbList"><li class="lb-empty">Chargement...</li></ol>
-    <p class="lb-status" id="lbStatus"></p>
-  </section>
+  </div>
 
-  <section class="archive">
-    <h2>Grilles précédentes</h2>
-    <ul class="grid-list" id="gridList"><li class="gl-empty">Chargement...</li></ul>
-  </section>
-
-  <div class="home-foot"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
   <div class="stamp">version de travail</div>
 </div>
 
 <div id="profileModal" hidden>
   <div class="profile-card">
-    <h2>Votre profil</h2>
+    <h2>Votre compte</h2>
     <div class="profile-top">
       <span class="avatar" id="pAvatar"></span>
       <div class="profile-fields">
@@ -114,30 +147,13 @@
       </div>
     </div>
     <input type="file" id="avatarInput" accept="image/*" hidden>
+    <div class="account-mail" id="accountMail"></div>
     <p class="pstatus" id="pStatus"></p>
     <div class="profile-row">
       <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
       <button class="gate-btn primary" id="saveProfile" type="button">Enregistrer</button>
     </div>
-    <div class="level" id="levelBox" hidden>
-      <div class="level-head">
-        <span class="level-rank" id="levelNum">1</span>
-        <div class="level-txt">
-          <div class="level-title" id="levelTitle">Roturier</div>
-          <div class="level-xp"><b id="xpTotal">0</b> XP au total</div>
-        </div>
-      </div>
-      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
-      <div class="level-next" id="levelNext"></div>
-    </div>
-    <div class="badges">
-      <h3>Vos badges <span class="badges-count" id="badgesCount"></span></h3>
-      <div class="badge-grid" id="badgeGrid"></div>
-    </div>
-    <div class="hist">
-      <h3>Vos grilles reussies</h3>
-      <ul id="histList"></ul>
-    </div>
+    <div class="profile-signout"><button class="linklike" id="signOut" type="button">Déconnexion</button></div>
   </div>
 </div>
 
@@ -259,6 +275,23 @@ $("avatarInput").onchange = async e => {
 // classement : bascule entre le mois en cours et le cumul
 $("lbTabMonth").onclick = () => setLbTab("month");
 $("lbTabAll").onclick = () => setLbTab("all");
+// onglets de l'accueil (Jouer / Classement / Profil)
+const homePanels = { jouer: $("panelJouer"), classement: $("panelClassement"), profil: $("panelProfil") };
+const homeTabBtns = { jouer: $("tabJouer"), classement: $("tabClassement"), profil: $("tabProfil") };
+let histLoaded = false;
+function showTab(name){
+  for(const k in homePanels){
+    const on = k === name;
+    homePanels[k].hidden = !on;
+    homeTabBtns[k].classList.toggle("on", on);
+    homeTabBtns[k].setAttribute("aria-selected", on ? "true" : "false");
+  }
+  window.__home.tab = name;
+  if(name === "profil" && !histLoaded && CU){ histLoaded = true; renderHistory(); }   // historique chargé à la première visite
+}
+$("tabJouer").onclick = () => showTab("jouer");
+$("tabClassement").onclick = () => showTab("classement");
+$("tabProfil").onclick = () => showTab("profil");
 // crochets de test (parite avec le jeu)
 window.__home.resize = resizeImage;
 window.__home.setPendingAvatar = d => { pendingAvatar = d; };
@@ -315,25 +348,20 @@ function renderLevel(total){
 }
 async function renderHistory(){
   const ul = $("histList"); ul.innerHTML = "";
-  const box = $("levelBox");
-  if(box) box.hidden = true;
   try{
     const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc")));
     if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
-    let total = 0, anyXp = false;
     snap.forEach(ds => {
       const d = ds.data();
       let label = ds.id;
       try{ const [y, mo, da] = ds.id.split("-").map(Number); label = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }catch(e){}
       const t = (typeof d.seconds === "number") ? (Math.floor(d.seconds / 60) + ":" + String(d.seconds % 60).padStart(2, "0")) : "";
       const hasXp = typeof d.xp === "number";
-      if(hasXp){ total += d.xp; anyXp = true; }
       const right = (hasXp ? d.xp + " XP · " : "") + t;
       const li = document.createElement("li");
       li.innerHTML = "<span>" + label + '</span><span class="t">' + right + "</span>";
       ul.appendChild(li);
     });
-    if(anyXp) renderLevel(total);
   }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
 }
 function openProfile(){
@@ -342,10 +370,8 @@ function openProfile(){
   $("pseudoInput").value = profile.pseudo || "";
   fillAvatar($("pAvatar"), profile.avatar, profile.pseudo || (CU.email ? CU.email.split("@")[0] : "J"));
   $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
+  $("accountMail").textContent = CU.email || "";
   $("profileModal").hidden = false;
-  renderHistory();
-  if(badgesCache) renderBadges();
-  loadBadges().then(renderBadges);
 }
 function closeProfile(){ $("profileModal").hidden = true; }
 async function saveProfile(){
@@ -504,6 +530,7 @@ async function buildHome(user){
   $("statLevelSub").textContent = niv.titre;
   $("statXp").textContent = totalXp;
   window.__home.stats = { streak, totalXp, niveau: niv.niveau, done: done.size };
+  renderLevel(totalXp);   // barre de niveau (onglet Profil)
 
   // badges obtenus : compteur « Badges » de l'accueil (le détail est au profil).
   // Au passage, rattrapage silencieux des badges déjà mérités par l'historique
@@ -521,6 +548,7 @@ async function buildHome(user){
     $("statBadges").textContent = compterBadges(badgesCache);
     const sub = $("statBadges").parentElement.querySelector(".stat-s");
     if(sub) sub.textContent = "sur " + BADGES.length;
+    renderBadges();   // grille des badges (onglet Profil)
   }catch(e){}
 
   // etat de la grille du jour
