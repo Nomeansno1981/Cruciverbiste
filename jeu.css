@@ -12,7 +12,7 @@
   --line:#E7E1D5; --accent:#7C1D2E; --accent-weak:#F4E7E9; --accent-ink:#5E1522;
   --sun:#F2C14E; --sun-weak:#FBEFC9;
   --brand-red:#C4161C;   /* rouge du logo (titre de marque), plus vif que l'accent */
-  --forest:#2c7d20; --forest-ink:#2c7d20; --forest-weak:#DEEDD5;   /* second accent : vert (titres, separateurs) */
+  --forest:#4d7f46; --forest-ink:#4d7f46; --forest-weak:#E4ECE1;   /* second accent : vert (titres, separateurs) */
   --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
   --serif:"Crimson Pro",Iowan Old Style,Palatino,Georgia,serif;
   --display:"Pirata One",Palatino,Georgia,serif;   /* police d'affichage (titres) */
@@ -36,9 +36,9 @@ body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:non
 
 /* filet dessine a la main (ondule, encre verte), reutilise pour l'entete et les separateurs */
 header{display:flex; align-items:center; gap:12px; padding-bottom:13px; margin-bottom:16px; position:relative; border-bottom:none}
-header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%232c7d20' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%234d7f46' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
 .divider{display:flex; align-items:center; gap:13px; color:var(--forest); margin:2px 2px}
-.divider::before, .divider::after{content:""; flex:1; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%232c7d20' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+.divider::before, .divider::after{content:""; flex:1; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%234d7f46' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
 .dv-mark{flex:none; width:42px; height:16px; fill:currentColor}
 .brand{display:flex; align-items:center; gap:9px; min-width:0}
 a.brand{text-decoration:none; color:inherit}
