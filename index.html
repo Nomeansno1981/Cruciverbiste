@@ -393,31 +393,20 @@
 
 <script type="module">
 "use strict";
+// La configuration Firebase, le compte auteur, l'initialisation du SDK (avec la
+// gestion du mode emulateur), la connexion Google et les messages d'erreur
+// d'authentification sont mutualises dans firebase-init.js (partages avec les
+// pages du jeu). On l'importe dynamiquement dans bootCloud (mode en ligne
+// seulement) : le mode #local doit rester entierement hors-ligne, sans charger
+// la moindre ligne de code Firebase.
 
 /* =========================================================
    Modes : en ligne (par défaut), #local (stockage navigateur seul),
    #emu (émulateurs Firebase, pour les tests automatisés)
    ========================================================= */
 const LOCAL_MODE = location.hash.includes("local");
-const EMU_MODE = location.hash.includes("emu");
 const FLAT_MODE = location.hash.includes("flat");   // tests : toutes les sections visibles, sans onglets
 const CLOUD = !LOCAL_MODE;
-
-// En mode #emu (tests), le SDK est servi localement par le serveur de test.
-const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
-// Ce bloc identifie le projet Firebase; il n'est pas secret, la protection
-// vient des règles Firestore (l'auteur seul publie; chaque compte ne lit et n'écrit que ses données).
-const firebaseConfig = {
-  apiKey: "AIzaSyAqAt0KNZGDjIhP5wdlFSsHMnFXKl_pF8A",
-  authDomain: "donjons-definitions.firebaseapp.com",
-  projectId: "donjons-definitions",
-  storageBucket: "donjons-definitions.firebasestorage.app",
-  messagingSenderId: "1074510772699",
-  appId: "1:1074510772699:web:4ba0fed2da7dc68d124ffe",
-  measurementId: "G-QJNJ1N0JCY"
-};
-// L'atelier est réservé au compte de l'auteur (les règles Firestore le vérifient aussi).
-const ADMIN_EMAIL = "nominesnow@gmail.com";
 
 /* =========================================================
    Persistance locale (IndexedDB)
@@ -593,49 +582,21 @@ async function bootCloud(){
   const gate = $("authGate"), status = $("gateStatus"), loginBtn = $("loginBtn");
   gate.hidden = false;
   bind();
-  let m;
+  let m, auth, db, signInGoogle, authError, ADMIN_EMAIL;
   try{
-    const [appM, authM, fsM] = await Promise.all([
-      import(FIREBASE_SDK + "/firebase-app.js"),
-      import(FIREBASE_SDK + "/firebase-auth.js"),
-      import(FIREBASE_SDK + "/firebase-firestore.js")
-    ]);
-    m = Object.assign({}, appM, authM, fsM);
+    const fb = await import("./firebase-init.js");
+    ({ signInGoogle, authError, ADMIN_EMAIL } = fb);
+    ({ m, auth, db } = await fb.initFirebase());
   }catch(e){
     status.textContent = "Impossible de charger le module de synchronisation. Vérifiez votre connexion, puis rechargez la page.";
     status.classList.add("warn");
     return;
   }
-  const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
-  const app = m.initializeApp(cfg);
-  const auth = m.getAuth(app);
-  // Cache mémoire seul (pas de persistance IndexedDB) : la persistance
-  // multi-onglets fait planter les lectures Firestore sur Safari.
-  const db = m.initializeFirestore(app, {});
-  if(EMU_MODE){
-    m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-    m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  }
 
   loginBtn.onclick = async () => {
     status.textContent = "Connexion…"; status.classList.remove("warn");
-    try{
-      if(EMU_MODE){
-        const cred = m.GoogleAuthProvider.credential(JSON.stringify({ sub: "auteur-test", email: ADMIN_EMAIL, email_verified: true }));
-        await m.signInWithCredential(auth, cred);
-      } else {
-        await m.signInWithPopup(auth, new m.GoogleAuthProvider());
-      }
-    }catch(e){
-      status.classList.add("warn");
-      const code = (e && e.code) || "";
-      if(code === "auth/popup-blocked") status.textContent = "La fenêtre de connexion a été bloquée. Autorisez les fenêtres surgissantes pour ce site, puis réessayez.";
-      else if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") status.textContent = "Fenêtre refermée avant la fin de la connexion. Réessayez.";
-      else if(code === "auth/configuration-not-found") status.textContent = "La connexion Google n'est pas activée dans la console Firebase : menu Authentication, onglet Sign-in method, fournisseur Google.";
-      else if(code === "auth/operation-not-allowed") status.textContent = "Le fournisseur Google n'est pas activé dans la console Firebase : Authentication, onglet Sign-in method, Google, interrupteur Activer, puis Enregistrer.";
-      else if(code === "auth/unauthorized-domain") status.textContent = "Ce domaine n'est pas autorisé dans la console Firebase : Authentication, Settings, Domaines autorisés.";
-      else status.textContent = "Connexion impossible : " + (e && e.message ? e.message : e);
-    }
+    try{ await signInGoogle(auth, m, { admin: true }); }
+    catch(e){ status.classList.add("warn"); status.textContent = authError(e); }
   };
 
   let started = false;

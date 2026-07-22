@@ -8,6 +8,7 @@
     "test:play": "node tests/play.mjs",
     "test:indisponible": "node tests/grille-indisponible.mjs",
     "test:score": "node tests/score.mjs",
+    "test:commun": "node tests/commun.mjs",
     "test:tabs": "node tests/tabs.mjs",
     "test:sync": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/sync.mjs\"",
     "test:game": "firebase emulators:exec --only auth,firestore --project demo-donjons \"node tests/game.mjs\"",
