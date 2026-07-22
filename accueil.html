@@ -54,16 +54,19 @@
 
   <div class="tabpanel" id="panelJouer">
     <section class="hero">
-      <div class="hero-main">
-        <div class="hero-label">La grille du jour</div>
-        <div class="hero-date" id="heroDate"></div>
-        <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
-        <div class="hero-state" id="todayState"></div>
-      </div>
-      <div class="hero-count">
-        <div class="count-label" id="countLabel">Prochaine grille dans</div>
-        <div class="count-val" id="countdown">--:--:--</div>
-        <div class="count-sub" id="countSub"></div>
+      <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer la grille du jour" hidden></a>
+      <div class="hero-info">
+        <div class="hero-main">
+          <div class="hero-label">La grille du jour</div>
+          <div class="hero-date" id="heroDate"></div>
+          <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
+          <div class="hero-state" id="todayState"></div>
+        </div>
+        <div class="hero-count">
+          <div class="count-label" id="countLabel">Prochaine grille dans</div>
+          <div class="count-val" id="countdown">--:--:--</div>
+          <div class="count-sub" id="countSub"></div>
+        </div>
       </div>
     </section>
 
@@ -151,7 +154,7 @@
 </div>
 
 <script type="module">
-import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges } from "./jeu.js";
+import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges, apercuDonjon } from "./jeu.js";
 
 const EMU_MODE = location.hash.includes("emu");
 const FIREBASE_SDK = EMU_MODE ? "./firebasejs" : "https://www.gstatic.com/firebasejs/12.8.0";
@@ -491,6 +494,12 @@ function startCountdown(){
 async function buildHome(user){
   const todayKey = parisDate();
   $("heroDate").textContent = labelFromKey(todayKey);
+  // apercu du donjon du jour (forme seule, sans lettres) dans le cadre du jour
+  try{
+    const ts = await m.getDoc(m.doc(db, "puzzles", todayKey));
+    const ok = ts.exists() && apercuDonjon($("heroPreview"), (ts.data() || {}).puzzle, { cell: 30, band: 1.05 });
+    $("heroPreview").hidden = !ok;
+  }catch(e){ $("heroPreview").hidden = true; window.__home.previewError = String(e); }
   startCountdown();
 
   // profil (pseudo, avatar) affiche dans l'entete, editable via la fenetre de profil
@@ -573,11 +582,14 @@ async function buildHome(user){
       li.className = "gl-item " + (fait ? "done" : "todo");
       const title = (d.title && String(d.title).trim()) ? String(d.title).trim() : "Grille du " + labelFromKey(key);
       li.innerHTML = '<a href="donjons.html?d=' + encodeURIComponent(key) + '">'
-        + '<span class="gl-mark" aria-hidden="true">' + (fait ? "✓" : "○") + '</span>'
+        + '<span class="gl-preview" aria-hidden="true"></span>'
         + '<span class="gl-txt"><span class="gl-title"></span><span class="gl-date"></span></span>'
-        + '<span class="gl-tag">' + (fait ? "Faite" : "À faire") + '</span></a>';
+        + '<span class="gl-tag">' + (fait ? "✓ Faite" : "À faire") + '</span></a>';
       li.querySelector(".gl-title").textContent = title;
       li.querySelector(".gl-date").textContent = labelFromKey(key);
+      // apercu de la forme du donjon (petit, sans rocher ni lettres)
+      const prev = li.querySelector(".gl-preview");
+      if(!apercuDonjon(prev, d.puzzle, { cell: 15, band: 0.5, simple: true })) prev.hidden = true;
       ul.appendChild(li);
     });
     if(!n) ul.innerHTML = '<li class="gl-empty">Aucune grille précédente pour l\'instant.</li>';
