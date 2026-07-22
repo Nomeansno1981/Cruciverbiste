@@ -73,9 +73,9 @@ await check("une grille se génère réellement (cellules SVG présentes)", asyn
   if (cells < 10) throw new Error("seulement " + cells + " cellules");
 });
 
-await check("les dimensions proposées par défaut sont 14 x 14 (format du jeu)", async () => {
+await check("les dimensions proposées par défaut sont 15 x 15 (format imposé)", async () => {
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "14" || h !== "14") throw new Error("proposé : " + w + " x " + h);
+  if (w !== "15" || h !== "15") throw new Error("proposé : " + w + " x " + h);
 });
 
 await check("les définitions horizontales et verticales sont listées", async () => {
@@ -360,7 +360,7 @@ await check("boîte ferme : un mot plus long que la grille n'est pas utilisé", 
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const w = await page.inputValue("#maxW"), h = await page.inputValue("#maxH");
-  if (w !== "14" || h !== "14") throw new Error("dimensions retenues : " + w + " x " + h);
+  if (w !== "15" || h !== "15") throw new Error("dimensions retenues : " + w + " x " + h);
   const words = await page.locator(".clues .definebox input").evaluateAll(
     els => els.map(e => (e.placeholder.match(/« (.+) »/) || [])[1]));
   if (words.some(x => x && x.length > 25)) throw new Error("mot trop long placé : " + words.join(", "));
@@ -382,12 +382,13 @@ await check("frontières de mots : espaces et traits d'union barrés, pas l'apos
 
 await check("séparateurs ◆ des mots composés, conservés après enregistrement", async () => {
   await page.click("#newList");
-  await page.fill("#wIn", "donjons et dragons");
+  // mot composé à deux frontières (POMME|DE|TERRE), tenant dans le 15×15 imposé
+  await page.fill("#wIn", "pomme de terre");
   await page.click("#addBtn");
   await page.fill("#wIn", "griffon");
   await page.click("#addBtn");
-  await page.fill("#maxW", "17");
-  await page.fill("#maxH", "17");
+  await page.fill("#maxW", "15");
+  await page.fill("#maxH", "15");
   await page.click("#genBtn");
   await page.waitForSelector("#board svg g.cell");
   const bars = await count("#board svg path.wordbar");
@@ -498,6 +499,14 @@ await check("export « Copier pour le jeu » : structure valide et coordonnées 
   // une grille est présente (générée au contrôle précédent)
   const p = await page.evaluate(() => window.__vcGamePuzzle());
   if (!p || !p.solution || !p.rows || !p.cols) throw new Error("structure invalide");
+  // format publié imposé : toujours 15×15, avec le donjon centré (marges symétriques à ±1 case)
+  if (p.rows !== 15 || p.cols !== 15) throw new Error("grille publiée non 15×15 : " + p.cols + "×" + p.rows);
+  const rr = Object.keys(p.solution).map(k => +k.split(",")[0]);
+  const cc = Object.keys(p.solution).map(k => +k.split(",")[1]);
+  const hautMarge = Math.min(...rr), basMarge = 14 - Math.max(...rr);
+  const gaucheMarge = Math.min(...cc), droiteMarge = 14 - Math.max(...cc);
+  if (Math.abs(hautMarge - basMarge) > 1 || Math.abs(gaucheMarge - droiteMarge) > 1)
+    throw new Error("donjon non centré : marges V " + hautMarge + "/" + basMarge + ", H " + gaucheMarge + "/" + droiteMarge);
   // les lettres de la grille publiée sont neutralisées : aucune lettre accentuée
   const lettres = Object.values(p.solution).join("");
   if (!/^[A-Z0-9]+$/.test(lettres)) throw new Error("des accents subsistent dans la solution publiée : " + lettres);
