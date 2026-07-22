@@ -123,7 +123,7 @@ await check("le compte a rebours est au format heures:minutes:secondes", async (
 
 await check("la grille du jour est marquee comme resolue", async () => {
   const state = await player.evaluate(() => document.getElementById("todayState").textContent);
-  if (!/résolue/i.test(state)) throw new Error("etat de la grille du jour : " + state);
+  if (!/résolu/i.test(state)) throw new Error("etat du donjon du jour : " + state);
 });
 
 await check("serie, niveau et points refletent la reussite", async () => {
