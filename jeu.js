@@ -260,8 +260,20 @@ export function monterJeu(PUZZLE, opts = {}){
 
   function layout(){
     const mobile = window.innerWidth < 860;
-    const cap = mobile ? 40 : 46;
-    const availW = (gridarea.clientWidth || 700) - 2;
+    // grand ecran (iMac / moniteur) : la grille peut grossir davantage et la
+    // colonne grille est en 'auto' (elle epouse la grille). On ne peut alors pas
+    // lire .gridarea (dependance circulaire) : on lit la largeur du conteneur
+    // .layout moins le panneau des definitions.
+    const wide = window.innerWidth >= 1600;
+    const cap = mobile ? 40 : (wide ? 54 : 46);
+    const layEl = gridarea.parentElement;
+    let availW;
+    if(wide && layEl){
+      const asideEl = document.querySelector(".aside");
+      availW = layEl.clientWidth - (asideEl ? asideEl.offsetWidth : 0) - 50;
+    } else {
+      availW = (gridarea.clientWidth || 700) - 2;
+    }
     // on reserve la bande de rocher (bandCells() cases de chaque cote) dans le calcul
     const band = bandCells();
     let c = Math.min(cap, Math.floor(availW / (PUZZLE.cols + 2*band)));
@@ -278,7 +290,6 @@ export function monterJeu(PUZZLE, opts = {}){
       availH = gridarea.clientHeight - 8;
     } else {
       const toolsEl = document.querySelector(".tools");
-      const layEl = gridarea.parentElement;
       availH = (layEl ? layEl.clientHeight : gridarea.clientHeight)
              - (toolsEl ? toolsEl.offsetHeight : 0) - 22;
     }

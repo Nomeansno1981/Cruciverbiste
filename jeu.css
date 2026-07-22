@@ -302,6 +302,20 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .wrap.game .stamp{display:none}
 }
 
+/* ---- grand ecran (iMac, moniteur externe) : la grille grandit (plafond de
+   taille de case releve dans layout()) et le bloc grille + definitions se
+   centre, au lieu de flotter contre une largeur bornee. La colonne grille
+   passe en 'auto' : elle epouse la grille, ce qui evite l'espace vide entre la
+   grille et le panneau. ---- */
+@media (min-width:1600px){
+  .wrap.game{max-width:min(94vw, 1680px)}
+  .layout{
+    grid-template-columns:auto clamp(340px,22%,440px);
+    justify-content:center;
+    column-gap:44px;
+  }
+}
+
 /* ---- mobile : trois zones fixes, aucune barre systeme, aucun defilement ---- */
 @media (max-width:859px){
   html,body{height:100%; overflow:hidden; overscroll-behavior:none}
