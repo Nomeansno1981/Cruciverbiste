@@ -34,6 +34,7 @@ const server = http.createServer(async (req, res) => {
     const type = file.endsWith(".html") ? "text/html; charset=utf-8"
       : file.endsWith(".js") ? "text/javascript; charset=utf-8"
       : file.endsWith(".css") ? "text/css; charset=utf-8"
+      : file.endsWith(".svg") ? "image/svg+xml"
       : "application/octet-stream";
     res.writeHead(200, { "content-type": type });
     res.end(data);
@@ -173,15 +174,23 @@ await check("l'onglet Profil affiche le niveau, les badges et l'historique", asy
   await player.waitForSelector("#panelProfil:not([hidden])");
   await player.waitForSelector("#histList li");
   await player.waitForSelector("#badgeGrid .badge.on");
+  // les 13 icones SVG doivent effectivement se charger (chemins corrects, fichiers presents) :
+  // le profil ne vit plus que sur l'accueil, ce controle vivait auparavant dans tests/game.mjs
+  await player.waitForFunction(() => {
+    const imgs = document.querySelectorAll("#badgeGrid .badge img.badge-img");
+    return imgs.length === 13 && Array.from(imgs).every(im => im.complete);
+  }, null, { timeout: 5000 });
   const info = await player.evaluate(() => ({
     boxHidden: document.getElementById("levelBox").hidden,
     total: document.querySelectorAll("#badgeGrid .badge").length,
     gagnes: document.querySelectorAll("#badgeGrid .badge.on").length,
-    compteur: document.getElementById("badgesCount").textContent
+    compteur: document.getElementById("badgesCount").textContent,
+    imgCasses: Array.from(document.querySelectorAll("#badgeGrid .badge img.badge-img")).filter(im => im.naturalWidth === 0).length
   }));
   if (info.boxHidden) throw new Error("bloc de niveau masque dans l'onglet Profil");
   if (info.total !== 13) throw new Error("grille de badges incomplete au profil : " + info.total);
   if (info.gagnes < 1) throw new Error("aucun badge gagne affiche au profil : " + info.gagnes);
+  if (info.imgCasses > 0) throw new Error(info.imgCasses + " icone(s) de badge ne se chargent pas (chemin ou fichier manquant)");
   if (!/\d+\s*\/\s*13/.test(info.compteur)) throw new Error("compteur de badges inattendu : " + info.compteur);
 });
 

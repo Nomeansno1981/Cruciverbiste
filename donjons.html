@@ -100,25 +100,8 @@
       <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
       <button class="gate-btn primary" id="saveProfile" type="button">Enregistrer</button>
     </div>
-    <div class="level" id="levelBox" hidden>
-      <div class="level-head">
-        <span class="level-rank" id="levelNum">1</span>
-        <div class="level-txt">
-          <div class="level-title" id="levelTitle">Roturier</div>
-          <div class="level-xp"><b id="xpTotal">0</b> XP au total</div>
-        </div>
-      </div>
-      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
-      <div class="level-next" id="levelNext"></div>
-    </div>
-    <div class="badges">
-      <h3>Vos badges <span class="badges-count" id="badgesCount"></span></h3>
-      <div class="badge-grid" id="badgeGrid"></div>
-    </div>
-    <div class="hist">
-      <h3>Vos grilles reussies</h3>
-      <ul id="histList"></ul>
-    </div>
+    <!-- Niveau, badges et grilles réussies vivent sur la page dédiée (accueil,
+         onglet Profil) : la fenêtre du jeu ne concerne que le compte. -->
     <div style="text-align:center"><button class="linklike" id="signOut" type="button">Deconnexion</button></div>
   </div>
 </div>
@@ -346,43 +329,6 @@ function resizeImage(file, size){
     img.src = url;
   });
 }
-function renderLevel(total){
-  const box = $("levelBox");
-  if(!box) return;
-  const n = niveauPourXp(total);
-  $("levelNum").textContent = n.niveau;
-  $("levelTitle").textContent = n.titre;
-  $("xpTotal").textContent = total;
-  $("levelFill").style.width = Math.round(Math.min(1, Math.max(0, n.progression)) * 100) + "%";
-  $("levelNext").textContent = n.max
-    ? "Rang maximal atteint."
-    : "Encore " + (n.prochain - total) + " XP avant « " + n.titreProchain + " ».";
-  box.hidden = false;
-}
-async function renderHistory(){
-  const ul = $("histList"); ul.innerHTML = "";
-  const box = $("levelBox");
-  if(box) box.hidden = true;
-  try{
-    // toutes les grilles reussies : somme d'XP exacte pour le niveau, liste complete
-    const snap = await m.getDocs(m.query(m.collection(db, "users", CU.uid, "results"), m.orderBy("date", "desc")));
-    if(!snap.size){ ul.innerHTML = '<li class="empty">Aucune grille reussie pour l\'instant.</li>'; return; }
-    let total = 0, anyXp = false;
-    snap.forEach(ds => {
-      const d = ds.data();
-      let label = ds.id;
-      try{ const [y, mo, da] = ds.id.split("-").map(Number); label = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(Date.UTC(y, mo - 1, da, 12))); }catch(e){}
-      const t = (typeof d.seconds === "number") ? (Math.floor(d.seconds / 60) + ":" + String(d.seconds % 60).padStart(2, "0")) : "";
-      const hasXp = typeof d.xp === "number";
-      if(hasXp){ total += d.xp; anyXp = true; }
-      const right = (hasXp ? d.xp + " XP · " : "") + t;
-      const li = document.createElement("li");
-      li.innerHTML = "<span>" + label + '</span><span class="t">' + right + "</span>";
-      ul.appendChild(li);
-    });
-    if(anyXp) renderLevel(total);
-  }catch(e){ ul.innerHTML = '<li class="empty">Historique indisponible.</li>'; }
-}
 
 // ---- classement : publication de la fiche du joueur ----
 // (le tableau se consulte desormais sur l'accueil, plus depuis le jeu)
@@ -414,9 +360,6 @@ function openProfile(){
   fillAvatar($("pAvatar"), profile.avatar, profile.pseudo || (CU.email ? CU.email.split("@")[0] : "J"));
   $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
   $("profileModal").hidden = false;
-  renderHistory();
-  if(badgesCache) renderBadges();               // affichage immediat si connu
-  loadBadges().then(renderBadges);              // puis rafraichissement
 }
 function closeProfile(){ $("profileModal").hidden = true; }
 async function saveProfile(){
@@ -443,10 +386,6 @@ async function loadBadges(){
   }catch(e){ badgesCache = badgesCache || {}; }
   window.__ddef.badges = badgesCache;
   return badgesCache;
-}
-function renderBadges(){
-  rendreBadges($("badgeGrid"), badgesCache || {});
-  $("badgesCount").textContent = compterBadges(badgesCache || {}) + " / " + BADGES.length;
 }
 // heure de Paris : vrai dans les dix dernieres minutes avant minuit (« Sur le fil »)
 function parisAvantMinuit(){
