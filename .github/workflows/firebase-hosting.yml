@@ -31,8 +31,8 @@ jobs:
           cp -r fonts _fire/fonts
           horodatage="$(TZ=Europe/Paris date +%d/%m/%Y)"
           tampon="version ${GITHUB_SHA::7} publiée le ${horodatage}"
-          for f in index.html accueil.html donjons.html publier.html membres.html jouer.html atelier.html; do
-            sed -i "s|version de travail|${tampon}|" "_fire/$f"
+          for f in _fire/*.html; do
+            sed -i "s|version de travail|${tampon}|" "$f"
           done
 
       - name: Publier sur Firebase Hosting

@@ -426,7 +426,7 @@ async function updateLeaderboard(){
       const mk = String(d.date || ds.id || "").slice(0, 7);
       if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
     });
-    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0] : "Joueur");
+    const pseudo = profile.pseudo || (CU.email ? CU.email.split("@")[0].slice(0, 40) : "Joueur");
     window.__home.myBoard = { pseudo, total, months };
     if(total > 0){ await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() }); }
     // refleter aussitot le nouveau pseudo/total dans le tableau deja affiche (sans recharger)
@@ -473,7 +473,7 @@ function renderBoard(){
     li.innerHTML = '<span class="lb-rank">' + (i + 1) + '</span>'
       + '<span class="avatar lb-av">' + escapeHtml(initial(e.pseudo)) + '</span>'
       + '<span class="lb-name">' + escapeHtml(e.pseudo) + '</span>'
-      + '<span class="lb-xp">' + e.val + ' XP</span>';
+      + '<span class="lb-xp">' + (Number(e.val) || 0) + ' XP</span>';
     ol.appendChild(li);
   });
   const myIdx = CU ? rows.findIndex(e => e.uid === CU.uid) : -1;

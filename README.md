@@ -2,7 +2,7 @@
 
 Atelier personnel de mots croisés : un dictionnaire de mots et de définitions organisé en listes (une par thème), un générateur de grilles resserrées et bornées, un rendu SVG imprimable. Tout est rédigé par l'auteur : 100 % des mots et 100 % des définitions viennent de vous, sans lexique externe.
 
-**Application en ligne : https://nomeansno1981.github.io/Cruciverbiste/**
+**Application en ligne : https://donjonsetdefinitions.fr/**
 
 ## Utilisation rapide
 
@@ -53,10 +53,10 @@ npm run test:sync # synchronisation : deux navigateurs sur les émulateurs Fireb
 Le jeu public en préparation : une grille du jour à résoudre, sur le thème du jeu de rôle. Sur ordinateur, définitions listées sous la grille et clavier physique; sur mobile, la grille tient entièrement à l'écran avec un clavier intégré à l'application (pas celui du téléphone) et la définition de la case sélectionnée en dessous.
 
 - `jeu.js` et `jeu.css` : le moteur de résolution et les styles, partagés.
-- `jouer.html` : aperçu autonome, sans connexion, sur une grille de démonstration. https://nomeansno1981.github.io/Cruciverbiste/jouer.html
-- `donjons.html` : le site public branché à Firebase (projet `donjons-definitions`). Écran de connexion (Google ou e-mail/mot de passe), lecture de la grille du jour depuis Firestore (`puzzles/{AAAA-MM-JJ}`, heure de Paris) avec repli sur la démonstration si rien n'est publié, enregistrement du résultat du joueur sous `users/{uid}/results`, **série façon Duolingo** (`users/{uid}/state/streak`, jours de Paris; la série reste vivante si le dernier jour réussi est aujourd'hui ou hier, et repart à zéro après un jour manqué), et **profil** : pseudo, avatar et historique des grilles réussies (`users/{uid}/state/profile`). L'avatar est redimensionné dans le navigateur en un petit carré et rangé en data URL, sans service de stockage (donc sans coût). Le profil est privé (visible du joueur seul), donc sans modération tant qu'il n'est pas exposé aux autres. https://nomeansno1981.github.io/Cruciverbiste/donjons.html
+- `jouer.html` : aperçu autonome, sans connexion, sur une grille de démonstration. https://donjonsetdefinitions.fr/jouer
+- `donjons.html` : le site public branché à Firebase (projet `donjons-definitions`). Écran de connexion (Google ou e-mail/mot de passe), lecture de la grille du jour depuis Firestore (`puzzles/{AAAA-MM-JJ}`, heure de Paris) avec repli sur la démonstration si rien n'est publié, enregistrement du résultat du joueur sous `users/{uid}/results`, **série façon Duolingo** (`users/{uid}/state/streak`, jours de Paris; la série reste vivante si le dernier jour réussi est aujourd'hui ou hier, et repart à zéro après un jour manqué), et **profil** : pseudo, avatar et historique des grilles réussies (`users/{uid}/state/profile`). L'avatar est redimensionné dans le navigateur en un petit carré et rangé en data URL, sans service de stockage (donc sans coût). Le profil est privé (visible du joueur seul), donc sans modération tant qu'il n'est pas exposé aux autres. https://donjonsetdefinitions.fr/donjons
 
-- `publier.html` : la page d'administration de l'auteur. Connexion Google (réservée au compte administrateur par les règles Firestore), collage d'une grille exportée depuis l'atelier, choix de la date de parution, publication dans `puzzles/{date}` et liste des grilles publiées. https://nomeansno1981.github.io/Cruciverbiste/publier.html
+- `publier.html` : la page d'administration de l'auteur. Connexion Google (réservée au compte administrateur par les règles Firestore), collage d'une grille exportée depuis l'atelier, choix de la date de parution, publication dans `puzzles/{date}` et liste des grilles publiées. https://donjonsetdefinitions.fr/publier
 
 Publier une grille du jour : dans l'atelier, générez et réussissez une grille, cliquez sur « Copier pour le jeu », puis dans `publier.html` collez-la, choisissez la date et publiez. La grille est stockée en chaîne JSON (Firestore refuse les tableaux imbriqués). Le jeu affiche automatiquement la grille dont la date de parution est le jour même (heure de Paris).
 
@@ -64,4 +64,4 @@ Tests : `npm run test:play` (moteur, hors ligne), `npm run test:game` (site publ
 
 ## Déploiement
 
-À chaque push sur `main`, le workflow GitHub Actions publie `index.html` et `jouer.html` sur la branche `gh-pages`, servie par GitHub Pages. Au passage, il inscrit au pied de chaque page le commit publié et sa date. Au passage, il inscrit au pied de la page le commit publié et sa date (« version abc1234 publiée le 18/07/2026 »). Si ce tampon manque ou date, votre navigateur affiche une copie périmée : fermez complètement l'onglet et rouvrez l'adresse (ou Cmd+Maj+R sur Mac).
+À chaque push sur `main`, le workflow GitHub Actions assemble le site dans `_fire/` et le publie sur **Firebase Hosting** (domaine `donjonsetdefinitions.fr`), puis met à jour les **règles Firestore**. Au passage, il inscrit au pied de chaque page le commit publié et sa date (« version abc1234 publiée le 18/07/2026 »). Les fichiers n'étant pas versionnés par empreinte, l'en-tête `Cache-Control: no-cache` garantit un HTML toujours frais ; si un tampon semble périmé, fermez complètement l'onglet et rouvrez l'adresse (ou Cmd+Maj+R sur Mac).

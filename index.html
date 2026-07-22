@@ -48,13 +48,8 @@
   .amp{color:var(--ink); font-size:.7em; font-weight:400}   /* & du logo : noir, plus petit */
   .brand{display:flex; align-items:center; gap:16px}
   h1{font-family:var(--display); font-size:34px; letter-spacing:0; font-weight:400; margin:0; color:var(--brand-red)}
-  .sub{color:var(--muted); font-size:13px; letter-spacing:.01em}
   .hstatus{margin-left:auto; font-size:12.5px; color:var(--muted); min-height:1em; transition:color .2s}
   .hstatus.warn{color:var(--accent)}
-
-  /* ---- layout ---- */
-  .cols{display:grid; grid-template-columns:minmax(0,0.82fr) minmax(0,1.18fr); gap:20px; margin-top:20px}
-  @media (max-width:900px){ .cols{grid-template-columns:1fr} }
 
   /* ---- onglets ---- */
   .tabs{display:flex; gap:2px; margin-top:22px; border-bottom:1px solid var(--line)}
@@ -95,8 +90,6 @@
   }
   input:focus,select:focus,textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak)}
   textarea{resize:vertical; min-height:88px; line-height:1.45; font-family:var(--mono); font-size:13px}
-  .row{display:flex; gap:8px; align-items:end}
-  .row > *{min-width:0}
 
   button{font-family:var(--sans); font-size:13.5px; font-weight:600; cursor:pointer; border-radius:5px; border:1px solid transparent; padding:8px 13px; transition:background .15s,border-color .15s,color .15s}
   .btn-primary{background:var(--accent); color:#fff}
@@ -228,8 +221,7 @@
   @media print{
     body{background:#fff}
     .wrap{max-width:none; padding:0}
-    header .sub, .hstatus, .brand .mark, .panel:first-child, .gcontrols, .gexport, .saved, .panel-h, .gstats .fillinfo, .stamp{display:none !important}
-    .cols{display:block; margin:0}
+    .hstatus, .brand .mark, .panel:first-child, .gcontrols, .gexport, .saved, .panel-h, .gstats .fillinfo, .stamp{display:none !important}
     .panel{border:none; box-shadow:none}
     .body{padding:0}
     .board{border:none; padding:0; justify-content:flex-start; background:#fff}
@@ -1816,14 +1808,6 @@ function puzzleForGame(){
     across: g.across.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "across") })),
     down: g.down.map(it => ({ num: it.num, clue: it.clue || "", cells: cellsOf(it, "down") }))
   };
-}
-async function copyGamePuzzle(){
-  const p = puzzleForGame();
-  if(!p) return;
-  const undef = p.across.concat(p.down).filter(w => !w.clue).length;
-  const ok = await copyToClipboard(JSON.stringify(p));
-  if(!ok){ flash("Copie impossible sur ce navigateur.", true); return; }
-  flash(undef ? `Grille copiée pour le jeu (${undef} définition(s) manquante(s)).` : "Grille copiée pour le jeu, à coller dans la page de publication.", !!undef);
 }
 function importJsonFile(file){
   const reader = new FileReader();
