@@ -262,19 +262,19 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 /* classement affiche directement sur l'accueil (reutilise les styles .lb-*) */
 .board-home .lb-tabs{margin-bottom:10px}
 .board-home .lb-status{margin-top:8px; text-align:left}
-.hero{display:flex; flex-direction:column; gap:14px; align-items:center; background:linear-gradient(180deg,#ffffff,#fbf6ef); border:1px solid var(--line); border-radius:16px; padding:18px}
+.hero{display:flex; flex-direction:column; gap:14px; align-items:center}
 /* grande image cliquable du donjon du jour : carree (grille 15x15), le libelle
    et le bouton « Jouer » poses par-dessus, en bas */
 .hero-preview{position:relative; box-sizing:border-box; display:block; width:100%; max-width:460px; aspect-ratio:1/1; border:1px solid var(--line); border-radius:14px; background:var(--paper); overflow:hidden; text-decoration:none; box-shadow:inset 0 1px 0 #fff, 0 4px 16px rgba(28,27,20,.09); transition:box-shadow .15s ease, transform .15s ease}
 .hero-preview:hover{box-shadow:inset 0 1px 0 #fff, 0 10px 26px rgba(28,27,20,.15); transform:translateY(-1px)}
-.hero-canvas{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:22px 22px 48px}
+.hero-canvas{position:absolute; inset:0; background:#fff; display:flex; align-items:center; justify-content:center; padding:22px 22px 48px}
 .hero-canvas .donjon-preview{width:100%; height:100%; display:block}
-.hero-overlay{position:absolute; left:0; right:0; bottom:0; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:15px 18px; background:linear-gradient(180deg, rgba(250,249,245,0), rgba(250,249,245,.72) 45%, rgba(250,249,245,.96))}
+.hero-overlay{position:absolute; left:0; right:0; bottom:0; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:15px 18px; background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.72) 45%, rgba(255,255,255,.96))}
 .hero-heading{display:flex; flex-direction:column; min-width:0}
 .hero-label{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent)}
 .hero-date{font-family:var(--serif); font-size:18px; color:var(--ink); text-transform:capitalize; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.play-pill{flex:0 0 auto; background:var(--accent); color:#fff; font-weight:700; font-size:15px; padding:9px 22px; border-radius:999px; white-space:nowrap; box-shadow:0 3px 10px rgba(94,21,34,.3)}
-.hero-preview:hover .play-pill{background:var(--accent-ink)}
+.play-pill{flex:0 0 auto; background:#1E7A43; color:#fff; font-weight:700; font-size:17.5px; padding:13px 34px; border-radius:999px; white-space:nowrap; box-shadow:0 3px 12px rgba(30,122,67,.34)}
+.hero-preview:hover .play-pill{background:#17663A}
 .hero-foot{display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; width:100%}
 .hero-count{text-align:center}
 .count-label{display:block; font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em}
@@ -357,7 +357,6 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   html:has(.page-accueil), body.page-accueil{height:auto; min-height:100%; overflow:visible}
   .wrap.home{height:auto; overflow:visible; padding:8px 10px 34px; gap:14px}
   .home-stats{grid-template-columns:repeat(2,1fr)}
-  .hero{padding:14px}
   .hero-foot{gap:16px}
   header{flex:none; border:none; padding:2px 2px 0; margin:0; gap:8px}
   .acct .mail{display:none}
