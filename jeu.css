@@ -206,14 +206,25 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 /* ---- badges (hauts faits) ---- */
 .badges h3{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-family:var(--mono); margin:6px 0 10px; display:flex; align-items:baseline; gap:8px}
 .badges-count{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:normal}
-.badge-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:10px}
-.badge{display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; padding:9px 4px; border:1px solid var(--line); border-radius:12px; background:var(--panel)}
-.badge-ico{font-size:26px; line-height:1; filter:grayscale(1); opacity:.35}
-.badge-img{width:32px; height:32px; object-fit:contain}
-.badge-nom{font-family:var(--serif); font-size:11px; line-height:1.2; color:var(--muted)}
-.badge.on{border-color:#e6cfd0; background:linear-gradient(180deg,#ffffff,#fbf6ef)}
-.badge.on .badge-ico{filter:none; opacity:1}
-.badge.on .badge-nom{color:var(--accent-ink); font-weight:600}
+/* badges groupes par categorie, grandes vignettes + description au survol/tap */
+.badge-cats{display:flex; flex-direction:column; gap:18px}
+.badge-cat-head{display:flex; align-items:baseline; gap:8px; margin-bottom:9px}
+.badge-cat-nom{font-family:var(--display); font-size:18px; color:var(--forest-ink)}
+.badge-cat-count{font-family:var(--mono); font-size:11px; color:var(--muted)}
+.badge-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:12px}
+.badge{position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:15px 6px; border:1px solid var(--line); border-radius:14px; background:var(--panel); cursor:pointer; outline:none}
+.badge-ico{display:flex; align-items:center; justify-content:center; height:75px}
+.badge-img{width:72px; height:72px; object-fit:contain; filter:grayscale(1); opacity:.3}
+.badge-emoji{font-size:54px; line-height:1; filter:grayscale(1); opacity:.3}
+.badge-nom{font-family:var(--serif); font-size:13px; line-height:1.2; color:var(--muted)}
+.badge.on{border-color:#e6cfd0; background:linear-gradient(180deg,#ffffff,#fbf6ef); box-shadow:inset 0 1px 0 #fff}
+.badge.on .badge-img,.badge.on .badge-emoji{filter:none; opacity:1}
+.badge.on .badge-nom{color:var(--accent-ink); font-weight:700}
+.badge-tip{position:absolute; left:50%; bottom:calc(100% + 9px); transform:translateX(-50%) translateY(5px); width:max-content; max-width:210px; background:var(--ink); color:#fbfaf7; border-radius:11px; padding:9px 12px; font-family:var(--serif); font-size:13px; line-height:1.32; text-align:center; opacity:0; pointer-events:none; transition:opacity .14s ease, transform .14s ease; z-index:6; box-shadow:0 10px 28px rgba(28,27,20,.3)}
+.badge-tip::after{content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--ink)}
+.badge-tip-nom{display:block; font-weight:700; color:#fff; margin-bottom:2px}
+.badge-tip-lock{display:block; margin-top:4px; font-size:11.5px; color:#e7b3b8; font-style:italic}
+.badge:hover .badge-tip,.badge:focus-visible .badge-tip,.badge.open .badge-tip{opacity:1; transform:translateX(-50%) translateY(0)}
 /* ecran de fin de partie (#badgeModal) affiche a la resolution */
 #badgeModal{position:fixed; inset:0; z-index:70; background:rgba(28,27,20,.4); display:flex; align-items:center; justify-content:center; padding:18px}
 #badgeModal[hidden]{display:none}
@@ -288,6 +299,11 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .count-sub:empty{display:none}
 .home-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
 .stat{border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; background:var(--panel)}
+.stat-ic{display:block; width:26px; height:26px; margin:0 auto 5px; background-color:var(--accent-ink); -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat}
+.ic-fire{--ic:url(icones/rpg_v1_fire_124.svg)}
+.ic-helmet{--ic:url(icones/rpg_v1_knight_helmet_04.svg)}
+.ic-strength{--ic:url(icones/rpg_v2_strength_buff_101.svg)}
+.ic-shield{--ic:url(icones/rpg_v8_sun_shield_137.svg)}
 .stat-k{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .stat-v{font-family:var(--serif); font-size:24px; font-weight:700; color:var(--accent-ink); line-height:1.1; margin:3px 0}
 .stat-s{font-size:11.5px; color:var(--muted)}
