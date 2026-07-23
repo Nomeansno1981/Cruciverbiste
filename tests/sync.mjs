@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // copie locale (une seule fois) et on réécrit son import interne absolu en relatif.
 const SDK_VERSION = "12.8.0";
 const vendorDir = path.join(root, "tests", "vendor", "firebasejs");
-const sdkFiles = ["firebase-app.js", "firebase-auth.js", "firebase-firestore.js"];
+const sdkFiles = ["firebase-app.js", "firebase-auth.js", "firebase-firestore.js", "firebase-functions.js"];
 if (sdkFiles.some(f => !existsSync(path.join(vendorDir, f)))) {
   mkdirSync(vendorDir, { recursive: true });
   for (const f of sdkFiles) {

@@ -29,23 +29,28 @@ export const firebaseConfig = {
 // connecte les émulateurs en mode test. Renvoie { m, app, auth, db } où `m`
 // regroupe tous les modules Firebase (doc, getDoc, setDoc, onAuthStateChanged…).
 export async function initFirebase(){
-  const [appM, authM, fsM] = await Promise.all([
+  const [appM, authM, fsM, fnM] = await Promise.all([
     import(FIREBASE_SDK + "/firebase-app.js"),
     import(FIREBASE_SDK + "/firebase-auth.js"),
-    import(FIREBASE_SDK + "/firebase-firestore.js")
+    import(FIREBASE_SDK + "/firebase-firestore.js"),
+    import(FIREBASE_SDK + "/firebase-functions.js")
   ]);
-  const m = Object.assign({}, appM, authM, fsM);
+  const m = Object.assign({}, appM, authM, fsM, fnM);
   const cfg = EMU_MODE ? Object.assign({}, firebaseConfig, { projectId: "demo-donjons" }) : firebaseConfig;
   const app = m.initializeApp(cfg);
   const auth = m.getAuth(app);
   // Cache mémoire seul : la persistance multi-onglets fait planter les lectures
   // Firestore sur Safari.
   const db = m.initializeFirestore(app, {});
+  // Cloud Functions appelables (envoi de l'e-mail de vérification). Même région
+  // que les fonctions déployées (1re génération → us-central1).
+  const functions = m.getFunctions(app, "us-central1");
   if(EMU_MODE){
     m.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
     m.connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    m.connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   }
-  return { m, app, auth, db };
+  return { m, app, auth, db, functions };
 }
 
 // Connexion Google : fenêtre surgissante en production ; en test (#emu), on

@@ -131,18 +131,23 @@ export function showToast(msg, ms){
   t._timer = setTimeout(() => t.classList.remove("show"), ms || 9000);
 }
 
-// Renvoie l'e-mail de verification a l'utilisateur connecte (langue francaise) et
-// affiche un bandeau selon le resultat. Cable sur le bouton « Renvoyer... » du profil.
-export async function renvoyerVerification(m, auth){
-  const user = auth.currentUser;
-  if(!user) return;
+// Envoie (ou renvoie) l'e-mail de verification via la Cloud Function, qui l'expedie
+// depuis notre domaine (bien meilleure delivrabilite que l'expediteur Firebase par
+// defaut). Renvoie { sent, reason? }. Leve en cas d'echec (a rattraper par l'appelant).
+export async function envoyerVerification(m, functions){
+  const appeler = m.httpsCallable(functions, "envoyerVerificationEmail");
+  const res = await appeler();
+  return (res && res.data) || {};
+}
+
+// Variante « bouton du profil » : appelle la fonction et affiche un bandeau selon le resultat.
+export async function renvoyerVerification(m, functions){
   try{
-    auth.languageCode = "fr";
-    await m.sendEmailVerification(user);
-    showToast("E-mail de vérification renvoyé à " + user.email + ".");
+    await envoyerVerification(m, functions);
+    showToast("E-mail de vérification renvoyé. Pensez à vérifier votre boîte de réception.");
   }catch(e){
-    showToast((e && e.code === "auth/too-many-requests")
-      ? "Trop de tentatives. Patientez quelques minutes avant de réessayer."
+    showToast((e && e.code === "functions/resource-exhausted")
+      ? "Veuillez patienter une minute avant de renvoyer l'e-mail."
       : "Envoi impossible pour le moment. Réessayez plus tard.");
   }
 }
