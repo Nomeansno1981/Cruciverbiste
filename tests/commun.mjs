@@ -37,7 +37,7 @@ ok("secsToNextParisMidnight : entier dans (0, 86400]", Number.isInteger(secs) &&
 ok("secsToNextParisMidnight : jamais negatif (pas de bug « 24h »)", secs >= 0);
 ok("le compte a rebours passe le format attendu par l'accueil", /^\d{2}:\d{2}:\d{2}$/.test(fmtHms(secs)));
 
-// --- publication du classement (Firestore injecte) ---
+// --- calcul du classement (plus d'ecriture cote client : desormais serveur) ---
 function fakeStore(results){
   const store = { written: null };
   const m = {
@@ -55,12 +55,12 @@ const ra = await publierClassement(a.m, {}, { uid: "u1", email: "jean@exemple.fr
 ok("publierClassement : total agrege", ra.total === 50);
 ok("publierClassement : XP ventilee par mois", ra.months["2025-03"] === 20 && ra.months["2025-04"] === 30);
 ok("publierClassement : pseudo du profil", ra.pseudo === "Jean");
-ok("publierClassement : ecrit la fiche quand total > 0", !!a.store.written && a.store.written.data.total === 50);
+ok("publierClassement : n'ecrit plus /leaderboard cote client (total > 0)", a.store.written === null);
 
 const b = fakeStore([]);
 const rb = await publierClassement(b.m, {}, { uid: "u2", email: "marie@exemple.fr" }, { pseudo: "" });
 ok("publierClassement : total 0 sans resultat", rb.total === 0);
-ok("publierClassement : n'ecrit pas la fiche quand total 0", b.store.written === null);
+ok("publierClassement : n'ecrit jamais la fiche (meme a 0)", b.store.written === null);
 ok("publierClassement : pseudo derive de l'e-mail a defaut", rb.pseudo === "marie");
 
 const c = fakeStore([{ id: "2025-03-01", date: "2025-03-01", xp: 20 }, { id: "2025-03-02", date: "2025-03-02" }]);

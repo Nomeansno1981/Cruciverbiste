@@ -435,6 +435,15 @@ window.__ddef.lbProbe = async () => {
   try{ await m.setDoc(other, { pseudo: "Intrus", total: 999999, months: {} }); out.write = "ok"; }catch(e){ out.write = (e && e.code) || String(e); }
   return out;
 };
+// sonde de test du classement serveur : ecrire un resultat (autorise), tenter de
+// forger SA PROPRE fiche (desormais refuse : autorite serveur), et lire sa fiche
+// (ecrite par la Cloud Function a partir des resultats).
+window.__ddef.classementProbe = {
+  writeResult: async (dateStr, xp) => { if(!CU) return "no-user"; try{ await m.setDoc(m.doc(db, "users", CU.uid, "results", dateStr), { solved: true, xp, date: dateStr, seconds: 120, hints: 0, solutions: 0, words: 10 }); return "ok"; }catch(e){ return (e && e.code) || String(e); } },
+  deleteResult: async (dateStr) => { if(!CU) return "no-user"; try{ await m.deleteDoc(m.doc(db, "users", CU.uid, "results", dateStr)); return "ok"; }catch(e){ return (e && e.code) || String(e); } },
+  forgeOwn: async (total) => { if(!CU) return "no-user"; try{ await m.setDoc(m.doc(db, "leaderboard", CU.uid), { pseudo: "Triche", total, months: {} }); return "ok"; }catch(e){ return (e && e.code) || String(e); } },
+  readMine: async () => { if(!CU) return { err: "no-user" }; try{ const s = await m.getDoc(m.doc(db, "leaderboard", CU.uid)); return s.exists() ? s.data() : null; }catch(e){ return { err: (e && e.code) || String(e) }; } }
+};
 // sonde des regles du verrou « premier » : usurper l'uid d'autrui est refuse,
 // poser sa propre fiche est permis
 window.__ddef.firstProbe = async () => {

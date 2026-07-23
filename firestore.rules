@@ -28,19 +28,14 @@ service cloud.firestore {
         || (request.auth != null && request.auth.uid == uid && !estSuspendu(uid));
     }
 
-    // Classement : chaque joueur publie sa propre fiche (pseudo, XP totale et par
-    // mois). Lisible par tout joueur connecte, ecrite par le joueur (fiche validee,
-    // s'il n'est pas suspendu) ou par l'auteur (moderation : correction, retrait).
+    // Classement : calcule cote serveur (Cloud Function, droits admin) a partir
+    // des resultats de chaque joueur. Lisible par tout joueur connecte ; ecrit
+    // par la Function (qui contourne les regles) et par l'auteur (moderation :
+    // retrait, correction). Un joueur ne peut PLUS ecrire sa propre fiche, donc
+    // plus gonfler son total : la seule source du total, ce sont ses resultats.
     match /leaderboard/{uid} {
       allow read: if request.auth != null;
-      allow write: if estAdmin()
-        || (request.auth != null
-            && request.auth.uid == uid
-            && !estSuspendu(uid)
-            && request.resource.data.pseudo is string
-            && request.resource.data.pseudo.size() <= 40
-            && request.resource.data.total is number
-            && request.resource.data.total >= 0);
+      allow write: if estAdmin();
     }
 
     // Membres suspendus : chacun peut lire son propre statut (pour afficher

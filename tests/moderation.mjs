@@ -83,7 +83,7 @@ await check("un membre alimente ses propres donnees (classement, profil, resulta
   const role = await victim.evaluate(() => window.__mod.role);
   if (role !== "guest") throw new Error("le compte de test devrait etre un simple membre : " + role);
   const out = await victim.evaluate(() => window.__mod.seedSelf("Vilain", 120));
-  if (out.lb !== "ok" || out.profile !== "ok" || out.result !== "ok") throw new Error("ecriture de ses propres donnees refusee : " + JSON.stringify(out));
+  if (out.profile !== "ok" || out.result !== "ok") throw new Error("ecriture de ses propres donnees refusee : " + JSON.stringify(out));
   victimUid = out.uid;
   if (!victimUid) throw new Error("uid du membre introuvable");
 });
@@ -103,8 +103,16 @@ await check("l'auteur voit le membre dans la liste et sa fiche detaillee", async
   await signInMembres(admin, "#emu");
   const role = await admin.evaluate(() => window.__mod.role);
   if (role !== "admin") throw new Error("le compte auteur devrait etre admin : " + role);
-  const mem = await admin.evaluate(u => (window.__mod.members.find(x => x.uid === u) || null), victimUid);
-  if (!mem) throw new Error("membre absent de la liste");
+  // La liste se construit a partir de /leaderboard, desormais ecrit par la Cloud
+  // Function apres le resultat : on rafraichit jusqu'a ce que le membre apparaisse.
+  let mem = null;
+  for (let i = 0; i < 24; i++) {
+    await admin.evaluate(() => window.__mod.load());
+    mem = await admin.evaluate(u => (window.__mod.members.find(x => x.uid === u) || null), victimUid);
+    if (mem) break;
+    await new Promise(r => setTimeout(r, 500));
+  }
+  if (!mem) throw new Error("membre absent de la liste (Cloud Function pas encore passee ?)");
   if (mem.pseudo !== "Vilain") throw new Error("pseudo inattendu dans la liste : " + mem.pseudo);
   const detail = await admin.evaluate(u => window.__mod.open(u), victimUid);
   if (detail.grids < 1) throw new Error("historique vide dans la fiche : " + JSON.stringify(detail));
@@ -127,7 +135,7 @@ await check("l'auteur suspend un membre (retire du classement, marque suspendu)"
 
 await check("le membre suspendu ne peut plus ecrire ses donnees", async () => {
   const out = await victim.evaluate(() => window.__mod.seedSelf("Vilain2", 999));
-  if (out.lb === "ok" || out.profile === "ok") throw new Error("un membre suspendu a pu ecrire : " + JSON.stringify(out));
+  if (out.profile === "ok" || out.result === "ok") throw new Error("un membre suspendu a pu ecrire : " + JSON.stringify(out));
 });
 
 await check("l'accueil affiche « compte suspendu » au membre suspendu", async () => {

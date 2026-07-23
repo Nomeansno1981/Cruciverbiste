@@ -150,7 +150,7 @@ await check("ecran de fin : score explique, niveau situe, hauts faits annonces",
 // sur l'accueil, onglet Profil (voir tests/accueil.mjs), y compris le controle
 // de chargement effectif des 13 icones SVG.
 
-await check("classement : la fiche du joueur est publiee (total et mois courant)", async () => {
+await check("classement : le total du joueur est calcule pour l'affichage (total et mois courant)", async () => {
   await page.waitForFunction(() => window.__ddef && window.__ddef.myBoard && window.__ddef.myBoard.total > 0);
   const b = await page.evaluate(() => window.__ddef.myBoard);
   const r = await page.evaluate(() => window.__ddef.result);
