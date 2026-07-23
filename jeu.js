@@ -163,17 +163,51 @@ export function compterBadges(earned){
 export function rendreBadges(container, earned = {}){
   if(!container) return;
   container.innerHTML = "";
+  // Regroupe les badges par categorie (dans l'ordre d'apparition de BADGES).
+  const cats = [];
+  const byCat = new Map();
   for(const b of BADGES){
-    const acquis = !!(earned && earned[b.id]);
-    const el = document.createElement("div");
-    el.className = "badge" + (acquis ? " on" : "");
-    el.title = b.nom + " — " + b.desc + (acquis ? "" : " (à débloquer)");
-    const ico = b.icon ? '<img class="badge-img" alt="" src="' + b.icon + '">' : b.emoji;
-    el.innerHTML = '<span class="badge-ico" aria-hidden="true">' + ico + '</span>'
-      + '<span class="badge-nom"></span>';
-    el.querySelector(".badge-nom").textContent = b.nom;
-    container.appendChild(el);
+    if(!byCat.has(b.cat)){ byCat.set(b.cat, []); cats.push(b.cat); }
+    byCat.get(b.cat).push(b);
   }
+  for(const cat of cats){
+    const lot = byCat.get(cat);
+    const nDone = lot.filter(b => earned && earned[b.id]).length;
+    const sec = document.createElement("div");
+    sec.className = "badge-cat";
+    const head = document.createElement("div");
+    head.className = "badge-cat-head";
+    head.innerHTML = '<span class="badge-cat-nom"></span><span class="badge-cat-count"></span>';
+    head.querySelector(".badge-cat-nom").textContent = cat;
+    head.querySelector(".badge-cat-count").textContent = nDone + " / " + lot.length;
+    sec.appendChild(head);
+    const grid = document.createElement("div");
+    grid.className = "badge-grid";
+    for(const b of lot){
+      const acquis = !!(earned && earned[b.id]);
+      const el = document.createElement("div");
+      el.className = "badge" + (acquis ? " on" : "");
+      el.tabIndex = 0;
+      const ico = b.icon ? '<img class="badge-img" alt="" src="' + b.icon + '">' : '<span class="badge-emoji">' + b.emoji + '</span>';
+      el.innerHTML = '<span class="badge-ico" aria-hidden="true">' + ico + '</span>'
+        + '<span class="badge-nom"></span>'
+        + '<span class="badge-tip"><b class="badge-tip-nom"></b><span class="badge-tip-desc"></span>'
+        + (acquis ? '' : '<span class="badge-tip-lock">À débloquer</span>') + '</span>';
+      el.querySelector(".badge-nom").textContent = b.nom;
+      el.querySelector(".badge-tip-nom").textContent = b.nom;
+      el.querySelector(".badge-tip-desc").textContent = b.desc;
+      grid.appendChild(el);
+    }
+    sec.appendChild(grid);
+    container.appendChild(sec);
+  }
+  // Tap (mobile) : ouvre la description d'un badge et referme les autres.
+  container.onclick = (e) => {
+    const b = e.target.closest(".badge");
+    const wasOpen = b && b.classList.contains("open");
+    container.querySelectorAll(".badge.open").forEach(x => x.classList.remove("open"));
+    if(b && !wasOpen) b.classList.add("open");
+  };
 }
 
 // ---- Apercu du donjon (forme seule, sans lettres) ----
