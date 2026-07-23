@@ -139,13 +139,17 @@ await check("l'accueil affiche « compte suspendu » au membre suspendu", async 
   if (!shown) throw new Error("l'ecran de suspension n'est pas affiche");
 });
 
-await check("l'auteur reactive puis supprime les donnees du membre", async () => {
+await check("l'auteur reactive, resuspend, puis supprime — la suppression efface aussi la fiche /banned", async () => {
   const react = await admin.evaluate(u => window.__mod.reactivate(u), victimUid);
   if (!react) throw new Error("reactivation refusee");
+  // On resuspend avant de supprimer : le membre a de nouveau une fiche /banned.
+  // Si wipe ne l'effacait pas, il resterait affiche « Suspendu / 0 XP » dans la liste.
+  const resusp = await admin.evaluate(u => window.__mod.suspend(u), victimUid);
+  if (!resusp) throw new Error("re-suspension refusee");
   const wiped = await admin.evaluate(u => window.__mod.wipe(u), victimUid);
   if (!wiped) throw new Error("suppression refusee");
   const mem = await admin.evaluate(u => (window.__mod.members.find(x => x.uid === u) || null), victimUid);
-  if (mem) throw new Error("le membre subsiste dans la liste apres suppression");
+  if (mem) throw new Error("le membre subsiste dans la liste apres suppression (fiche /banned non effacee ?)");
 });
 
 await check("le journal de moderation consigne les actions (immuable)", async () => {

@@ -17,7 +17,8 @@
 //     completer surtout a coups d'indices) ne rapporte donc aucun bonus.
 // `words` est soit la liste des mots [{ cells, hints, solution }], soit un
 // simple nombre (grille supposee sans aide, pour un appel de commodite).
-// detailScore renvoie le detail (pour l'ecran de fin) ; scoreXP juste l'XP.
+// detailScore renvoie le detail (base, bonus, xp…) pour l'ecran de fin ;
+// pour la seule XP, lire son champ .xp.
 export function detailScore({ seconds = 0, words = 20 } = {}){
   const liste = Array.isArray(words)
     ? words
@@ -38,7 +39,6 @@ export function detailScore({ seconds = 0, words = 20 } = {}){
   const bonus = Math.round(seuilVitesse * part);
   return { xp: base + bonus, base, bonus, seuilVitesse, part, seuls, aides, reveles, mots: liste.length };
 }
-export function scoreXP(args){ return detailScore(args).xp; }
 
 // Echelle de progression facon jeu de role : titres et seuils d'XP cumulee.
 // Donnees volontairement isolees pour etre faciles a retoucher (renommer un

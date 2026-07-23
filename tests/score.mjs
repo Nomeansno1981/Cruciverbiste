@@ -1,6 +1,8 @@
-// Test du bareme d'experience (scoreXP / detailScore) et de l'echelle de
+// Test du bareme d'experience (detailScore) et de l'echelle de
 // niveaux (niveauPourXp), fonctions pures sans DOM. A lancer via : npm run test:score
-import { scoreXP, detailScore, niveauPourXp, NIVEAUX, badgesRetroactifs } from "../jeu.js";
+import { detailScore, niveauPourXp, NIVEAUX, badgesRetroactifs } from "../jeu.js";
+// L'XP seule = detailScore(args).xp (l'ancien helper scoreXP a ete retire).
+const scoreXP = (args) => detailScore(args).xp;
 
 // construit une grille : `propres` mots trouves seuls (5 lettres, 0 indice),
 // plus d'eventuels mots particuliers passes tels quels.

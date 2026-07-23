@@ -347,9 +347,10 @@ async function wipe(uid){
     rs.forEach(d => ops.push(m.deleteDoc(m.doc(db, "users", uid, "results", d.id))));
     for(const s of ["profile", "streak", "badges"]) ops.push(m.deleteDoc(m.doc(db, "users", uid, "state", s)));
     ops.push(m.deleteDoc(m.doc(db, "leaderboard", uid)));
+    ops.push(m.deleteDoc(m.doc(db, "banned", uid)));   // suppression littérale : efface aussi la fiche /banned (lève donc la suspension)
     await Promise.all(ops);
     await logMod("suppression", uid, (window.__mod.detail || {}).pseudo, "données supprimées");
-    dok("Données du membre supprimées.");
+    dok("Membre entièrement supprimé (données et suspension).");
     await loadMembers();
     $("detail").hidden = true; window.__mod.detail = null;
     return true;
