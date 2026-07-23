@@ -11,6 +11,7 @@
 <link rel="icon" href="icones/favicon.svg" type="image/svg+xml">
 <link rel="mask-icon" href="icones/favicon.svg" color="#7C1D2E">
 <link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/IMFellEnglish-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="jeu.css">
 </head>
 <body class="page-accueil">
@@ -65,13 +66,13 @@
 
   <div class="tabpanel" id="panelJouer">
     <section class="hero">
+      <div class="hero-head">
+        <h2 class="hero-title">Le donjon du jour</h2>
+        <div class="hero-date" id="heroDate"></div>
+      </div>
       <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer le donjon du jour">
         <div class="hero-canvas" id="heroCanvas"></div>
         <div class="hero-overlay">
-          <span class="hero-heading">
-            <span class="hero-label">Le donjon du jour</span>
-            <span class="hero-date" id="heroDate"></span>
-          </span>
           <span class="play-pill" id="playToday">Jouer</span>
         </div>
       </a>
