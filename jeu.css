@@ -189,12 +189,13 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .profile-fields input{font-family:var(--sans); font-size:16px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink)}
 .avatar-actions{display:flex; gap:12px; align-items:center; font-size:13px; margin-top:3px}
 .linklike{background:none; border:none; color:var(--accent); cursor:pointer; font-size:13px; padding:0; text-decoration:underline}
-.pstatus{font-size:12.5px; color:var(--muted); min-height:1em}
+.pstatus{font-size:12.5px; color:var(--muted)}
+.pstatus:empty{display:none}   /* pas d'espace vide quand il n'y a pas de message */
 .pstatus.warn{color:var(--accent)}
 .profile-row{display:flex; gap:8px}
 .profile-row .gate-btn{flex:1}
 /* rappel « adresse non vérifiée » + lien pour renvoyer l'e-mail (profil) */
-.profile-verif{display:flex; flex-direction:column; align-items:center; gap:1px; margin:-2px 0 2px; text-align:center}
+.profile-verif{display:flex; flex-direction:column; align-items:flex-start; gap:1px}
 .profile-verif[hidden]{display:none}
 .profile-verif .verif-note{font-family:var(--serif); font-size:12.5px; color:var(--accent)}
 .hist h3{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-family:var(--mono); margin:6px 0 8px}
@@ -277,9 +278,10 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .home-tab.on{color:var(--accent-ink); border-bottom-color:var(--accent)}
 .tabpanel{display:flex; flex-direction:column; gap:18px}
 .tabpanel[hidden]{display:none}
-/* fenêtre de compte : e-mail + déconnexion */
+/* fenêtre de compte : e-mail (+ vérification) regroupés sous un filet, puis déconnexion */
+.account-info{display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding-top:13px; border-top:1px solid var(--line)}
 .account-mail{font-family:var(--mono); font-size:12.5px; color:var(--muted); word-break:break-all}
-.profile-signout{margin-top:12px; padding-top:12px; border-top:1px solid var(--line); text-align:center}
+.profile-signout{margin-top:2px; padding-top:12px; border-top:1px solid var(--line); text-align:center}
 .who{display:inline-flex; align-items:center; gap:7px; box-sizing:border-box; height:38px; background:#fff; border:1px solid var(--line); border-radius:999px; box-shadow:0 1px 2px rgba(30,27,20,.05); padding:6px 12px 6px 6px; color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:600; max-width:180px; cursor:pointer; transition:box-shadow .15s ease, border-color .15s ease}
 .who:hover{border-color:#d8cfbe; box-shadow:0 5px 14px rgba(30,27,20,.15)}
 .who .pseudo{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
