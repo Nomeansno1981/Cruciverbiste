@@ -95,10 +95,11 @@
 
   /* ---- controls ---- */
   label.f{display:block; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px}
-  input[type=text],input[type=number],select,textarea{
+  input[type=text],input[type=number],input[type=search],select,textarea{
     width:100%; font-family:var(--sans); font-size:14px; color:var(--ink);
     background:#fff; border:1px solid var(--line); border-radius:5px; padding:8px 10px; outline:none;
   }
+  .dictsearch{margin-bottom:10px}
   input:focus,select:focus,textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak)}
   textarea{resize:vertical; min-height:88px; line-height:1.45; font-family:var(--mono); font-size:13px}
 
@@ -295,6 +296,10 @@
           <div><label class="f" for="wIn">Mot</label><input type="text" id="wIn" autocomplete="off" spellcheck="false" placeholder="lancelot   (ou : chat ; chien ; oiseau)" /></div>
           <div><label class="f" for="cIn">Définition</label><input type="text" id="cIn" autocomplete="off" placeholder="Le héros chevalier du roman" /></div>
           <button class="btn-primary" id="addBtn">Ajouter</button>
+        </div>
+
+        <div class="dictsearch">
+          <input type="search" id="dictSearch" autocomplete="off" spellcheck="false" placeholder="Rechercher un mot…" aria-label="Rechercher dans le dictionnaire">
         </div>
 
         <div class="entries" id="entries" aria-live="polite"></div>
@@ -1185,15 +1190,23 @@ function renderLists(){
   $("delList").disabled = state.lists.length <= 1;
 }
 
+// recherche dans le dictionnaire : normalise (minuscules, sans accent) pour un
+// filtre insensible à la casse et aux accents
+let dictFilter = "";
+function deburr(s){ return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 function renderEntries(){
   const box = $("entries");
   const l = currentList();
   box.innerHTML = "";
+  const q = deburr(dictFilter).trim();
+  const visibles = q ? l.entries.filter(e => deburr(e.word).includes(q)) : l.entries;
   if(!l.entries.length){
     box.innerHTML = `<div class="empty-hint">Aucun mot pour l'instant. Ajoutez-en un ci-dessus, ou collez une liste.</div>`;
+  } else if(!visibles.length){
+    box.innerHTML = `<div class="empty-hint">Aucun mot ne correspond à « ${escapeHtml(dictFilter.trim())} ».</div>`;
   } else {
     // affichage par ordre alphabétique (l'ordre de saisie est conservé dans les données)
-    const sorted = l.entries.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
+    const sorted = visibles.slice().sort((a,b) => a.word.localeCompare(b.word, "fr", { sensitivity: "base" }));
     for(const e of sorted){
       const row = document.createElement("div");
       row.className = "entry";
@@ -1220,7 +1233,10 @@ function renderEntries(){
       box.appendChild(row);
     }
   }
-  $("entryCount").textContent = l.entries.length + (l.entries.length===1?" mot":" mots");
+  const total = l.entries.length;
+  $("entryCount").textContent = (q && visibles.length !== total)
+    ? (visibles.length + " / " + total + " mots")
+    : (total + (total === 1 ? " mot" : " mots"));
   // les champs vides se préremplissent au format imposé : 15 x 15 (format du jeu)
   if(!$("maxW").value) $("maxW").value = "15";
   if(!$("maxH").value) $("maxH").value = "15";
@@ -2157,6 +2173,10 @@ function bind(){
     afterMutate();
   };
   $("cIn").onkeydown = $("wIn").onkeydown = ev => { if(ev.key==="Enter") $("addBtn").click(); };
+
+  // recherche : filtre la liste au fil de la frappe (Échap efface)
+  $("dictSearch").oninput = () => { dictFilter = $("dictSearch").value; renderEntries(); };
+  $("dictSearch").onkeydown = ev => { if(ev.key === "Escape"){ $("dictSearch").value = ""; dictFilter = ""; renderEntries(); } };
 
   $("listSelect").onchange = e => {
     state.currentId = e.target.value; currentModel = null;
