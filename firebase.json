@@ -1,6 +1,6 @@
 {
   "firestore": { "rules": "firestore.rules" },
-  "functions": { "source": "functions" },
+  "functions": { "source": "functions", "predeploy": ["npm --prefix \"$RESOURCE_DIR\" ci"] },
   "hosting": {
     "public": "_fire",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
