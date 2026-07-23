@@ -597,6 +597,35 @@ await check("jamais deux mots superposés dans le même sens (MAGICIEN ⊂ MAGIC
   }
 });
 
+await check("recherche : le champ filtre le dictionnaire sur les lettres tapées", async () => {
+  await page.click("#newList");
+  for (const w of ["dragon", "draconique", "hydre", "épée", "orque"]) {
+    await page.fill("#wIn", w); await page.click("#addBtn");
+  }
+  await page.waitForFunction(() => document.querySelectorAll("#entries .entry").length === 5);
+  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  // « dra » ne laisse que dragon et draconique
+  await page.fill("#dictSearch", "dra");
+  await page.waitForFunction(() => document.querySelectorAll("#entries .entry").length === 2);
+  const mots = await page.locator("#entries .entry .word").allInnerTexts();
+  if (!mots.every(w => norm(w).includes("dra"))) throw new Error("intrus dans le filtre : " + mots.join(", "));
+  const cnt = await page.locator("#entryCount").innerText();
+  if (!/2\s*\/\s*5/.test(cnt)) throw new Error("le compteur ne reflète pas le filtre : " + cnt);
+  // insensible aux accents : « epe » (sans accent) trouve « épée »
+  await page.fill("#dictSearch", "epe");
+  await page.waitForFunction(() => document.querySelectorAll("#entries .entry").length === 1);
+  const acc = await page.locator("#entries .entry .word").first().innerText();
+  if (norm(acc) !== "epee") throw new Error("recherche insensible aux accents KO : " + acc);
+  // aucun résultat → message dédié
+  await page.fill("#dictSearch", "zzz");
+  await page.waitForFunction(() => document.querySelectorAll("#entries .entry").length === 0);
+  const hint = await page.locator("#entries .empty-hint").innerText();
+  if (!/correspond/i.test(hint)) throw new Error("message d'absence de résultat manquant : " + hint);
+  // effacer rétablit toute la liste
+  await page.fill("#dictSearch", "");
+  await page.waitForFunction(() => document.querySelectorAll("#entries .entry").length === 5);
+});
+
 await check("aucune erreur JavaScript sur la page", async () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
 });
