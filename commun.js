@@ -110,3 +110,23 @@ export async function publierClassement(m, db, user, profile){
   const pseudo = (profile && profile.pseudo) || (user.email ? user.email.split("@")[0].slice(0, 40) : "Joueur");
   return { pseudo, total, months };
 }
+
+// ---- petit bandeau ephemere ----
+// Message flottant en bas de l'ecran (ex. « e-mail de confirmation envoye »), independant
+// de la porte d'authentification qui, elle, disparait des la connexion. Se referme au clic
+// ou automatiquement apres quelques secondes.
+export function showToast(msg, ms){
+  let t = document.getElementById("ddToast");
+  if(!t){
+    t = document.createElement("div");
+    t.id = "ddToast"; t.className = "dd-toast"; t.setAttribute("role", "status");
+    t.addEventListener("click", () => t.classList.remove("show"));
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  // forcer un reflow pour rejouer la transition si un toast est deja affiche
+  void t.offsetWidth;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), ms || 9000);
+}

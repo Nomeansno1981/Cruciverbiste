@@ -306,6 +306,9 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .hero-state{font-family:var(--serif); font-size:13.5px; color:var(--muted)}
 .hero-state.ok{color:#1E7A43}
 .count-sub:empty{display:none}
+/* bandeau ephemere (confirmation d'e-mail, etc.) : flottant en bas, centre, se referme au clic */
+.dd-toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(12px); z-index:60; max-width:min(92vw,460px); background:var(--ink); color:#fbfaf7; font-family:var(--serif); font-size:15px; line-height:1.35; text-align:center; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(28,27,20,.35); opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease}
+.dd-toast.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; cursor:pointer}
 .home-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
 .stat{border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; background:var(--panel)}
 .stat-ic{display:block; width:26px; height:26px; margin:0 auto 5px; background-color:var(--accent-ink); -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat}
