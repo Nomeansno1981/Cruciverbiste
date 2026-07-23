@@ -663,6 +663,7 @@ async function bootCloud(){
 }
 
 async function startSession(m){
+  chargerUsagePublies();   // usage des grilles publiées/en file pour la rotation (sans bloquer l'ouverture)
   // ancien stockage local de ce navigateur, repris une seule fois
   const legacy = migrateState(await loadState());
   const migratedFlag = "vc-migrated-" + cloud.uid;
@@ -1509,6 +1510,36 @@ function savedGridUsage(){
   }
   return ge => (byId.get(ge.entryId) || 0) + (byWord.get(ge.display.join("")) || 0);
 }
+// Rotation fondée sur les grilles réellement parues : mots employés dans les
+// grilles publiées ET celles de la file d'attente (collection « puzzles »), et
+// non dans les brouillons enregistrés. Rempli de façon asynchrone (au démarrage
+// et à chaque changement de la file) puis consulté au moment de générer.
+let usageParMot = new Map();   // mot (majuscules, sans accent) -> nb d'apparitions
+function usageDepuisPuzzles(docs){
+  const m = new Map();
+  for(const ds of docs){
+    let p; try{ p = JSON.parse(ds.data().puzzle); }catch(e){ continue; }
+    if(!p || !p.solution) continue;
+    for(const w of [].concat(p.across || [], p.down || [])){
+      const mot = (w.cells || []).map(([r, c]) => p.solution[r + "," + c] || "").join("").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+      if(mot.length >= 2) m.set(mot, (m.get(mot) || 0) + 1);
+    }
+  }
+  usageParMot = m;
+}
+async function chargerUsagePublies(){
+  if(!cloud || !cloud.getDocs){ usageParMot = new Map(); return; }
+  try{
+    const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(400)));
+    usageDepuisPuzzles(snap.docs);
+  }catch(e){ /* usage indisponible : rotation neutre ce coup-ci */ }
+}
+// En ligne : rotation d'après les grilles publiées / en file. Hors-ligne : à
+// défaut, d'après les brouillons enregistrés localement.
+function usageRotation(){
+  if(CLOUD && cloud && cloud.getDocs) return ge => usageParMot.get(ge.letters) || 0;
+  return savedGridUsage();
+}
 // Candidats d'une grille : autant de mots que la boîte peut en accueillir.
 // Au-delà de sa capacité estimée, rotation : les mots les moins présents dans
 // les grilles enregistrées passent d'abord (hasard à égalité). Jamais deux
@@ -1519,7 +1550,7 @@ function selectPool(out, W, H){
   // aire/6 : réserve mesurée au banc d'essai, environ 13 % de croisements de
   // plus qu'aire/8 sur une 15×15 pour un surcoût minime
   const cap = Math.max(20, Math.round((W * H) / 6));
-  const usage = savedGridUsage();
+  const usage = usageRotation();
   const scored = out.map(e => ({ e, u: usage(e), r: Math.random() }));
   scored.sort((a,b) => a.u - b.u || a.r - b.r);
   const pool = [];
@@ -1605,7 +1636,7 @@ function doGenerate(){
     let extras = out.filter(e => !inPool.has(e.letters) && e.letters.length <= Math.max(W, H));
     let extended = 0;
     if(extras.length){
-      const usage = savedGridUsage();
+      const usage = usageRotation();
       extras = extras.map(e => ({ e, u: usage(e), r: Math.random() }))
         .sort((a,b) => a.u - b.u || a.r - b.r).map(x => x.e);
       extended = extendGrid(best, extras, W, H, target);
@@ -1948,6 +1979,7 @@ async function loadPublished(){
   ul.innerHTML = '<li class="pub-empty">Chargement…</li>';
   try{
     const snap = await cloud.getDocs(cloud.query(cloud.collection(cloud.db, "puzzles"), cloud.orderBy("date", "desc"), cloud.limit(200)));
+    usageDepuisPuzzles(snap.docs);   // rafraîchit l'usage pour la rotation (publiées + file)
     const today = parisDate();
     const all = snap.docs.map(ds => ({ id: ds.id, data: ds.data() }));
     const futur = all.filter(x => x.id > today).sort((a, b) => a.id < b.id ? -1 : 1);   // parution ascendante
@@ -2240,6 +2272,7 @@ window.__vcPoolWords = (W, H) => {
 };
 window.__vcCluesText = () => cluesText();
 window.__vcGamePuzzle = () => puzzleForGame();
+window.__vcUsage = () => Object.fromEntries(usageParMot);   // usage des mots (grilles publiées/en file) pour la rotation
 
 /* =========================================================
    Boot

@@ -184,6 +184,26 @@ await check("file d'attente : les grilles suivantes prennent les jours suivants,
   if (cMonter !== 0) throw new Error("la tête de file (File C) ne devrait plus avoir « Monter »");
 });
 
+await check("rotation : fondée sur les grilles publiées/en file, pas sur les brouillons enregistrés", async () => {
+  await auteur.click("#tabPub");
+  await auteur.waitForSelector("#pubList li .d");
+  const avant = await auteur.evaluate(() => JSON.stringify(window.__vcUsage()));
+  if (Object.keys(JSON.parse(avant)).length === 0) throw new Error("usage des grilles publiées vide (attendu > 0)");
+  // générer puis ENREGISTRER un brouillon, sans publier
+  await auteur.click("#tabGrids");
+  await auteur.waitForSelector("#board svg g.cell");
+  await auteur.click("#genBtn");
+  await auteur.waitForSelector("#board svg g.cell");
+  const nSaved = await auteur.evaluate(() => window.__vcState().savedGrids.length);
+  await auteur.click("#saveGrid");
+  await auteur.waitForFunction(n => window.__vcState().savedGrids.length > n, nSaved);
+  // recalcul de l'usage (visite de la file) : le brouillon ne doit rien y changer
+  await auteur.click("#tabPub");
+  await auteur.waitForSelector("#pubList li .d");
+  const apres = await auteur.evaluate(() => JSON.stringify(window.__vcUsage()));
+  if (apres !== avant) throw new Error("un brouillon enregistré a modifié l'usage (seules les grilles publiées doivent compter)");
+});
+
 await check("aucune erreur JavaScript", async () => {
   if (errs.length) throw new Error(errs.join(" | "));
 });
