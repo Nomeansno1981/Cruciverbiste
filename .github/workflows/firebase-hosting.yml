@@ -46,6 +46,25 @@ jobs:
           projectId: donjons-definitions
           channelId: live
 
+      # Cloud Functions : autorite serveur sur le classement (functions/index.js).
+      # NECESSITE le plan Blaze + un compte de service avec les droits de
+      # deploiement (Cloud Functions Admin, Cloud Build, Artifact Registry,
+      # Eventarc, Service Account User). Tant que ce n'est pas en place, l'etape
+      # avertit sans bloquer. IMPORTANT : ne verrouiller les regles du classement
+      # (ci-dessous) qu'une fois cette etape reussie — sinon le classement gele.
+      - name: Publier les Cloud Functions
+        if: ${{ env.SA != '' }}
+        continue-on-error: true
+        run: |
+          printf '%s' "$SA" > "${RUNNER_TEMP}/sa-donjons.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="${RUNNER_TEMP}/sa-donjons.json"
+          if npx --yes firebase-tools@14 deploy --only functions --project donjons-definitions --non-interactive; then
+            echo "Cloud Functions publiees."
+          else
+            echo "::warning::Cloud Functions non publiees (plan Blaze requis + droits du compte de service). Voir functions/README.md."
+          fi
+          rm -f "${RUNNER_TEMP}/sa-donjons.json"
+
       # Regles Firestore (dont le classement) : versionnees dans firestore.rules.
       # Publiees automatiquement SI le compte de service a les droits requis
       # (Firebase Rules Admin + Service Usage Consumer). Sinon l'etape n'a aucun
