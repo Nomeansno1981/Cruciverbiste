@@ -20,7 +20,7 @@
   <div class="gate-card">
     <img class="mark" src="icones/heaume.svg" alt="">
     <h2>Donjons <span class="amp">&amp;</span> Définitions</h2>
-    <p class="gate-text">La grille de mots croises du jour, sur le theme du jeu de role. Connectez-vous pour jouer et garder votre progression.</p>
+    <p class="gate-text">Testez votre culture des jeux de rôle et vos talents de cruciverbiste en explorant le donjon du jour. Gagnez de l'expérience, gravissez les rangs et devenez le seigneur des catacombes.</p>
     <button class="gate-btn primary" id="gGoogle">Se connecter avec Google</button>
     <div class="gate-sep">ou</div>
     <input class="gate-field" id="gEmail" type="email" placeholder="Adresse e-mail" autocomplete="email">
@@ -164,6 +164,10 @@
     </div>
     <input type="file" id="avatarInput" accept="image/*" hidden>
     <div class="account-mail" id="accountMail"></div>
+    <div class="profile-verif" id="verifRow" hidden>
+      <span class="verif-note">Adresse e-mail non vérifiée.</span>
+      <button class="linklike" id="resendVerif" type="button">Renvoyer l'e-mail de vérification</button>
+    </div>
     <p class="pstatus" id="pStatus"></p>
     <div class="profile-row">
       <button class="gate-btn" id="closeProfile" type="button">Fermer</button>
@@ -177,7 +181,7 @@
 import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges, apercuDonjon } from "./jeu.js";
 
 import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
-import { parisDate, labelForKey, effectiveStreak, FLAME, initial, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement, showToast } from "./commun.js";
+import { parisDate, labelForKey, effectiveStreak, FLAME, initial, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement, showToast, renvoyerVerification } from "./commun.js";
 
 window.__home = { ready: false };
 const $ = id => document.getElementById(id);
@@ -208,7 +212,7 @@ async function emailLogin(create){
       try{
         auth.languageCode = "fr";                       // e-mail de confirmation en français
         await m.sendEmailVerification(cred.user);
-        showToast("Compte créé ! Un e-mail de confirmation a été envoyé à " + email + ". Pensez à vérifier vos courriers indésirables.");
+        showToast("Compte créé ! Un e-mail de confirmation a été envoyé à " + email + '. Si jamais vous ne le recevez pas, pensez à vérifier dans votre dossier "Courrier indésirable".');
       }catch(_){ /* l'envoi peut échouer (quota, réseau) : le compte reste utilisable */ }
     }
     else await m.signInWithEmailAndPassword(auth, email, pass);
@@ -224,6 +228,7 @@ $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} loc
 $("who").onclick = openProfile;
 $("closeProfile").onclick = closeProfile;
 $("saveProfile").onclick = saveProfile;
+$("resendVerif").onclick = async () => { const b = $("resendVerif"); b.disabled = true; try{ await renvoyerVerification(m, auth); } finally{ b.disabled = false; } };
 $("profileModal").addEventListener("click", e => { if(e.target === $("profileModal")) closeProfile(); });
 $("pickAvatar").onclick = () => $("avatarInput").click();
 $("removeAvatar").onclick = () => { pendingAvatar = ""; fillAvatar($("pAvatar"), "", $("pseudoInput").value || "J"); };
@@ -307,6 +312,7 @@ function openProfile(){
   fillAvatar($("pAvatar"), profile.avatar, profile.pseudo || (CU.email ? CU.email.split("@")[0] : "J"));
   $("pStatus").textContent = ""; $("pStatus").classList.remove("warn");
   $("accountMail").textContent = CU.email || "";
+  $("verifRow").hidden = !(CU.email && !CU.emailVerified);   // adresse e-mail non vérifiée : proposer le renvoi
   $("profileModal").hidden = false;
 }
 function closeProfile(){ $("profileModal").hidden = true; }
