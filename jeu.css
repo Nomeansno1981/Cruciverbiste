@@ -276,6 +276,11 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .board-home .lb-tabs{margin-bottom:10px}
 .board-home .lb-status{margin-top:8px; text-align:left}
 .hero{display:flex; flex-direction:column; gap:14px; align-items:center}
+/* torchbearer pose a cote du donjon du jour : illustration decorative, encre noire sur parchemin,
+   les pieds alignes sur le bas de la grille (align-items:flex-end) */
+.hero-stage{display:flex; align-items:flex-end; justify-content:center; gap:6px; width:100%}
+.hero-stage .hero-preview{flex:0 1 460px}
+.hero-figure{flex:0 0 296px; width:296px; height:auto; align-self:flex-end; display:block; pointer-events:none; user-select:none; -webkit-user-select:none}
 /* grande image cliquable du donjon du jour : carree (grille 15x15), le libelle
    et le bouton « Jouer » poses par-dessus, en bas */
 .hero-preview{position:relative; box-sizing:border-box; display:block; width:100%; max-width:460px; aspect-ratio:1/1; border:1px solid var(--line); border-radius:14px; background:var(--paper); overflow:hidden; text-decoration:none; box-shadow:inset 0 1px 0 #fff, 0 4px 16px rgba(28,27,20,.09); transition:box-shadow .15s ease, transform .15s ease}
@@ -380,6 +385,9 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .wrap.home{height:auto; overflow:visible; padding:8px 10px 34px; gap:14px}
   .home-stats{grid-template-columns:repeat(2,1fr)}
   .hero-foot{gap:16px}
+  /* torchbearer reduit sur mobile : reste visible mais laisse la place a la grille (bouton principal) */
+  .hero-stage{gap:5px}
+  .hero-figure{flex-basis:108px; width:108px}
   header{flex:none; border:none; padding:2px 2px 0; margin:0; gap:8px}
   .acct .mail{display:none}
   .mode{display:none}
