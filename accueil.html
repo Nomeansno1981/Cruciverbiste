@@ -76,7 +76,7 @@
         <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer le donjon du jour">
           <div class="hero-canvas" id="heroCanvas"></div>
           <div class="hero-overlay">
-            <span class="play-pill" id="playToday">Jouer</span>
+            <span class="play-pill" id="playToday">Entrer dans le donjon</span>
           </div>
         </a>
       </div>
@@ -474,13 +474,13 @@ async function buildHome(user){
   // etat de la grille du jour + libelle du compte a rebours (meme duree, message
   // different selon que le donjon du jour est explore ou non)
   if(done.has(todayKey)){
-    $("playToday").textContent = "Revoir";
+    $("playToday").textContent = "Revoir le donjon";
     $("todayState").textContent = "Résolu. Revenez demain pour le prochain.";
     $("todayState").classList.add("ok");
     $("countLabel").textContent = "Prochain donjon dans";
     $("countSub").textContent = "";
   } else {
-    $("playToday").textContent = "Jouer";
+    $("playToday").textContent = "Entrer dans le donjon";
     $("todayState").textContent = "";
     $("countLabel").textContent = "Plus que";
     $("countSub").textContent = "pour explorer le donjon";
