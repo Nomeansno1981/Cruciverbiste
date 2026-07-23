@@ -130,3 +130,19 @@ export function showToast(msg, ms){
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove("show"), ms || 9000);
 }
+
+// Renvoie l'e-mail de verification a l'utilisateur connecte (langue francaise) et
+// affiche un bandeau selon le resultat. Cable sur le bouton « Renvoyer... » du profil.
+export async function renvoyerVerification(m, auth){
+  const user = auth.currentUser;
+  if(!user) return;
+  try{
+    auth.languageCode = "fr";
+    await m.sendEmailVerification(user);
+    showToast("E-mail de vérification renvoyé à " + user.email + ".");
+  }catch(e){
+    showToast((e && e.code === "auth/too-many-requests")
+      ? "Trop de tentatives. Patientez quelques minutes avant de réessayer."
+      : "Envoi impossible pour le moment. Réessayez plus tard.");
+  }
+}
