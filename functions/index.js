@@ -1,4 +1,4 @@
-// Cloud Functions — autorité serveur sur le classement.
+// Cloud Functions (1re génération) — autorité serveur sur le classement.
 //
 // Pourquoi : jusqu'ici chaque joueur écrivait lui-même sa fiche
 // `leaderboard/{uid}`. Les règles Firestore ne peuvent pas additionner les
@@ -10,9 +10,11 @@
 //
 // Source de vérité : users/{uid}/results/{date} = { xp, date, ... }.
 // Le classement dérive : total = somme des xp ; months[YYYY-MM] = somme du mois.
+//
+// 1re génération (déclencheurs Firestore classiques + callable) : suffisante pour
+// ce besoin, et déployable avec un jeu de droits minimal côté compte de service.
 
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const functions = require("firebase-functions/v1");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
@@ -74,26 +76,26 @@ async function refreshLeaderboard(uid) {
 }
 
 // Un résultat change (ajout, correction, suppression) → on recalcule.
-exports.classementSurResultat = onDocumentWritten("users/{uid}/results/{rid}", (event) => {
-  return refreshLeaderboard(event.params.uid);
-});
+exports.classementSurResultat = functions.firestore
+  .document("users/{uid}/results/{rid}")
+  .onWrite((change, context) => refreshLeaderboard(context.params.uid));
 
 // Le profil change (surtout le pseudo, ou l'avatar) → on rafraîchit la fiche.
-exports.classementSurProfil = onDocumentWritten("users/{uid}/state/profile", (event) => {
-  return refreshLeaderboard(event.params.uid);
-});
+exports.classementSurProfil = functions.firestore
+  .document("users/{uid}/state/profile")
+  .onWrite((change, context) => refreshLeaderboard(context.params.uid));
 
 // Suspension / réactivation (/banned) → retire ou restaure la fiche.
-exports.classementSurBanni = onDocumentWritten("banned/{uid}", (event) => {
-  return refreshLeaderboard(event.params.uid);
-});
+exports.classementSurBanni = functions.firestore
+  .document("banned/{uid}")
+  .onWrite((change, context) => refreshLeaderboard(context.params.uid));
 
 // Backfill unique après le déploiement : recalcule le classement de tous les
 // joueurs existants. Réservé au compte de l'auteur. À appeler une fois.
-exports.backfillClassement = onCall(async (req) => {
-  const email = req.auth && req.auth.token && req.auth.token.email;
+exports.backfillClassement = functions.https.onCall(async (data, context) => {
+  const email = context.auth && context.auth.token && context.auth.token.email;
   if (email !== ADMIN_EMAIL) {
-    throw new HttpsError("permission-denied", "Réservé à l'auteur.");
+    throw new functions.https.HttpsError("permission-denied", "Réservé à l'auteur.");
   }
   const users = await db.collection("users").listDocuments();
   const res = [];
