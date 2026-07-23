@@ -6,6 +6,9 @@ qui tournent avec les droits admin) écrit `/leaderboard`. Les règles Firestore
 interdisent désormais l'écriture de `/leaderboard` côté joueur, si bien qu'un
 total ne peut plus être gonflé depuis la console.
 
+Fonctions en **1re génération** (déclencheurs Firestore classiques + callable) :
+suffisant pour ce besoin et déployable avec un jeu de droits minimal.
+
 ## Fonctions (`index.js`)
 
 - `classementSurResultat` — déclencheur sur `users/{uid}/results/{rid}` : recalcule.
@@ -25,9 +28,11 @@ Le total dérive de `users/{uid}/results/{date}.xp` (source de vérité, écrite
    - Cloud Functions Admin
    - Cloud Build Editor
    - Artifact Registry Administrator
-   - Eventarc Admin
    - Service Account User (sur le compte de service d'exécution `…@appspot.gserviceaccount.com`)
    - Service Usage Admin (pour activer les API au 1er déploiement)
+   - **Firebase Extensions Viewer** (lecture seule ; `firebase deploy` inspecte les
+     extensions au passage) — `roles/firebaseextensions.viewer`
+   - (Eventarc Admin n'est utile qu'en 2e génération ; inoffensif s'il est présent.)
 
 ## Séquence de mise en ligne (en deux temps, pour ne jamais geler le classement)
 
