@@ -34,16 +34,15 @@ body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:non
   background-size:240px 240px, 185px 185px, 140px 140px}
 .wrap{max-width:1040px; margin:0 auto; padding:16px 16px 40px}
 
-/* filet dessine a la main (ondule, encre verte), reutilise pour l'entete et les separateurs */
-header{display:flex; align-items:center; gap:12px; padding-bottom:13px; margin-bottom:16px; position:relative; border-bottom:none}
-header::after{content:""; position:absolute; left:0; right:0; bottom:0; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%234d7f46' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+/* filet dessine a la main (ondule, encre verte), reutilise pour les separateurs (.divider) */
+header{display:flex; align-items:center; gap:12px; margin-bottom:16px; border-bottom:none}
 .divider{display:flex; align-items:center; gap:13px; color:var(--forest); margin:2px 2px}
 .divider::before, .divider::after{content:""; flex:1; height:6px; background:repeat-x left center/130px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%234d7f46' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")}
 .dv-mark{flex:none; width:42px; height:16px; fill:currentColor}
 .brand{display:flex; align-items:center; gap:14px; min-width:0}
 a.brand{text-decoration:none; color:inherit}
-.mark{height:40px; width:auto; flex:none}   /* logo heaume : plus haut que large, on cale sur la hauteur */
-h1{font-family:var(--display); font-size:31px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap; color:var(--brand-red)}
+.mark{height:50px; width:auto; flex:none}   /* logo heaume : plus haut que large, on cale sur la hauteur */
+h1{font-family:var(--display); font-size:35px; letter-spacing:0; margin:0; font-weight:400; white-space:nowrap; color:var(--brand-red)}
 .amp{color:var(--ink); font-size:.7em; font-weight:400}   /* & du logo : noir et plus petit */
 .spacer{flex:1}
 .meta{display:flex; align-items:center; gap:12px}
