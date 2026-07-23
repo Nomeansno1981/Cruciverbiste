@@ -177,7 +177,7 @@
 import { niveauPourXp, BADGES, badgesRetroactifs, rendreBadges, compterBadges, apercuDonjon } from "./jeu.js";
 
 import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
-import { parisDate, labelForKey, effectiveStreak, FLAME, initial, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement } from "./commun.js";
+import { parisDate, labelForKey, effectiveStreak, FLAME, initial, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement, showToast } from "./commun.js";
 
 window.__home = { ready: false };
 const $ = id => document.getElementById(id);
@@ -203,7 +203,14 @@ async function emailLogin(create){
   if(!email || !pass){ warn("Renseignez une adresse e-mail et un mot de passe."); return; }
   info(create ? "Creation du compte..." : "Connexion...");
   try{
-    if(create) await m.createUserWithEmailAndPassword(auth, email, pass);
+    if(create){
+      const cred = await m.createUserWithEmailAndPassword(auth, email, pass);
+      try{
+        auth.languageCode = "fr";                       // e-mail de confirmation en français
+        await m.sendEmailVerification(cred.user);
+        showToast("Compte créé ! Un e-mail de confirmation a été envoyé à " + email + ". Pensez à vérifier vos courriers indésirables.");
+      }catch(_){ /* l'envoi peut échouer (quota, réseau) : le compte reste utilisable */ }
+    }
     else await m.signInWithEmailAndPassword(auth, email, pass);
   }catch(e){ warn(authError(e)); }
 }
