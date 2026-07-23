@@ -8,6 +8,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Donjons &amp; Définitions</title>
+<link rel="icon" href="icones/favicon.svg" type="image/svg+xml">
+<link rel="mask-icon" href="icones/favicon.svg" color="#7C1D2E">
 <link rel="preload" href="fonts/PirataOne-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="jeu.css">
 </head>
@@ -63,19 +65,23 @@
 
   <div class="tabpanel" id="panelJouer">
     <section class="hero">
-      <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer le donjon du jour" hidden></a>
-      <div class="hero-info">
-        <div class="hero-main">
-          <div class="hero-label">Le donjon du jour</div>
-          <div class="hero-date" id="heroDate"></div>
-          <a class="play-btn" id="playToday" href="donjons.html">Jouer</a>
-          <div class="hero-state" id="todayState"></div>
+      <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer le donjon du jour">
+        <div class="hero-canvas" id="heroCanvas"></div>
+        <div class="hero-overlay">
+          <span class="hero-heading">
+            <span class="hero-label">Le donjon du jour</span>
+            <span class="hero-date" id="heroDate"></span>
+          </span>
+          <span class="play-pill" id="playToday">Jouer</span>
         </div>
+      </a>
+      <div class="hero-foot">
         <div class="hero-count">
-          <div class="count-label" id="countLabel">Prochain donjon dans</div>
-          <div class="count-val" id="countdown">--:--:--</div>
-          <div class="count-sub" id="countSub"></div>
+          <span class="count-label" id="countLabel">Prochain donjon dans</span>
+          <span class="count-val" id="countdown">--:--:--</span>
+          <span class="count-sub" id="countSub"></span>
         </div>
+        <div class="hero-state" id="todayState"></div>
       </div>
     </section>
 
@@ -394,12 +400,14 @@ function startCountdown(){
 async function buildHome(user){
   const todayKey = parisDate();
   $("heroDate").textContent = labelForKey(todayKey);
-  // apercu du donjon du jour (forme seule, sans lettres) dans le cadre du jour
+  // apercu du donjon du jour (forme seule, sans lettres), en grand dans le cadre
+  // cliquable ; le cadre reste visible meme sans apercu (le libelle et « Jouer »
+  // sont poses dessus).
   try{
     const ts = await m.getDoc(m.doc(db, "puzzles", todayKey));
-    const ok = ts.exists() && apercuDonjon($("heroPreview"), (ts.data() || {}).puzzle, { cell: 30, band: 1.05 });
-    $("heroPreview").hidden = !ok;
-  }catch(e){ $("heroPreview").hidden = true; window.__home.previewError = String(e); }
+    const ok = apercuDonjon($("heroCanvas"), ts.exists() ? (ts.data() || {}).puzzle : null, { cell: 30, band: 1.05 });
+    $("heroPreview").classList.toggle("no-preview", !ok);
+  }catch(e){ window.__home.previewError = String(e); }
   startCountdown();
 
   // profil (pseudo, avatar) affiche dans l'entete, editable via la fenetre de profil
@@ -455,7 +463,7 @@ async function buildHome(user){
   // etat de la grille du jour + libelle du compte a rebours (meme duree, message
   // different selon que le donjon du jour est explore ou non)
   if(done.has(todayKey)){
-    $("playToday").textContent = "Revoir le donjon du jour";
+    $("playToday").textContent = "Revoir";
     $("todayState").textContent = "Résolu. Revenez demain pour le prochain.";
     $("todayState").classList.add("ok");
     $("countLabel").textContent = "Prochain donjon dans";
