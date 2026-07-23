@@ -76,14 +76,14 @@ const hidden = (page, sel) => page.locator(sel).evaluate(el => el.hidden === tru
 await check("jeu — joueur ordinaire : ni « Rejouer » ni « Atelier »", async () => {
   const page = await openGame("emu");
   if (!(await hidden(page, "#replayBtn"))) throw new Error("le bouton Rejouer est visible pour un joueur");
-  if (!(await hidden(page, "#atelierLink"))) throw new Error("le lien Atelier est visible pour un joueur");
+  if (!(await hidden(page, "#navAtelier"))) throw new Error("le lien Atelier est visible pour un joueur");
 });
 
 await check("jeu — auteur : « Rejouer » et « Atelier » visibles, lien vers l'atelier", async () => {
   const page = await openGame("emu-admin");
   if (await hidden(page, "#replayBtn")) throw new Error("le bouton Rejouer n'apparaît pas pour l'auteur");
-  if (await hidden(page, "#atelierLink")) throw new Error("le lien Atelier n'apparaît pas pour l'auteur");
-  const href = await page.getAttribute("#atelierLink", "href");
+  if (await hidden(page, "#navAtelier")) throw new Error("le lien Atelier n'apparaît pas pour l'auteur");
+  const href = await page.getAttribute("#navAtelier", "href");
   if (!/atelier/.test(href || "")) throw new Error("le lien Atelier ne pointe pas vers l'atelier : " + href);
 });
 
@@ -103,13 +103,13 @@ await check("jeu — auteur : « Rejouer » remet la grille à zéro", async () 
 
 await check("accueil — joueur ordinaire : pas de lien « Atelier »", async () => {
   const page = await openHome("emu");
-  if (!(await hidden(page, "#atelierLink"))) throw new Error("le lien Atelier est visible pour un joueur");
+  if (!(await hidden(page, "#navAtelier"))) throw new Error("le lien Atelier est visible pour un joueur");
 });
 
 await check("accueil — auteur : lien « Atelier » visible", async () => {
   const page = await openHome("emu-admin");
-  if (await hidden(page, "#atelierLink")) throw new Error("le lien Atelier n'apparaît pas pour l'auteur");
-  const href = await page.getAttribute("#atelierLink", "href");
+  if (await hidden(page, "#navAtelier")) throw new Error("le lien Atelier n'apparaît pas pour l'auteur");
+  const href = await page.getAttribute("#navAtelier", "href");
   if (!/atelier/.test(href || "")) throw new Error("lien Atelier inattendu : " + href);
 });
 

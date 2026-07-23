@@ -52,7 +52,8 @@
     </div>
     <div class="spacer"></div>
     <div class="meta">
-      <a class="atelier-link" id="atelierLink" href="atelier.html" hidden title="Ouvrir l'atelier (auteur)"><span aria-hidden="true">🛠️</span><span class="atelier-txt">Atelier</span></a>
+      <a class="hdr-nav" id="navAtelier" href="atelier.html" hidden title="Atelier" aria-label="Atelier"><span class="nav-ic ic-anvil" aria-hidden="true"></span></a>
+      <a class="hdr-nav" id="navAdmin" href="membres.html" hidden title="Modération des membres" aria-label="Modération"><span class="nav-ic ic-crown" aria-hidden="true"></span></a>
       <span class="streak" id="streak" hidden></span>
       <button class="who" id="who" type="button" title="Votre profil"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
     </div>
@@ -436,7 +437,7 @@ async function buildHome(user){
   let streak = 0;
   try{ const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak")); streak = effectiveStreak(s.exists() ? s.data() : null, todayKey); }catch(e){}
   const stEl = $("streak");
-  if(streak > 0){ stEl.innerHTML = FLAME + " " + streak; stEl.hidden = false; }
+  if(streak > 0){ stEl.innerHTML = '<b class="streak-n">' + streak + '</b><span class="streak-fire" aria-hidden="true"></span>'; stEl.hidden = false; stEl.title = "Série : " + streak + " jour" + (streak > 1 ? "s" : ""); }
   $("statStreak").textContent = streak;
   $("statStreakSub").textContent = streak > 1 ? "jours" : "jour";
 
@@ -536,7 +537,7 @@ m.onAuthStateChanged(auth, async user => {
     }
   }catch(e){ /* statut indetermine : on laisse jouer, les regles protegent */ }
   gate.hidden = true; $("home").hidden = false;
-  if(user.email === ADMIN_EMAIL) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
+  if(user.email === ADMIN_EMAIL){ $("navAtelier").hidden = false; $("navAdmin").hidden = false; }   // navigation auteur : atelier + modération
   if(mounted) return; mounted = true;
   try{ await buildHome(user); }catch(e){ window.__home.error = String(e); }
 });

@@ -52,7 +52,8 @@
     </a>
     <div class="spacer"></div>
     <div class="meta">
-      <a class="hdr-btn hdr-admin" id="atelierLink" href="atelier.html" hidden title="Ouvrir l'atelier (auteur)"><span aria-hidden="true">🛠️</span><span class="hdr-btn-txt">Atelier</span></a>
+      <a class="hdr-nav" id="navAtelier" href="atelier.html" hidden title="Atelier" aria-label="Atelier"><span class="nav-ic ic-anvil" aria-hidden="true"></span></a>
+      <a class="hdr-nav" id="navAdmin" href="membres.html" hidden title="Modération des membres" aria-label="Modération"><span class="nav-ic ic-crown" aria-hidden="true"></span></a>
       <span class="streak" id="streak" hidden></span>
       <span class="timer" id="timer">0:00</span>
       <button class="acct-btn" id="profileBtn" hidden><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
@@ -234,7 +235,7 @@ function nextStreakCount(doc, today){
 }
 function setStreak(n){
   const el = $("streak");
-  if(n > 0){ el.innerHTML = FLAME + " " + n; el.hidden = false; el.title = "Serie : " + n + " jour" + (n > 1 ? "s" : ""); }
+  if(n > 0){ el.innerHTML = '<b class="streak-n">' + n + '</b><span class="streak-fire" aria-hidden="true"></span>'; el.hidden = false; el.title = "Serie : " + n + " jour" + (n > 1 ? "s" : ""); }
   else { el.hidden = true; }
   window.__ddef.streak = n;
 }
@@ -495,7 +496,7 @@ m.onAuthStateChanged(auth, async user => {
   }catch(e){ /* statut indetermine : on laisse jouer, les regles protegent */ }
   gate.hidden = true;   // connecte : on masque l'ecran de connexion sans attendre le chargement de la grille
   $("profileBtn").hidden = false;
-  if(isAdmin(user)) $("atelierLink").hidden = false;   // accès direct à l'atelier, auteur seul
+  if(isAdmin(user)){ $("navAtelier").hidden = false; $("navAdmin").hidden = false; }   // navigation auteur : atelier + modération
   loadProfile();
   if(mounted) return;
   mounted = true;

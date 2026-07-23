@@ -131,21 +131,25 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .gate-row .gate-btn{flex:1}
 .gate-status{margin:0; font-size:12.5px; color:var(--muted); min-height:1.1em}
 .gate-status.warn{color:var(--accent)}
-.streak{display:inline-flex; align-items:center; gap:4px; font-size:13px; font-weight:700; color:var(--accent-ink); background:var(--accent-weak); border-radius:999px; padding:3px 10px 3px 8px}
+/* pastilles d'en-tete a fond blanc (memes hauteur/bordure/ombre au survol que .who) :
+   serie (feu rouge + nombre) et boutons de navigation (icone seule). */
+.hdr-nav,.streak{box-sizing:border-box; height:38px; background:#fff; border:1px solid var(--line); border-radius:11px; box-shadow:0 1px 2px rgba(30,27,20,.05); transition:box-shadow .15s ease, border-color .15s ease}
+.hdr-nav:hover,.streak:hover{box-shadow:0 5px 14px rgba(30,27,20,.15); border-color:#d8cfbe}
+.streak{display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; min-width:38px; padding:0 8px; text-decoration:none}
 .streak[hidden]{display:none}
-.streak svg{width:12px; height:14px; flex:none}
+.streak .streak-n{font-family:var(--sans); font-size:12px; font-weight:800; color:var(--ink); line-height:1}
+.streak .streak-fire{width:15px; height:15px; background-color:var(--accent); -webkit-mask:url(icones/rpg_v1_fire_124.svg) center/contain no-repeat; mask:url(icones/rpg_v1_fire_124.svg) center/contain no-repeat}
+.hdr-nav{display:inline-flex; align-items:center; justify-content:center; width:38px; text-decoration:none; cursor:pointer}
+.hdr-nav[hidden]{display:none}
+.hdr-nav .nav-ic{width:20px; height:20px; background-color:var(--ink); -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat}
+.hdr-nav:hover .nav-ic{background-color:var(--accent-ink)}
+.ic-anvil{--ic:url(icones/rpg_v1_anvil_39.svg)}
+.ic-dice{--ic:url(icones/rpg_v10_polyhedral_dice_92.svg)}
+.ic-crown{--ic:url(icones/rpg_v1_crown_78.svg)}
 .acct{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)}
 .acct button{font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--ink); cursor:pointer}
 
 /* ---- classement (bouton d'entete + fenetre) ---- */
-.hdr-btn{display:inline-flex; align-items:center; gap:6px; background:none; border:1px solid var(--line); border-radius:999px; padding:4px 12px; cursor:pointer; color:var(--ink); font-size:12.5px; font-weight:600}
-.hdr-btn[hidden]{display:none}
-.hdr-btn:hover{border-color:#d8cfbe}
-.hdr-btn.hdr-admin{text-decoration:none; color:var(--accent-ink); border-color:#e6cfd0}
-/* accueil : lien direct vers l'atelier (auteur seul), même allure que les pastilles d'en-tête */
-.atelier-link{display:inline-flex; align-items:center; gap:5px; text-decoration:none; background:none; border:1px solid #e6cfd0; border-radius:999px; padding:4px 12px; color:var(--accent-ink); font-size:12.5px; font-weight:600}
-.atelier-link[hidden]{display:none}
-.atelier-link:hover{border-color:#d8a9ac}
 .lb-tabs{display:flex; gap:8px}
 .lb-tab{flex:1; font-family:var(--sans); font-size:13.5px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--muted); cursor:pointer}
 .lb-tab.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
@@ -160,7 +164,8 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 .lb-status{font-size:12.5px; color:var(--muted); min-height:1em; margin:0; text-align:center}
 
 /* ---- profil (avatar, pseudo, historique) ---- */
-.acct-btn{display:inline-flex; align-items:center; gap:7px; background:none; border:1px solid var(--line); border-radius:999px; padding:3px 11px 3px 3px; cursor:pointer; color:var(--ink); font-size:12.5px; font-weight:600; max-width:170px}
+.acct-btn{display:inline-flex; align-items:center; gap:7px; box-sizing:border-box; height:38px; background:#fff; border:1px solid var(--line); border-radius:999px; box-shadow:0 1px 2px rgba(30,27,20,.05); padding:6px 12px 6px 6px; cursor:pointer; color:var(--ink); font-size:12.5px; font-weight:600; max-width:170px; transition:box-shadow .15s ease, border-color .15s ease}
+.acct-btn:hover{border-color:#d8cfbe; box-shadow:0 5px 14px rgba(30,27,20,.15)}
 .acct-btn[hidden]{display:none}
 .acct-btn .pseudo{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .avatar{width:26px; height:26px; border-radius:50%; background:var(--accent-weak); color:var(--accent-ink); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; overflow:hidden; flex:none}
@@ -253,8 +258,8 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 /* fenêtre de compte : e-mail + déconnexion */
 .account-mail{font-family:var(--mono); font-size:12.5px; color:var(--muted); word-break:break-all}
 .profile-signout{margin-top:12px; padding-top:12px; border-top:1px solid var(--line); text-align:center}
-.who{display:inline-flex; align-items:center; gap:7px; background:none; border:1px solid var(--line); border-radius:999px; padding:3px 11px 3px 3px; color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:600; max-width:180px; cursor:pointer}
-.who:hover{border-color:#d8cfbe}
+.who{display:inline-flex; align-items:center; gap:7px; box-sizing:border-box; height:38px; background:#fff; border:1px solid var(--line); border-radius:999px; box-shadow:0 1px 2px rgba(30,27,20,.05); padding:6px 12px 6px 6px; color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:600; max-width:180px; cursor:pointer; transition:box-shadow .15s ease, border-color .15s ease}
+.who:hover{border-color:#d8cfbe; box-shadow:0 5px 14px rgba(30,27,20,.15)}
 .who .pseudo{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 /* classement affiche directement sur l'accueil (reutilise les styles .lb-*) */
 .board-home .lb-tabs{margin-bottom:10px}
@@ -360,11 +365,17 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   .acct .mail{display:none}
   .mode{display:none}
   .timer{display:none}                                  /* barre du haut allégée : le temps est masqué */
-  .brand{gap:9px}                                       /* le titre revient à côté du logo : on resserre l'écart */
-  .hdr-btn-txt,.atelier-txt{display:none}               /* lien atelier : icône seule sur mobile, pour laisser la place au titre */
-  .hdr-btn,.atelier-link{gap:0; padding:4px 9px}        /* pastille atelier compacte (icône seule) */
-  .acct-btn,.who{max-width:112px}                       /* le pseudo se tronque (…) : le titre passe avant le compte */
-  h1{font-size:20px}
+  .brand{gap:9px; min-width:0}                          /* le titre revient à côté du logo : on resserre l'écart */
+  .brand > div{min-width:0}
+  .mark{height:40px}                                    /* logo un peu plus petit sur mobile, place aux pastilles */
+  .hdr-nav,.streak,.who,.acct-btn{height:32px}          /* pastilles d'en-tete compactes sur mobile */
+  .hdr-nav{width:32px}
+  .hdr-nav .nav-ic{width:17px; height:17px}
+  .streak{min-width:32px; padding:0 6px}
+  .streak .streak-fire{width:13px; height:13px}
+  .streak .streak-n{font-size:11px}
+  .acct-btn,.who{max-width:104px}                       /* le pseudo se tronque (…) : le titre passe avant le compte */
+  h1{font-size:20px; overflow:hidden; text-overflow:ellipsis}   /* le titre se tronque au lieu de chevaucher les pastilles */
   .layout{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:7px; width:100%}
   .gridarea{flex:1; min-height:0}
   .aside{display:none}
