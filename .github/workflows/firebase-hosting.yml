@@ -58,7 +58,7 @@ jobs:
         run: |
           printf '%s' "$SA" > "${RUNNER_TEMP}/sa-donjons.json"
           export GOOGLE_APPLICATION_CREDENTIALS="${RUNNER_TEMP}/sa-donjons.json"
-          if npx --yes firebase-tools@14 deploy --only functions --project donjons-definitions --non-interactive; then
+          if npx --yes firebase-tools@14 deploy --only functions --project donjons-definitions --non-interactive --force; then
             echo "Cloud Functions publiees."
           else
             echo "::warning::Cloud Functions non publiees (plan Blaze requis + droits du compte de service). Voir functions/README.md."

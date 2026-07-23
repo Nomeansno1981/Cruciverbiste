@@ -331,20 +331,16 @@ function renderBadges(){
 // ---- classement (mensuel + cumule), affiche directement sur l'accueil ----
 function escapeHtml(s){ return (s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
 function monthKeyNow(){ return parisDate().slice(0, 7); }
-// publie la fiche de classement (voir publierClassement dans commun.js) puis
-// reflete aussitot le nouveau pseudo/total dans le tableau deja affiche.
+// Calcule le total du joueur (myBoard) pour l'affichage. Le classement lui-meme
+// est desormais ecrit cote serveur (Cloud Function) a partir des resultats ;
+// renderBoard integre myBoard pour que le joueur se voie aussitot, sans attendre
+// que la Function ait ecrit sa fiche.
 async function updateLeaderboard(){
   if(!CU) return;
   try{
     const { pseudo, total, months } = await publierClassement(m, db, CU, profile);
     window.__home.myBoard = { pseudo, total, months };
-    // refleter aussitot le nouveau pseudo/total dans le tableau deja affiche (sans recharger)
-    if(lbCache){
-      const mine = lbCache.find(e => e.uid === CU.uid);
-      if(mine){ mine.pseudo = pseudo; mine.total = total; mine.months = months; }
-      else if(total > 0){ lbCache.push({ uid: CU.uid, pseudo, total, months }); }
-      renderBoard();
-    }
+    if(lbCache) renderBoard();
   }catch(e){ window.__home.leaderboardError = String(e); }
 }
 let lbCache = null, lbTab = "month";
@@ -365,7 +361,17 @@ function setLbTab(tab){
 }
 function renderBoard(){
   const mk = monthKeyNow();
-  const rows = (lbCache || [])
+  // Le classement est ecrit cote serveur (Cloud Function) avec un court delai
+  // apres la resolution : on complete toujours avec le total local du joueur
+  // (myBoard) pour qu'il se voie aussitot, sans attendre la Function.
+  const src = (lbCache || []).slice();
+  const mb = window.__home.myBoard;
+  if(CU && mb && (mb.total || 0) > 0){
+    const mine = src.find(e => e.uid === CU.uid);
+    if(mine){ if((mb.total || 0) >= (mine.total || 0)){ mine.pseudo = mb.pseudo; mine.total = mb.total; mine.months = mb.months; } }
+    else { src.push({ uid: CU.uid, pseudo: mb.pseudo, total: mb.total, months: mb.months }); }
+  }
+  const rows = src
     .map(e => ({ uid: e.uid, pseudo: e.pseudo, val: lbTab === "month" ? (e.months[mk] || 0) : e.total }))
     .filter(e => e.val > 0)
     .sort((a, b) => b.val - a.val);
@@ -504,7 +510,11 @@ async function buildHome(user){
     window.__home.archiveCount = n;
   }catch(e){ ul.innerHTML = '<li class="gl-empty">Liste indisponible pour l\'instant.</li>'; window.__home.archiveError = String(e); }
 
-  // classement affiche directement sur l'accueil (onglet du mois par defaut)
+  // classement affiche directement sur l'accueil (onglet du mois par defaut).
+  // On calcule d'abord le total local du joueur (myBoard) pour qu'il figure
+  // aussitot au tableau : sa fiche serveur est ecrite par la Cloud Function avec
+  // un court delai apres sa resolution, mais renderBoard integre myBoard.
+  await updateLeaderboard();
   await loadBoard();
 
   window.__home.ready = true;

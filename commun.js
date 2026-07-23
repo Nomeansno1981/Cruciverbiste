@@ -87,10 +87,16 @@ export function fmtHms(t){
 }
 
 // ---- classement ----
-// (re)publie la fiche de classement du joueur : pseudo, XP totale et XP par
-// mois, recalculées à partir de toutes ses grilles réussies (robuste aux
-// reprises). N'écrit que si le total est positif. Renvoie { pseudo, total,
-// months } pour que l'appelant rafraîchisse l'affichage.
+// Recalcule le classement du joueur (pseudo, XP totale et XP par mois) à partir
+// de toutes ses grilles réussies, et renvoie { pseudo, total, months } pour un
+// affichage immédiat (mise à jour optimiste du tableau côté appelant).
+//
+// N'ÉCRIT PLUS /leaderboard : la fiche est désormais écrite côté serveur par une
+// Cloud Function (autorité serveur) à partir des mêmes résultats, peu après
+// l'enregistrement du résultat. Les règles refusent l'écriture côté joueur, si
+// bien qu'un total ne peut plus être gonflé depuis la console. Le calcul local
+// ci-dessous reste utile pour refléter aussitôt le nouveau total sans attendre
+// la Function ni recharger la page.
 export async function publierClassement(m, db, user, profile){
   const snap = await m.getDocs(m.collection(db, "users", user.uid, "results"));
   let total = 0; const months = {};
@@ -102,6 +108,5 @@ export async function publierClassement(m, db, user, profile){
     if(/^\d{4}-\d{2}$/.test(mk)) months[mk] = (months[mk] || 0) + d.xp;
   });
   const pseudo = (profile && profile.pseudo) || (user.email ? user.email.split("@")[0].slice(0, 40) : "Joueur");
-  if(total > 0){ await m.setDoc(m.doc(db, "leaderboard", user.uid), { pseudo, total, months, updatedAt: m.serverTimestamp() }); }
   return { pseudo, total, months };
 }

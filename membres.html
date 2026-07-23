@@ -401,7 +401,8 @@ function disarmAll(){ for(const d of disarmers) d(); }
 window.__mod.seedSelf = async (pseudo, total) => {
   const u = auth.currentUser; if(!u) return { err: "no-user" };
   const out = { uid: u.uid };
-  try{ await m.setDoc(m.doc(db, "leaderboard", u.uid), { pseudo, total: total || 0, months: {}, updatedAt: m.serverTimestamp() }); out.lb = "ok"; }catch(e){ out.lb = (e && e.code) || String(e); }
+  // Le classement n'est plus écrit côté joueur (autorité serveur) : on alimente
+  // profil + résultat ; la fiche /leaderboard est dérivée par la Cloud Function.
   try{ await m.setDoc(m.doc(db, "users", u.uid, "state", "profile"), { pseudo }); out.profile = "ok"; }catch(e){ out.profile = (e && e.code) || String(e); }
   try{ await m.setDoc(m.doc(db, "users", u.uid, "results", "2025-01-01"), { solved: true, seconds: 200, xp: total || 0, hints: 0, solutions: 0, words: 10, date: "2025-01-01" }); out.result = "ok"; }catch(e){ out.result = (e && e.code) || String(e); }
   return out;
