@@ -1,0 +1,11 @@
+{
+  "name": "donjons-functions",
+  "description": "Cloud Functions : autorité serveur sur le classement (recalcul de l'XP depuis les résultats)",
+  "engines": { "node": "22" },
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.2"
+  }
+}
