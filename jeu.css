@@ -98,10 +98,10 @@ ol li.on{background:var(--sun-weak)}
 ol li.filled{color:var(--muted)}
 
 .tools{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
-button.tool{font-family:var(--sans); font-size:13px; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--ink); cursor:pointer}
-button.tool:hover{border-color:#d8cfbe}
+button.tool{font-family:var(--serif); font-variant:small-caps; letter-spacing:.03em; font-size:16px; padding:7px 18px; border:1.5px solid var(--ink); border-radius:8px; background:var(--panel); color:var(--ink); cursor:pointer; box-shadow:0 1.5px 0 rgba(33,32,28,.2); transition:background .12s ease, color .12s ease, border-color .12s ease}
+button.tool:hover{background:var(--accent); color:var(--blanc); border-color:var(--accent)}
 /* outils réservés à l'auteur : teinte accent discrète pour les distinguer */
-button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
+button.tool.tool-admin{color:var(--accent-ink); border-color:var(--accent-ink); border-style:dashed}
 
 /* clavier integre (masque sur ordinateur) */
 .kbd{display:none; flex-direction:column; gap:6px; width:100%; max-width:560px; touch-action:none}
@@ -358,7 +358,10 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
    et les outils restent visibles sans defiler ; le panneau des definitions
    defile de facon autonome. ---- */
 @media (min-width:860px){
-  .wrap.game{max-width:1180px; height:100dvh; overflow:hidden; display:flex; flex-direction:column; padding-bottom:10px}
+  /* overflow visible (et non hidden) pour laisser le bandeau encre déborder en
+     pleine largeur ; la grille est dimensionnée pour tenir, donc rien d'autre ne
+     dépasse la hauteur d'écran. */
+  .wrap.game{max-width:1180px; height:100dvh; overflow:visible; display:flex; flex-direction:column; padding-bottom:10px}
   .wrap.game header{flex:none}
   .layout{
     flex:1; min-height:0;
@@ -400,6 +403,9 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 @media (max-width:859px){
   html,body{height:100%; overflow:hidden; overscroll-behavior:none}
   .wrap{max-width:none; height:100dvh; padding:6px 6px 0; display:flex; flex-direction:column; gap:7px}
+  /* jeu mobile : bandeau plein écran mais compact (tenue verticale serrée) */
+  .wrap.game header{margin:-6px calc(50% - 50vw) 6px; padding:6px 12px}
+  .wrap.game .game-topbar{margin:0 2px 2px}
   /* la page d'accueil defile normalement (ce n'est pas le jeu plein ecran) */
   html:has(.page-accueil){height:auto; min-height:100%; overflow:visible}
   /* le corps clippe le debordement horizontal (infobulles de badges qui depassent a droite)
@@ -490,11 +496,10 @@ header .brand, header .meta, header .spacer{position:relative; z-index:1}
 header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
 header .amp{color:var(--accent)}  /* le & en brique : accent */
 header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
-header .timer{color:var(--sun)}   /* compte à rebours de la partie, lisible sur l'encre (or) */
-/* Jeu (donjons/jouer) : bandeau CONTENU (pas pleine largeur) et compact, pour
-   préserver la tenue verticale de la partie et éviter le rognage (wrap.game
-   est overflow:hidden). */
-.wrap.game header{margin:-16px 0 12px; padding:9px 14px}
+/* Jeu : le chrono sort du bandeau — fine barre à droite, juste dessous. */
+.game-topbar{display:flex; justify-content:flex-end; align-items:center; min-height:0; margin:2px 2px 4px}
+.game-topbar .timer{font-family:var(--serif); font-size:17px; font-weight:400; color:var(--accent-ink); font-variant-numeric:tabular-nums}
+.game-topbar:empty{display:none}
 /* nouvelle flamme de la série (accueil) */
 .streak .streak-fire{-webkit-mask:url(icones/flamme.svg) center/contain no-repeat; mask:url(icones/flamme.svg) center/contain no-repeat}
 .streak .streak-n{font-family:var(--serif); font-weight:400; font-size:26px; top:60%; z-index:3; color:var(--blanc); text-shadow:0 1px 2px rgba(40,10,8,.75)}
