@@ -6,11 +6,14 @@
 @font-face{font-family:'IM Fell English';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IMFellEnglish-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'IM Fell English';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/IMFellEnglish-italic-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
-  --paper:#FAF9F5; --panel:#FFFFFF; --ink:#1C1B19; --muted:#74706A;
-  --line:#E7E1D5; --accent:#7C1D2E; --accent-weak:#F4E7E9; --accent-ink:#5E1522; --danger:#8A2432;
-  --sun:#F2C14E; --sun-weak:#FBEFC9;
-  --brand-red:#C4161C;   /* rouge du logo (titre de marque), plus vif que l'accent */
-  --forest:#4d7f46; --forest-ink:#4d7f46; --forest-weak:#E4ECE1;   /* second accent : vert (titres, separateurs) */
+  /* Identité « fanzine OSR » — palette resserrée, valable sur TOUTES les pages.
+     Une brique (--accent), un vert (--forest), une encre (--ink), un blanc (--blanc). */
+  --paper:#ece7db; --panel:#F2ECDB; --blanc:#fffefc; --ink:#21201C; --muted:#6E685B;
+  --line:#D4C9AE; --accent:#A7412A; --accent-weak:#E7D9C0; --accent-ink:#83301E; --danger:#8A2E22;
+  --sun:#C79A3E; --sun-weak:#EBDCB4;
+  --brand-red:var(--accent);   /* flamme / logo = brique */
+  --forest:#52832f; --forest-ink:var(--forest); --forest-weak:#DED9C2;   /* vert unique : titres, séparateurs, pastille */
+  --tr-parch:#ded8cd;          /* points de trame : à peine plus sombres que le parchemin */
   --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
   --serif:"IM Fell English",Iowan Old Style,Palatino,Georgia,serif;
   --display:"Pirata One",Palatino,Georgia,serif;   /* police d'affichage (titres) */
@@ -462,34 +465,39 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
 }
 /* Plus de trame sur tout le fond : parchemin nu. La texture n'apparaît que par
    zones (bandeau, bande sous le bandeau). On neutralise le grain de base. */
-body.page-accueil::before{display:none}
+body::before{display:none}
 
 /* ---- Bandeau d'entête : encre pleine largeur, titre crème, bord déchiré ---- */
 .page-accueil .wrap.home{position:relative}
-.page-accueil header{
+header{
   position:relative; overflow:visible; z-index:2;
   margin:-16px calc(50% - 50vw) 18px; padding:16px max(16px, calc(50vw - 520px)) 20px;
   background:var(--ink); border-bottom:none; gap:14px;
 }
 /* accent marqué : trame brique clairsemée sur l'encre du bandeau */
-.page-accueil header::before{
+header::before{
   content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
   background-color:var(--accent);
   -webkit-mask:url(icones/trame-banner.svg) 0 0/2160px 324px repeat; mask:url(icones/trame-banner.svg) 0 0/2160px 324px repeat;
 }
 /* bord inférieur : ondulation douce (déchirure discrète) */
-.page-accueil header::after{
+header::after{
   content:""; position:absolute; left:0; right:0; top:100%; height:11px; z-index:0; pointer-events:none;
   background:var(--ink);
   -webkit-mask:url(icones/deckle.svg) 0 0/1200px 11px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 11px repeat-x;
 }
-.page-accueil header .brand, .page-accueil header .meta, .page-accueil header .spacer{position:relative; z-index:1}
-.page-accueil header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
-.page-accueil header .amp{color:var(--accent)}  /* le & en brique : accent */
-.page-accueil header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
+header .brand, header .meta, header .spacer{position:relative; z-index:1}
+header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
+header .amp{color:var(--accent)}  /* le & en brique : accent */
+header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
+header .timer{color:var(--sun)}   /* compte à rebours de la partie, lisible sur l'encre (or) */
+/* Jeu (donjons/jouer) : bandeau CONTENU (pas pleine largeur) et compact, pour
+   préserver la tenue verticale de la partie et éviter le rognage (wrap.game
+   est overflow:hidden). */
+.wrap.game header{margin:-16px 0 12px; padding:9px 14px}
 /* nouvelle flamme de la série (accueil) */
-.page-accueil .streak .streak-fire{-webkit-mask:url(icones/flamme.svg) center/contain no-repeat; mask:url(icones/flamme.svg) center/contain no-repeat}
-.page-accueil .streak .streak-n{font-family:var(--serif); font-weight:400; font-size:26px; top:60%; z-index:3; color:var(--blanc); text-shadow:0 1px 2px rgba(40,10,8,.75)}
+.streak .streak-fire{-webkit-mask:url(icones/flamme.svg) center/contain no-repeat; mask:url(icones/flamme.svg) center/contain no-repeat}
+.streak .streak-n{font-family:var(--serif); font-weight:400; font-size:26px; top:60%; z-index:3; color:var(--blanc); text-shadow:0 1px 2px rgba(40,10,8,.75)}
 
 /* Bande de trame sous le bandeau : halftone incliné 30° (couche interne) fondu
    verticalement (couche externe) — la texture « déborde » du noir puis se dissout. */
@@ -529,7 +537,7 @@ body.page-accueil::before{display:none}
 .page-accueil .hero-date{font-size:18px; margin-top:10px}
 .page-accueil .archive h2, .page-accueil .board-home h2{color:var(--forest-ink)}
 /* séparateur : filet en --forest (lime), recolorable via masque */
-.page-accueil .divider::before, .page-accueil .divider::after{
+.divider::before, .divider::after{
   background:var(--forest);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") left center/130px 6px repeat-x;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") left center/130px 6px repeat-x;
@@ -600,9 +608,9 @@ body.page-accueil::before{display:none}
 .page-accueil .gl-item.done .gl-tag{color:var(--forest-ink)}
 
 /* ---- Écran de connexion : parchemin nu + carte texturée ---- */
-.page-accueil #authGate, .page-accueil #suspended{background-image:none; background-color:var(--paper)}
-.page-accueil .gate-card{position:relative; z-index:1; background:var(--panel); box-shadow:0 6px 26px rgba(33,32,28,.14)}
-.page-accueil .gate-card h2{color:var(--ink)}
+#authGate, #suspended{background-image:none; background-color:var(--paper)}
+.gate-card{position:relative; z-index:1; background:var(--panel); box-shadow:0 6px 26px rgba(33,32,28,.14)}
+.gate-card h2{color:var(--ink)}
 .page-accueil .gate-btn.primary{background:var(--accent); border-color:var(--accent)}
 
 @media (max-width:859px){
