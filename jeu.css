@@ -458,7 +458,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   --danger:#8A2E22;
   --forest:#52832f; --forest-ink:var(--forest); --forest-weak:#DED9C2;   /* vert unique : titres, séparateur, pastille */
   --sun:#C79A3E; --sun-weak:#EBDCB4;                               /* or */
-  --tr-parch:#e4ded0;       /* points de trame : à peine plus sombres que le parchemin */
+  --tr-parch:#ded8cd;       /* points de trame : à peine plus sombres que le parchemin */
 }
 /* Plus de trame sur tout le fond : parchemin nu. La texture n'apparaît que par
    zones (bandeau, bande sous le bandeau). On neutralise le grain de base. */
@@ -475,7 +475,7 @@ body.page-accueil::before{display:none}
 .page-accueil header::before{
   content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
   background-color:var(--accent);
-  -webkit-mask:url(icones/trame.svg) 0 0/900px 900px repeat; mask:url(icones/trame.svg) 0 0/900px 900px repeat;
+  -webkit-mask:url(icones/trame-banner.svg) 0 0/2160px 324px repeat; mask:url(icones/trame-banner.svg) 0 0/2160px 324px repeat;
 }
 /* bord inférieur : ondulation douce (déchirure discrète) */
 .page-accueil header::after{
@@ -489,6 +489,7 @@ body.page-accueil::before{display:none}
 .page-accueil header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
 /* nouvelle flamme de la série (accueil) */
 .page-accueil .streak .streak-fire{-webkit-mask:url(icones/flamme.svg) center/contain no-repeat; mask:url(icones/flamme.svg) center/contain no-repeat}
+.page-accueil .streak .streak-n{font-family:var(--serif); font-weight:400; font-size:26px; top:60%; z-index:3; color:var(--blanc); text-shadow:0 1px 2px rgba(40,10,8,.75)}
 
 /* Bande de trame sous le bandeau : halftone incliné 30° (couche interne) fondu
    verticalement (couche externe) — la texture « déborde » du noir puis se dissout. */
@@ -573,7 +574,7 @@ body.page-accueil::before{display:none}
 .page-accueil .count-label, .page-accueil .count-sub{
   display:inline; font-family:var(--serif); font-variant:small-caps; text-transform:none; letter-spacing:.03em; font-size:16px; color:var(--muted);
 }
-.page-accueil .count-val{display:inline; font-family:var(--serif); font-size:32px; font-weight:400; color:var(--accent-ink); margin:0 .28em}
+.page-accueil .count-val{display:inline; font-family:var(--serif); font-size:32px; font-weight:400; color:var(--accent); margin:0 .28em}
 
 /* ---- Cartes « Donjons précédents » : cadre tracé main + texte thémé + jour capitalisé ---- */
 .page-accueil .gl-item a{position:relative; border-color:transparent; background:var(--blanc); transition:transform .15s ease, box-shadow .15s ease}
