@@ -16,6 +16,15 @@
 </head>
 <body class="page-accueil">
 
+<!-- Filtre « tracé main » : léger tremblé appliqué UNIQUEMENT aux filets/cadres
+     décoratifs (jamais au texte ni à la carte du donjon). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="ddRough" x="-6%" y="-6%" width="112%" height="112%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.015" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
 <div id="authGate" hidden>
   <div class="gate-card">
     <img class="mark" src="icones/heaume.svg" alt="">
@@ -58,6 +67,7 @@
       <button class="who" id="who" type="button" title="Votre profil"><span class="avatar" id="hdrAvatar"></span><span class="pseudo" id="hdrPseudo"></span></button>
     </div>
   </header>
+  <div class="banner-trame" aria-hidden="true"><i></i></div>
 
   <nav class="home-tabs" role="tablist" aria-label="Sections">
     <button class="home-tab on" id="tabJouer" type="button" role="tab" aria-selected="true">Jouer</button>
@@ -71,6 +81,7 @@
         <h2 class="hero-title">Le donjon du jour</h2>
         <div class="hero-date" id="heroDate"></div>
       </div>
+      <div class="today-banner" id="todayState"></div>
       <div class="hero-stage">
         <img class="hero-figure" src="icones/torchbearer.svg" alt="" aria-hidden="true" width="563" height="775">
         <a class="hero-preview" id="heroPreview" href="donjons.html" aria-label="Jouer le donjon du jour">
@@ -86,7 +97,6 @@
           <span class="count-val" id="countdown">--:--:--</span>
           <span class="count-sub" id="countSub"></span>
         </div>
-        <div class="hero-state" id="todayState"></div>
       </div>
     </section>
 
@@ -443,10 +453,10 @@ async function buildHome(user){
   // resultats du joueur : dates faites, total d'XP, et historique complet (rattrapage badges)
   const done = new Set();
   const allResults = [];
-  let totalXp = 0;
+  let totalXp = 0, xpToday = null;
   try{
     const rs = await m.getDocs(m.collection(db, "users", user.uid, "results"));
-    rs.forEach(ds => { const d = ds.data(); allResults.push(d); if(d && d.solved){ done.add(ds.id); if(typeof d.xp === "number") totalXp += d.xp; } });
+    rs.forEach(ds => { const d = ds.data(); allResults.push(d); if(d && d.solved){ done.add(ds.id); if(typeof d.xp === "number"){ totalXp += d.xp; if(ds.id === todayKey) xpToday = d.xp; } } });
   }catch(e){}
   window.__home.doneDates = Array.from(done);
 
@@ -489,8 +499,7 @@ async function buildHome(user){
   // different selon que le donjon du jour est explore ou non)
   if(done.has(todayKey)){
     $("playToday").textContent = "Revoir le donjon";
-    $("todayState").textContent = "Résolu. Revenez demain pour le prochain.";
-    $("todayState").classList.add("ok");
+    $("todayState").innerHTML = "✔︎ Donjon du jour résolu" + (xpToday != null ? " <b>· " + xpToday + " XP</b>" : "");
     $("countLabel").textContent = "Prochain donjon dans";
     $("countSub").textContent = "";
   } else {
