@@ -460,64 +460,107 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   --tr-parch:#DCD3BB;       /* points sur parchemin : à peine plus sombre */
   --encre:#21201C; --encre2:#2E2C27; --brique:#A7412A;
 }
-
-/* Trame de fond parchemin : halftone régulier incliné 30°, recoloré via masque,
-   faible contraste (ne gêne pas la lecture), figé derrière tout le contenu. */
-body.page-accueil::before{
-  content:""; position:fixed; inset:-30%; z-index:-1; pointer-events:none;
-  background-image:none; background-color:var(--tr-parch);
-  -webkit-mask:url(icones/trame.svg) 0 0/560px 560px repeat; mask:url(icones/trame.svg) 0 0/560px 560px repeat;
-  transform:rotate(30deg);
-}
+/* Plus de trame sur tout le fond : parchemin nu. La texture n'apparaît que par
+   zones (bandeau, bande sous le bandeau). On neutralise le grain de base. */
+body.page-accueil::before{display:none}
 
 /* ---- Bandeau d'entête : encre pleine largeur, titre crème, bord déchiré ---- */
+.page-accueil .wrap.home{position:relative}
 .page-accueil header{
-  position:relative; overflow:visible; z-index:1;
-  margin:-16px calc(50% - 50vw) 34px; padding:16px max(16px, calc(50vw - 520px)) 20px;
+  position:relative; overflow:visible; z-index:2;
+  margin:-16px calc(50% - 50vw) 30px; padding:16px max(16px, calc(50vw - 520px)) 20px;
   background:var(--encre); border-bottom:none; gap:14px;
 }
-/* accent : trame brique clairsemée sur l'encre du bandeau (contraste fort assumé) */
+/* accent marqué : trame brique clairsemée sur l'encre du bandeau */
 .page-accueil header::before{
   content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
   background-color:var(--brique);
   -webkit-mask:url(icones/trame.svg) 0 0/460px 460px repeat; mask:url(icones/trame.svg) 0 0/460px 460px repeat;
-  -webkit-mask-composite:source-in;
 }
-/* bord inférieur déchiré / tremblant : frange d'encre suspendue sous le bandeau */
+/* bord inférieur : ondulation douce (déchirure discrète) */
 .page-accueil header::after{
-  content:""; position:absolute; left:0; right:0; top:100%; height:22px; z-index:0; pointer-events:none;
+  content:""; position:absolute; left:0; right:0; top:100%; height:20px; z-index:0; pointer-events:none;
   background:var(--encre);
-  -webkit-mask:url(icones/deckle.svg) 0 0/1200px 22px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 22px repeat-x;
+  -webkit-mask:url(icones/deckle.svg) 0 0/1200px 20px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 20px repeat-x;
 }
 .page-accueil header .brand, .page-accueil header .meta, .page-accueil header .spacer{position:relative; z-index:1}
 .page-accueil header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
 .page-accueil header .amp{color:var(--brique)}  /* le & en brique : accent */
 .page-accueil header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
 
-/* ---- Titres de section : Pirata encré, filet olive dessous ---- */
-.page-accueil .hero-title{color:var(--ink)}
+/* Bande de trame sous le bandeau : halftone incliné 30° (couche interne) fondu
+   verticalement (couche externe) — la texture « déborde » du noir puis se dissout. */
+.page-accueil .banner-trame{
+  position:absolute; top:0; left:calc(50% - 50vw); width:100vw; height:330px; z-index:0; overflow:hidden; pointer-events:none;
+  -webkit-mask:linear-gradient(#000 0, #000 30%, transparent 100%); mask:linear-gradient(#000 0, #000 30%, transparent 100%);
+}
+.page-accueil .banner-trame i{
+  content:""; position:absolute; inset:-30%; display:block; background-color:var(--tr-parch);
+  -webkit-mask:url(icones/trame.svg) 0 0/470px 470px repeat; mask:url(icones/trame.svg) 0 0/470px 470px repeat;
+  transform:rotate(30deg);
+}
+.page-accueil .home-tabs, .page-accueil .tabpanel{position:relative; z-index:1}
+
+/* ---- Menu d'onglets : Pirata encré, actif en brique ---- */
+.page-accueil .home-tabs{border-bottom:2px solid var(--ink); gap:6px; margin-top:2px}
+.page-accueil .home-tab{
+  font-family:var(--display); font-weight:400; font-size:23px; letter-spacing:.01em;
+  color:var(--muted); padding:6px 18px 7px; border-bottom:3px solid transparent; margin-bottom:-2px;
+}
+.page-accueil .home-tab:hover{color:var(--ink)}
+.page-accueil .home-tab.on{color:var(--accent); border-bottom-color:var(--accent)}
+
+/* ---- Titres : « Le donjon du jour » en rouge (brique) ; sections en olive ---- */
+.page-accueil .hero-title{color:var(--accent)}
 .page-accueil .archive h2, .page-accueil .board-home h2{color:var(--forest-ink)}
 
-/* ---- Cadre tracé main autour de l'aperçu du donjon (le wobble ne touche que
-   le filet, jamais la carte du donjon) ---- */
+/* ---- Pastille « donjon résolu » AU-DESSUS de l'image ---- */
+.page-accueil .today-banner{
+  align-self:center; display:inline-flex; align-items:center; gap:7px;
+  background:var(--forest); color:#F1E7CE; font-family:var(--serif); font-size:15px; line-height:1;
+  padding:8px 16px; border-radius:999px; box-shadow:0 3px 10px rgba(45,50,25,.28);
+}
+.page-accueil .today-banner:empty{display:none}
+.page-accueil .today-banner b{font-weight:700}
+
+/* ---- Cadre ROUGE tracé main autour de l'aperçu du jour (le wobble ne touche
+   que le filet, jamais la carte du donjon) ---- */
 .page-accueil .hero-preview{border-color:transparent; background:var(--panel); box-shadow:0 4px 16px rgba(33,32,28,.16)}
 .page-accueil .hero-preview::before{
   content:""; position:absolute; inset:3px; z-index:3; pointer-events:none;
-  border:2px solid var(--ink); border-radius:9px; filter:url(#ddRough);
+  border:2.5px solid var(--accent); border-radius:9px; filter:url(#ddRough);
 }
 .page-accueil .hero-canvas{background:var(--panel)}
 .page-accueil .hero-overlay{background:linear-gradient(180deg, rgba(242,236,219,0), rgba(242,236,219,.55) 50%, rgba(242,236,219,.97))}
 
-/* ---- Écran de connexion : même costume (parchemin + trame + brique) ---- */
-.page-accueil #authGate, .page-accueil #suspended{
-  background-image:none; background-color:var(--paper);
+/* ---- Bouton d'entrée : vert olive (visible mais raccord palette), sans halo néon ---- */
+.page-accueil .play-pill{
+  background:linear-gradient(180deg,#6E7F3C,#495B27); color:#F3EAD3; border-color:rgba(241,231,206,.35);
+  box-shadow:0 6px 18px rgba(58,72,28,.45), inset 0 1px 0 rgba(255,255,255,.22); animation:none;
 }
-.page-accueil #authGate::before, .page-accueil #suspended::before{
-  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
-  background-color:var(--tr-parch);
-  -webkit-mask:url(icones/trame.svg) 0 0/560px 560px repeat; mask:url(icones/trame.svg) 0 0/560px 560px repeat;
-  transform:rotate(30deg);
+.page-accueil .hero-preview:hover .play-pill{background:linear-gradient(180deg,#7C8E46,#54682E)}
+
+/* ---- Compte à rebours : typographie raccord (serif, plus de mono) ---- */
+.page-accueil .count-label, .page-accueil .count-sub{
+  font-family:var(--serif); font-variant:small-caps; text-transform:none; letter-spacing:.03em; font-size:14px; color:var(--muted);
 }
+.page-accueil .count-val{font-family:var(--serif); font-size:32px; font-weight:400; color:var(--accent-ink)}
+
+/* ---- Cartes « Donjons précédents » : cadre tracé main + texte thémé + jour capitalisé ---- */
+.page-accueil .gl-item a{position:relative; border-color:transparent; background:var(--panel)}
+.page-accueil .gl-item a::after{
+  content:""; position:absolute; inset:2px; z-index:2; pointer-events:none;
+  border:1.5px solid var(--ink); border-radius:9px; filter:url(#ddRough);
+}
+.page-accueil .gl-item a:hover{background:#F6F0DF}
+.page-accueil .gl-preview{background:var(--paper); border-color:var(--line)}
+.page-accueil .gl-title{font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--ink)}
+.page-accueil .gl-date{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); text-transform:capitalize}
+.page-accueil .gl-tag{font-family:var(--serif); font-variant:small-caps; letter-spacing:.03em; font-size:13.5px; color:var(--muted)}
+.page-accueil .gl-item.done .gl-tag{color:var(--forest-ink)}
+
+/* ---- Écran de connexion : parchemin nu + carte texturée ---- */
+.page-accueil #authGate, .page-accueil #suspended{background-image:none; background-color:var(--paper)}
 .page-accueil .gate-card{position:relative; z-index:1; background:var(--panel); box-shadow:0 6px 26px rgba(33,32,28,.14)}
 .page-accueil .gate-card h2{color:var(--ink)}
 .page-accueil .gate-btn.primary{background:var(--accent); border-color:var(--accent)}
