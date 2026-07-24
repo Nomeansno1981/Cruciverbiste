@@ -552,6 +552,9 @@ body.page-accueil::before{display:none}
   border:2.5px solid var(--accent); border-radius:9px; filter:url(#ddRough);
 }
 .page-accueil .hero-stage{margin-top:10px}
+/* torchbearer : illustration en blanc (line-art) posée sur un halo d'encre qui
+   se fond dans le parchemin — sinon la figure blanche serait invisible. */
+.page-accueil .hero-figure{background:radial-gradient(ellipse 72% 82% at 50% 47%, #211f1b 0%, #211f1b 58%, rgba(33,31,27,0) 82%)}
 .page-accueil .hero-canvas{background:var(--blanc)}
 .page-accueil .hero-overlay{background:none}
 
