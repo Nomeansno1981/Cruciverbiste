@@ -552,14 +552,14 @@ body.page-accueil::before{display:none}
   border:2.5px solid var(--accent); border-radius:9px; filter:url(#ddRough);
 }
 .page-accueil .hero-stage{margin-top:10px}
-/* torchbearer à la même hauteur que la grille : on élargit la scène et on
-   rééquilibre (grille ~inchangée à 50%, figure 44% -> même hauteur via son
-   ratio 900:1024), somme < 100% donc aucun débordement. Réservé au bureau :
+/* torchbearer à la même hauteur que la grille : la figure (ratio 563:775) est
+   dimensionnée pour atteindre la hauteur de la grille, la grille garde ~sa
+   taille, somme des largeurs < 100% donc aucun débordement. Réservé au bureau :
    sur mobile la figure est masquée et la grille garde sa règle dédiée. */
 @media (min-width:860px){
-  .page-accueil .hero-stage{max-width:920px}
-  .page-accueil .hero-stage .hero-preview{flex:0 0 50%}
-  .page-accueil .hero-stage .hero-figure{flex:0 0 44%; width:44%}
+  .page-accueil .hero-stage{max-width:840px}
+  .page-accueil .hero-stage .hero-preview{flex:0 0 55%}
+  .page-accueil .hero-stage .hero-figure{flex:0 0 40%; width:40%}
 }
 .page-accueil .hero-canvas{background:var(--blanc)}
 .page-accueil .hero-overlay{background:none}
