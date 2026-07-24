@@ -531,6 +531,57 @@ m.onAuthStateChanged(auth, async user => {
   }catch(e){ /* pas de revue : la grille se joue normalement */ }
   window.__ddef.review = !!review;
 
+  // --- Progression en cours : anti-triche + confort --------------------------
+  // Lettres et chrono sont sauvegardes en continu (ecritures espacees) pour
+  // qu'un rafraichissement NE remette PAS la grille a vide ni le chrono a zero.
+  // Le depart est ancre cote serveur des la 1re ouverture (startedAt, jamais
+  // reecrit cote client) : actualiser ne peut donc pas raccourcir le temps.
+  // Document distinct du resultat (results/{date}), efface a la resolution.
+  const progRef = m.doc(db, "users", user.uid, "progress", dateStr);
+  let startedAtMs = 0, restore = null;
+  if(!review){
+    try{
+      const ps = await m.getDoc(progRef);
+      if(ps.exists()){
+        const p = ps.data();
+        startedAtMs = (p.startedAt && p.startedAt.toMillis) ? p.startedAt.toMillis() : 0;
+        let letters = {}; try{ letters = JSON.parse(p.letters || "{}"); }catch(e){ letters = {}; }
+        restore = { letters, given: p.given || [], solvedWords: p.solvedWords || [], hints: p.hints || 0, solutions: p.solutions || 0 };
+      } else {
+        // 1re ouverture : on pose l'horodatage serveur du depart (une seule fois)
+        await m.setDoc(progRef, { startedAt: m.serverTimestamp(), letters: "{}", given: [], solvedWords: [], hints: 0, solutions: 0, updatedAt: m.serverTimestamp() });
+        const ps2 = await m.getDoc(progRef);
+        const p2 = ps2.exists() ? ps2.data() : null;
+        startedAtMs = (p2 && p2.startedAt && p2.startedAt.toMillis) ? p2.startedAt.toMillis() : Date.now();
+      }
+    }catch(e){ window.__ddef.progressError = String(e); }
+  }
+  window.__ddef.startedAtMs = startedAtMs;   // repere de test
+
+  // Ecriture espacee (au plus une par ~1,5 s), avec vidage immediat quand
+  // l'onglet passe en arriere-plan ou se ferme : on ne perd aucune lettre.
+  let progTimer = null, progPending = null;
+  const flushProgress = async () => {
+    if(progTimer){ clearTimeout(progTimer); progTimer = null; }
+    if(!progPending) return;
+    const s = progPending; progPending = null;
+    try{ await m.setDoc(progRef, {
+      letters: JSON.stringify(s.letters || {}),
+      given: s.given || [], solvedWords: s.solvedWords || [],
+      hints: s.hints || 0, solutions: s.solutions || 0,
+      updatedAt: m.serverTimestamp()
+    }, { merge: true }); }catch(e){ window.__ddef.progressError = String(e); }
+  };
+  const onProgress = (s) => {
+    if(review) return;
+    progPending = s;
+    if(progTimer) clearTimeout(progTimer);
+    progTimer = setTimeout(flushProgress, 1500);
+  };
+  window.__ddef.flushProgress = flushProgress;   // repere de test (vidage force)
+  document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") flushProgress(); });
+  window.addEventListener("pagehide", () => { flushProgress(); });
+
   // serie du joueur, affichee au chargement (independante de la grille jouee)
   try{
     const s = await m.getDoc(m.doc(db, "users", user.uid, "state", "streak"));
@@ -546,6 +597,9 @@ m.onAuthStateChanged(auth, async user => {
   };
 
   const saveResult = async (seconds, stats = {}) => {
+    // partie finie : on stoppe la sauvegarde de progression et on efface le brouillon
+    progPending = null; if(progTimer){ clearTimeout(progTimer); progTimer = null; }
+    try{ await m.deleteDoc(progRef); }catch(e){ /* sans gravite */ }
     try{
       const ref = m.doc(db, "users", user.uid, "results", dateStr);
       const data = { solved: true, seconds, date: dateStr, at: m.serverTimestamp() };
@@ -600,7 +654,7 @@ m.onAuthStateChanged(auth, async user => {
   };
 
   window.__ddef.puzzle = puzzle;   // grille effectivement montée (repère de test)
-  const play = monterJeu(puzzle, { onSolved: saveResult, dateText: isToday ? parisLabel() : labelForKey(dateStr), review });
+  const play = monterJeu(puzzle, { onSolved: saveResult, onProgress, startedAtMs: startedAtMs || undefined, restore, dateText: isToday ? parisLabel() : labelForKey(dateStr), review });
   // Rejouer (auteur seul) : remet la grille à zéro pour la retester, sans rien enregistrer
   if(isAdmin(user)){
     const rb = $("replayBtn");

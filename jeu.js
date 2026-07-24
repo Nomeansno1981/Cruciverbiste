@@ -439,6 +439,10 @@ export function monterJeu(PUZZLE, opts = {}){
   let muted = false; try{ muted = localStorage.getItem("dd-mute") === "1"; }catch(e){}
   let audioCtx = null;
   let sel = null, solved = false, started = 0, tick = null, cell = 30, noSave = false, readonly = false;
+  // Ancre du chrono : à la première ouverture, la page hôte fournit l'horodatage
+  // (serveur) du départ ; le chrono repart de là après un rafraîchissement, au
+  // lieu de zéro. Consommée une seule fois (un « Rejouer » d'auteur repart de Date.now()).
+  let anchorMs = (typeof opts.startedAtMs === "number" && opts.startedAtMs > 0) ? opts.startedAtMs : 0;
 
   const correct = k => norm(user[k]) === norm(PUZZLE.solution[k]);
   const wordsAt = k => { const cw = cellWord[k]; return cw ? [cw.across, cw.down].filter(Boolean) : []; };
@@ -592,6 +596,7 @@ export function monterJeu(PUZZLE, opts = {}){
     if(w && okWords.has(w.id) && !solved) advanced = gotoNextUnfinished(w);
     if(!advanced) render();
     checkSolved();
+    notifyProgress();
   }
   function erase(){
     if(readonly || solved || !sel) return;
@@ -600,6 +605,7 @@ export function monterJeu(PUZZLE, opts = {}){
     if(user[k]){ delete user[k]; }
     else { advance(-1); const k2 = K(sel.r, sel.c); if(!isLocked(k2)) delete user[k2]; }
     render();
+    notifyProgress();
   }
   function advance(step){
     const w = currentWord(); if(!w) return;
@@ -823,7 +829,7 @@ export function monterJeu(PUZZLE, opts = {}){
     const t = cands[Math.floor(Math.random() * cands.length)];
     const k = K(t[0], t[1]);
     user[k] = PUZZLE.solution[k]; given[k] = true; hintCount++;
-    startTimer(); checkWords(); render(); checkSolved();
+    startTimer(); checkWords(); render(); checkSolved(); notifyProgress();
   }
   // Solution : revele le mot selectionne en entier. Le mot est marque solvedWords
   // (rouge, verrouille) et n'est jamais compte comme valide.
@@ -833,17 +839,50 @@ export function monterJeu(PUZZLE, opts = {}){
     if(okWords.has(w.id) || solvedWords.has(w.id)) return;   // deja resolu
     for(const [r,c] of w.cells){ const k = K(r,c); user[k] = PUZZLE.solution[k]; }
     solvedWords.add(w.id); solutionCount++;
-    startTimer(); render(); checkSolved();
+    startTimer(); render(); checkSolved(); notifyProgress();
   }
 
   function escapeHtml(s){ return (s||"").replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
   // Rendu d'une definition : on echappe le HTML, puis on met en italique les
   // segments places entre asterisques par l'auteur (*mot* devient <em>mot</em>).
   function formatClue(s){ return escapeHtml(s || "Definition a venir").replace(/\*([^*]+)\*/g, "<em>$1</em>"); }
-  function elapsed(){ return started ? Math.floor((Date.now() - started)/1000) : 0; }
+  function elapsed(){ return started ? Math.max(0, Math.floor((Date.now() - started)/1000)) : 0; }
   function fmt(s){ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
-  function startTimer(){ if(started) return; started = Date.now(); tick = setInterval(() => { document.getElementById("timer").textContent = fmt(elapsed()); }, 1000); }
+  function startTimer(){
+    if(started) return;
+    started = anchorMs || Date.now(); anchorMs = 0;   // départ ancré (serveur) au 1er montage, sinon maintenant
+    const t = document.getElementById("timer"); if(t) t.textContent = fmt(elapsed());   // affichage immédiat (reprise sans clignoter à 0:00)
+    tick = setInterval(() => { document.getElementById("timer").textContent = fmt(elapsed()); }, 1000);
+  }
   function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } document.getElementById("timer").textContent = fmt(elapsed()); }
+  // Sauvegarde continue (anti-triche : rafraîchir ne remet ni la grille ni le
+  // chrono à zéro). On notifie la page hôte à chaque changement ; c'est elle qui
+  // espace réellement les écritures. Rien à sauvegarder en revue, en « Rejouer »
+  // d'auteur (noSave), ni une fois la grille résolue.
+  function notifyProgress(){
+    if(readonly || noSave || solved) return;
+    if(typeof opts.onProgress !== "function") return;
+    try{ opts.onProgress({
+      letters: { ...user },
+      given: Object.keys(given),
+      solvedWords: [...solvedWords],
+      hints: hintCount,
+      solutions: solutionCount
+    }); }catch(e){ /* la page hôte gère */ }
+  }
+  // Reprise d'une partie en cours (lettres saisies, indices, mots dévoilés, compteurs).
+  function restoreProgress(rv){
+    if(!rv) return;
+    for(const k in (rv.letters || {})){ if(filled(k)) user[k] = String(rv.letters[k] || "").toUpperCase(); }
+    for(const k of (rv.given || [])){ if(filled(k)) given[k] = true; }
+    for(const id of (rv.solvedWords || [])) solvedWords.add(id);
+    hintCount = Number(rv.hints) || 0;
+    solutionCount = Number(rv.solutions) || 0;
+    const wasMuted = muted; muted = true;   // pas de « ding » en rafale à la reprise
+    checkWords();
+    muted = wasMuted;
+    gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);   // se poser sur la 1re case encore vide
+  }
 
   // clavier physique (ordinateur) : la page capte les touches globalement
   window.addEventListener("keydown", e => {
@@ -898,7 +937,8 @@ export function monterJeu(PUZZLE, opts = {}){
   buildLists();
   buildKeyboard();
   gotoClue(PUZZLE.across[0] || PUZZLE.down[0], true);
-  if(opts.review) enterReview(opts.review);   // grille déjà résolue : revue en lecture seule
+  if(opts.review) enterReview(opts.review);          // grille déjà résolue : revue en lecture seule
+  else if(opts.restore) restoreProgress(opts.restore);   // partie en cours : on reprend lettres + chrono
   requestAnimationFrame(layout);
   // le chrono démarre dès l'ouverture de la grille (et non à la première frappe),
   // sauf en revue/lecture seule (grille déjà résolue).
