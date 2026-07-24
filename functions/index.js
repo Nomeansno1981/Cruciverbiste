@@ -114,14 +114,16 @@ exports.backfillClassement = functions.https.onCall(async (data, context) => {
 function gabaritVerification(lien) {
   return `<!doctype html><html lang="fr"><body style="margin:0;background:#faf9f5;padding:24px 12px">
   <div style="font-family:Georgia,'Times New Roman',serif;max-width:480px;margin:0 auto;background:#fff;border:1px solid #e7e1d5;border-radius:14px;padding:28px;color:#1c1b19">
-    <h1 style="font-family:Georgia,serif;color:#c4161c;font-size:24px;margin:0 0 14px;text-align:center">Donjons &amp; Définitions</h1>
-    <p style="font-size:15px;line-height:1.55;margin:0 0 12px">Bienvenue, aventurier !</p>
-    <p style="font-size:15px;line-height:1.55;margin:0 0 18px">Confirmez votre adresse e-mail pour sceller votre entrée dans le donjon&nbsp;:</p>
+    <h1 style="font-family:Georgia,serif;color:#c4161c;font-size:24px;margin:0 0 4px;text-align:center">Donjons &amp; Définitions</h1>
+    <p style="text-align:center;font-size:13px;color:#74706a;margin:0 0 22px">La grille de mots croisés du jour, sur le thème du jeu de rôle</p>
+    <p style="font-size:15px;line-height:1.55;margin:0 0 12px">Bonjour,</p>
+    <p style="font-size:15px;line-height:1.55;margin:0 0 18px">Un compte vient d'être créé avec cette adresse sur <a href="https://donjonsetdefinitions.fr" style="color:#5e1522">donjonsetdefinitions.fr</a>. Confirmez votre adresse e-mail pour finaliser votre inscription&nbsp;:</p>
     <p style="text-align:center;margin:0 0 20px">
       <a href="${lien}" style="display:inline-block;background:#1e7a43;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:13px 30px;border-radius:999px">Confirmer mon adresse</a>
     </p>
-    <p style="font-size:12.5px;color:#74706a;line-height:1.5;margin:0 0 10px">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br><span style="word-break:break-all;color:#5e1522">${lien}</span></p>
-    <p style="font-size:12.5px;color:#74706a;line-height:1.5;margin:0">Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet e-mail.</p>
+    <p style="font-size:12.5px;color:#74706a;line-height:1.5;margin:0 0 18px">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br><span style="word-break:break-all;color:#5e1522">${lien}</span></p>
+    <hr style="border:none;border-top:1px solid #e7e1d5;margin:0 0 12px">
+    <p style="font-size:12px;color:#9a968f;line-height:1.5;margin:0">Vous recevez cet e-mail parce qu'une inscription a été effectuée avec votre adresse sur donjonsetdefinitions.fr. Si ce n'était pas vous, ignorez simplement ce message&nbsp;: aucun compte ne sera activé sans cette confirmation.</p>
   </div></body></html>`;
 }
 
@@ -151,7 +153,12 @@ exports.envoyerVerificationEmail = functions
       }
     }
 
-    const lien = await getAuth().generateEmailVerificationLink(email);
+    // Lien de vérification sur NOTRE domaine : Hosting sert le même gestionnaire
+    // /__/auth/action sur donjonsetdefinitions.fr. On passe une URL de continuation
+    // sur le site, puis on réécrit l'hôte du lien (…firebaseapp.com → donjonsetdefinitions.fr)
+    // pour supprimer le décalage expéditeur/lien (signal d'hameçonnage classique).
+    const brut = await getAuth().generateEmailVerificationLink(email, { url: "https://donjonsetdefinitions.fr/" });
+    const lien = brut.replace(/^https:\/\/donjons-definitions\.(firebaseapp\.com|web\.app)\//, "https://donjonsetdefinitions.fr/");
 
     // Émulateur (ou clé absente) : on n'envoie pas réellement, on journalise le lien.
     if (inEmu || !process.env.RESEND_API_KEY) {
@@ -170,7 +177,7 @@ exports.envoyerVerificationEmail = functions
         to: [email],
         subject: "Confirmez votre adresse — Donjons & Définitions",
         html: gabaritVerification(lien),
-        text: `Bienvenue sur Donjons & Définitions !\n\nConfirmez votre adresse e-mail en ouvrant ce lien :\n${lien}\n\nSi vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail.`,
+        text: `Donjons & Définitions — la grille de mots croisés du jour, sur le thème du jeu de rôle.\n\nBonjour,\n\nUn compte vient d'être créé avec cette adresse sur donjonsetdefinitions.fr. Confirmez votre adresse e-mail pour finaliser votre inscription en ouvrant ce lien :\n${lien}\n\nVous recevez cet e-mail parce qu'une inscription a été effectuée avec votre adresse. Si ce n'était pas vous, ignorez ce message : aucun compte ne sera activé sans cette confirmation.`,
       }),
     });
     if (!resp.ok) {
