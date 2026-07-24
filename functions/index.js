@@ -105,5 +105,82 @@ exports.backfillClassement = functions.https.onCall(async (data, context) => {
   return { count: res.length, results: res };
 });
 
+// --- Vérification d'adresse e-mail envoyée depuis notre domaine ---
+// L'expéditeur Firebase par défaut (…firebaseapp.com) a une réputation faible :
+// spam chez Gmail, rejet silencieux chez iCloud. On génère nous-mêmes le lien de
+// vérification (Admin SDK) et on envoie l'e-mail via Resend, depuis
+// noreply@donjonsetdefinitions.fr (domaine authentifié SPF/DKIM/DMARC).
+// La clé API Resend est un secret (functions:secrets:set RESEND_API_KEY).
+function gabaritVerification(lien) {
+  return `<!doctype html><html lang="fr"><body style="margin:0;background:#faf9f5;padding:24px 12px">
+  <div style="font-family:Georgia,'Times New Roman',serif;max-width:480px;margin:0 auto;background:#fff;border:1px solid #e7e1d5;border-radius:14px;padding:28px;color:#1c1b19">
+    <h1 style="font-family:Georgia,serif;color:#c4161c;font-size:24px;margin:0 0 14px;text-align:center">Donjons &amp; Définitions</h1>
+    <p style="font-size:15px;line-height:1.55;margin:0 0 12px">Bienvenue, aventurier !</p>
+    <p style="font-size:15px;line-height:1.55;margin:0 0 18px">Confirmez votre adresse e-mail pour sceller votre entrée dans le donjon&nbsp;:</p>
+    <p style="text-align:center;margin:0 0 20px">
+      <a href="${lien}" style="display:inline-block;background:#1e7a43;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:13px 30px;border-radius:999px">Confirmer mon adresse</a>
+    </p>
+    <p style="font-size:12.5px;color:#74706a;line-height:1.5;margin:0 0 10px">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br><span style="word-break:break-all;color:#5e1522">${lien}</span></p>
+    <p style="font-size:12.5px;color:#74706a;line-height:1.5;margin:0">Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet e-mail.</p>
+  </div></body></html>`;
+}
+
+exports.envoyerVerificationEmail = functions
+  .runWith({ secrets: ["RESEND_API_KEY"] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Connexion requise.");
+    }
+    const uid = context.auth.uid;
+    const email = context.auth.token.email;
+    if (!email) {
+      throw new functions.https.HttpsError("failed-precondition", "Ce compte n'a pas d'adresse e-mail.");
+    }
+    if (context.auth.token.email_verified) {
+      return { sent: false, reason: "already_verified" };
+    }
+
+    // Anti-abus : au plus un envoi par minute et par compte (ignoré en émulateur).
+    const inEmu = process.env.FUNCTIONS_EMULATOR === "true";
+    const metaRef = db.doc(`users/${uid}/state/mailmeta`);
+    if (!inEmu) {
+      const meta = await metaRef.get();
+      const last = meta.exists ? (meta.data().lastVerif || 0) : 0;
+      if (Date.now() - last < 60000) {
+        throw new functions.https.HttpsError("resource-exhausted", "Veuillez patienter une minute avant de renvoyer l'e-mail.");
+      }
+    }
+
+    const lien = await getAuth().generateEmailVerificationLink(email);
+
+    // Émulateur (ou clé absente) : on n'envoie pas réellement, on journalise le lien.
+    if (inEmu || !process.env.RESEND_API_KEY) {
+      functions.logger.info(`[verif] lien pour ${email} : ${lien}`);
+      return { sent: true, emulated: true };
+    }
+
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Donjons & Définitions <noreply@donjonsetdefinitions.fr>",
+        to: [email],
+        subject: "Confirmez votre adresse — Donjons & Définitions",
+        html: gabaritVerification(lien),
+        text: `Bienvenue sur Donjons & Définitions !\n\nConfirmez votre adresse e-mail en ouvrant ce lien :\n${lien}\n\nSi vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail.`,
+      }),
+    });
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => "");
+      functions.logger.error("Resend a refusé l'envoi", resp.status, detail);
+      throw new functions.https.HttpsError("internal", "L'envoi de l'e-mail a échoué.");
+    }
+    await metaRef.set({ lastVerif: Date.now() }, { merge: true });
+    return { sent: true };
+  });
+
 // Exporté pour les tests unitaires (logique pure de recalcul).
 exports._refreshLeaderboard = refreshLeaderboard;

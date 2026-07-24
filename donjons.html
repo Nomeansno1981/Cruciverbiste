@@ -150,7 +150,7 @@
 import { monterJeu, DEMO_PUZZLE, niveauPourXp, BADGES, evaluerBadges, badgesRetroactifs } from "./jeu.js";
 
 import { EMU_MODE, ADMIN_EMAIL, initFirebase, signInGoogle, authError } from "./firebase-init.js";
-import { parisDate, labelForKey, prevDate, effectiveStreak, FLAME, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement, showToast, renvoyerVerification } from "./commun.js";
+import { parisDate, labelForKey, prevDate, effectiveStreak, FLAME, fillAvatar, resizeImage, secsToNextParisMidnight, fmtHms, publierClassement, showToast, envoyerVerification, renvoyerVerification } from "./commun.js";
 const isAdmin = u => !!(u && u.email === ADMIN_EMAIL);
 
 window.__ddef = { ready: false, source: null, result: null };
@@ -171,9 +171,9 @@ function requestedDate(){
   return (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) ? p : null;
 }
 
-let m, auth, db;
+let m, auth, db, functions;
 try{
-  ({ m, auth, db } = await initFirebase());
+  ({ m, auth, db, functions } = await initFirebase());
 }catch(e){
   warn("Impossible de charger le module de connexion. Verifiez votre connexion, puis rechargez la page.");
   throw e;
@@ -190,12 +190,11 @@ async function emailLogin(create){
   info(create ? "Creation du compte..." : "Connexion...");
   try{
     if(create){
-      const cred = await m.createUserWithEmailAndPassword(auth, email, pass);
+      await m.createUserWithEmailAndPassword(auth, email, pass);
       try{
-        auth.languageCode = "fr";                       // e-mail de confirmation en français
-        await m.sendEmailVerification(cred.user);
+        await envoyerVerification(m, functions);        // e-mail envoyé depuis notre domaine (Cloud Function + Resend)
         showToast("Compte créé ! Un e-mail de confirmation a été envoyé à " + email + '. Si jamais vous ne le recevez pas, pensez à vérifier dans votre dossier "Courrier indésirable".');
-      }catch(_){ /* l'envoi peut échouer (quota, réseau) : le compte reste utilisable */ }
+      }catch(_){ showToast("Compte créé. L'e-mail de confirmation n'a pas pu être envoyé — vous pourrez le renvoyer depuis votre profil."); }
     }
     else await m.signInWithEmailAndPassword(auth, email, pass);
   }catch(e){ warn(authError(e)); }
@@ -471,7 +470,7 @@ window.__ddef.firstProbe = async () => {
 $("profileBtn").onclick = openProfile;
 $("closeProfile").onclick = closeProfile;
 $("saveProfile").onclick = saveProfile;
-$("resendVerif").onclick = async () => { const b = $("resendVerif"); b.disabled = true; try{ await renvoyerVerification(m, auth); } finally{ b.disabled = false; } };
+$("resendVerif").onclick = async () => { const b = $("resendVerif"); b.disabled = true; try{ await renvoyerVerification(m, functions); } finally{ b.disabled = false; } };
 $("closeBadge").onclick = closeBadge;
 $("badgeModal").addEventListener("click", e => { if(e.target === $("badgeModal")) closeBadge(); });
 $("signOut").onclick = async () => { try{ await m.signOut(auth); }catch(e){} location.reload(); };
