@@ -59,7 +59,6 @@
     </div>
   </header>
 
-  <div class="game-topbar"><span class="timer" id="timer">0:00</span></div>
   <div class="banner" id="banner"></div>
 
   <div class="layout">
@@ -80,14 +79,17 @@
 
     <div class="kbd" id="kbd"></div>
 
-    <aside class="aside" id="clueAside" data-dir="across">
-      <div class="dir-toggle" role="tablist" aria-label="Sens des définitions">
-        <button class="dir-btn on" id="dirAcross" type="button" role="tab" aria-selected="true">Horizontalement</button>
-        <button class="dir-btn" id="dirDown" type="button" role="tab" aria-selected="false">Verticalement</button>
-      </div>
-      <ol id="acrossList" class="clue-list"></ol>
-      <ol id="downList" class="clue-list"></ol>
-    </aside>
+    <div class="defs-col">
+      <div class="game-clock"><span class="timer" id="timer">0:00</span></div>
+      <aside class="aside" id="clueAside" data-dir="across">
+        <div class="dir-toggle" role="tablist" aria-label="Sens des définitions">
+          <button class="dir-btn on" id="dirAcross" type="button" role="tab" aria-selected="true">Horizontalement</button>
+          <button class="dir-btn" id="dirDown" type="button" role="tab" aria-selected="false">Verticalement</button>
+        </div>
+        <ol id="acrossList" class="clue-list"></ol>
+        <ol id="downList" class="clue-list"></ol>
+      </aside>
+    </div>
   </div>
 
   <div class="stamp">version de travail</div>

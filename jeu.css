@@ -376,7 +376,10 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:var(--accent-ink); 
      bas (redondante et de hauteur variable) est retiree sur ordinateur. */
   .wrap.game .cluebar{display:none}
   .tools{grid-area:tools; justify-self:center}
-  .aside{grid-area:defs; max-width:none; align-self:stretch; min-height:0; overflow:auto}
+  /* colonne des définitions : le chrono coiffe le panneau, qui défile seul dessous */
+  .defs-col{grid-area:defs; display:flex; flex-direction:column; min-height:0; gap:12px}
+  .defs-col .game-clock{display:flex; justify-content:center; align-items:baseline; flex:none}
+  .defs-col .aside{max-width:none; align-self:stretch; min-height:0; flex:1; overflow:auto}
   .wrap.game .stamp{display:none}
 }
 
@@ -405,7 +408,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:var(--accent-ink); 
   .wrap{max-width:none; height:100dvh; padding:6px 6px 0; display:flex; flex-direction:column; gap:7px}
   /* jeu mobile : bandeau plein écran mais compact (tenue verticale serrée) */
   .wrap.game header{margin:-6px calc(50% - 50vw) 6px; padding:6px 12px}
-  .wrap.game .game-topbar{margin:0 2px 2px}
+  .defs-col{display:none}   /* le chrono et les définitions sont réservés au bureau */
   /* la page d'accueil defile normalement (ce n'est pas le jeu plein ecran) */
   html:has(.page-accueil){height:auto; min-height:100%; overflow:visible}
   /* le corps clippe le debordement horizontal (infobulles de badges qui depassent a droite)
@@ -496,10 +499,10 @@ header .brand, header .meta, header .spacer{position:relative; z-index:1}
 header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
 header .amp{color:var(--accent)}  /* le & en brique : accent */
 header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
-/* Jeu : le chrono sort du bandeau — fine barre à droite, juste dessous. */
-.game-topbar{display:flex; justify-content:flex-end; align-items:center; min-height:0; margin:2px 2px 4px}
-.game-topbar .timer{font-family:var(--serif); font-size:17px; font-weight:400; color:var(--accent-ink); font-variant-numeric:tabular-nums}
-.game-topbar:empty{display:none}
+/* Jeu : le chrono, en gros, coiffe le panneau des définitions (bureau). Masqué
+   sur mobile, comme l'était l'ancienne barre. */
+.game-clock{display:none}
+.game-clock .timer{font-family:var(--serif); font-size:33px; font-weight:400; color:var(--accent-ink); font-variant-numeric:tabular-nums; letter-spacing:.01em; line-height:1}
 /* nouvelle flamme de la série (accueil) */
 .streak .streak-fire{-webkit-mask:url(icones/flamme.svg) center/contain no-repeat; mask:url(icones/flamme.svg) center/contain no-repeat}
 .streak .streak-n{font-family:var(--serif); font-weight:400; font-size:26px; top:60%; z-index:3; color:var(--blanc); text-shadow:0 1px 2px rgba(40,10,8,.75)}
