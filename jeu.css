@@ -436,3 +436,88 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   /* en revue, le bandeau reste dans le flux (en haut) au lieu de recouvrir la grille et d'intercepter les appuis */
   .banner.review{position:static; transform:none; left:auto; right:auto; z-index:auto; padding:8px 12px; font-size:13px}
 }
+
+/* ==========================================================================
+   IDENTITÉ VISUELLE « fanzine OSR / D&D 1re édition »
+   Palette terreuse, trame (halftone) par endroits, bandeau d'entête encre à
+   bord déchiré, filets tracés main. Déployée d'abord sur l'accueil : toute la
+   section est portée par .page-accueil pour ne pas toucher le jeu tant que le
+   costume n'est pas validé.
+   ========================================================================== */
+.page-accueil{
+  --paper:#EBE3CE;          /* parchemin (fond) */
+  --panel:#F2ECDB;          /* carte, un ton plus clair que le parchemin */
+  --ink:#21201C;            /* encre (texte, bandeau) */
+  --muted:#6E685B;          /* brun-gris estompé */
+  --line:#D4C9AE;           /* filet parchemin */
+  --accent:#A7412A; --accent-ink:#83301E; --accent-weak:#E7D9C0;   /* brique */
+  --brand-red:#A7412A;      /* la flamme / le logo passent au brique */
+  --danger:#8A2E22;
+  --forest:#6E7247; --forest-ink:#5C6039; --forest-weak:#DED9C2;   /* olive (titres, filets) */
+  --sun:#C79A3E; --sun-weak:#EBDCB4;                               /* or */
+  --prune:#5B5470;
+  /* teintes de trame (points) — faible contraste sur la base, fort en accent */
+  --tr-parch:#DCD3BB;       /* points sur parchemin : à peine plus sombre */
+  --encre:#21201C; --encre2:#2E2C27; --brique:#A7412A;
+}
+
+/* Trame de fond parchemin : halftone régulier incliné 30°, recoloré via masque,
+   faible contraste (ne gêne pas la lecture), figé derrière tout le contenu. */
+body.page-accueil::before{
+  content:""; position:fixed; inset:-30%; z-index:-1; pointer-events:none;
+  background-image:none; background-color:var(--tr-parch);
+  -webkit-mask:url(icones/trame.svg) 0 0/560px 560px repeat; mask:url(icones/trame.svg) 0 0/560px 560px repeat;
+  transform:rotate(30deg);
+}
+
+/* ---- Bandeau d'entête : encre pleine largeur, titre crème, bord déchiré ---- */
+.page-accueil header{
+  position:relative; overflow:visible; z-index:1;
+  margin:-16px calc(50% - 50vw) 34px; padding:16px max(16px, calc(50vw - 520px)) 20px;
+  background:var(--encre); border-bottom:none; gap:14px;
+}
+/* accent : trame brique clairsemée sur l'encre du bandeau (contraste fort assumé) */
+.page-accueil header::before{
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
+  background-color:var(--brique);
+  -webkit-mask:url(icones/trame.svg) 0 0/460px 460px repeat; mask:url(icones/trame.svg) 0 0/460px 460px repeat;
+  -webkit-mask-composite:source-in;
+}
+/* bord inférieur déchiré / tremblant : frange d'encre suspendue sous le bandeau */
+.page-accueil header::after{
+  content:""; position:absolute; left:0; right:0; top:100%; height:22px; z-index:0; pointer-events:none;
+  background:var(--encre);
+  -webkit-mask:url(icones/deckle.svg) 0 0/1200px 22px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 22px repeat-x;
+}
+.page-accueil header .brand, .page-accueil header .meta, .page-accueil header .spacer{position:relative; z-index:1}
+.page-accueil header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
+.page-accueil header .amp{color:var(--brique)}  /* le & en brique : accent */
+.page-accueil header .mark{filter:brightness(0) invert(1); opacity:.95}  /* heaume crème sur l'encre */
+
+/* ---- Titres de section : Pirata encré, filet olive dessous ---- */
+.page-accueil .hero-title{color:var(--ink)}
+.page-accueil .archive h2, .page-accueil .board-home h2{color:var(--forest-ink)}
+
+/* ---- Cadre tracé main autour de l'aperçu du donjon (le wobble ne touche que
+   le filet, jamais la carte du donjon) ---- */
+.page-accueil .hero-preview{border-color:transparent; background:var(--panel); box-shadow:0 4px 16px rgba(33,32,28,.16)}
+.page-accueil .hero-preview::before{
+  content:""; position:absolute; inset:3px; z-index:3; pointer-events:none;
+  border:2px solid var(--ink); border-radius:9px; filter:url(#ddRough);
+}
+.page-accueil .hero-canvas{background:var(--panel)}
+.page-accueil .hero-overlay{background:linear-gradient(180deg, rgba(242,236,219,0), rgba(242,236,219,.55) 50%, rgba(242,236,219,.97))}
+
+/* ---- Écran de connexion : même costume (parchemin + trame + brique) ---- */
+.page-accueil #authGate, .page-accueil #suspended{
+  background-image:none; background-color:var(--paper);
+}
+.page-accueil #authGate::before, .page-accueil #suspended::before{
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-color:var(--tr-parch);
+  -webkit-mask:url(icones/trame.svg) 0 0/560px 560px repeat; mask:url(icones/trame.svg) 0 0/560px 560px repeat;
+  transform:rotate(30deg);
+}
+.page-accueil .gate-card{position:relative; z-index:1; background:var(--panel); box-shadow:0 6px 26px rgba(33,32,28,.14)}
+.page-accueil .gate-card h2{color:var(--ink)}
+.page-accueil .gate-btn.primary{background:var(--accent); border-color:var(--accent)}

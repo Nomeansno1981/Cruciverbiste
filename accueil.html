@@ -16,6 +16,15 @@
 </head>
 <body class="page-accueil">
 
+<!-- Filtre « tracé main » : léger tremblé appliqué UNIQUEMENT aux filets/cadres
+     décoratifs (jamais au texte ni à la carte du donjon). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="ddRough" x="-6%" y="-6%" width="112%" height="112%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.015" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
 <div id="authGate" hidden>
   <div class="gate-card">
     <img class="mark" src="icones/heaume.svg" alt="">
