@@ -453,7 +453,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   --accent:#A7412A; --accent-ink:#83301E; --accent-weak:#E7D9C0;   /* brique */
   --brand-red:#A7412A;      /* la flamme / le logo passent au brique */
   --danger:#8A2E22;
-  --forest:#6E7247; --forest-ink:#5C6039; --forest-weak:#DED9C2;   /* olive (titres, filets) */
+  --forest:#b3c037; --forest-ink:#52832f; --forest-weak:#DED9C2;   /* verts : filet (lime) + titres (vert) */
   --sun:#C79A3E; --sun-weak:#EBDCB4;                               /* or */
   --prune:#5B5470;
   /* teintes de trame (points) — faible contraste sur la base, fort en accent */
@@ -501,24 +501,35 @@ body.page-accueil::before{display:none}
 .page-accueil .home-tabs, .page-accueil .tabpanel{position:relative; z-index:1}
 
 /* ---- Menu d'onglets : Pirata encré, actif en brique ---- */
-.page-accueil .home-tabs{border-bottom:2px solid var(--ink); gap:8px; margin-top:0}
+.page-accueil .home-tabs{border-bottom:none; gap:8px; margin-top:0}
 .page-accueil .tabpanel{padding-top:18px}
 .page-accueil .home-tab{
-  font-family:var(--serif); font-variant:small-caps; font-weight:600; font-size:20px; letter-spacing:.05em;
+  font-family:var(--serif); font-variant:small-caps; font-weight:600; font-size:18px; letter-spacing:.05em;
   color:var(--muted); padding:5px 16px 8px; border-bottom:3px solid transparent; margin-bottom:-2px;
 }
 .page-accueil .home-tab:hover{color:var(--ink)}
 .page-accueil .home-tab.on{color:var(--accent); border-bottom-color:var(--accent)}
 
 /* ---- Titres : « Le donjon du jour » en rouge (brique) ; sections en olive ---- */
-.page-accueil .hero-title{color:var(--accent)}
+.page-accueil .hero-title{color:var(--accent); font-size:40px}
+/* crânes noirs de part et d'autre du titre du jour */
+.page-accueil .hero-title::before, .page-accueil .hero-title::after{
+  content:""; display:inline-block; width:.66em; height:.74em; vertical-align:-.09em; margin:0 .34em;
+  background-color:var(--ink); -webkit-mask:url(icones/skull.svg) center/contain no-repeat; mask:url(icones/skull.svg) center/contain no-repeat;
+}
 .page-accueil .hero-date{font-size:18px; margin-top:10px}
 .page-accueil .archive h2, .page-accueil .board-home h2{color:var(--forest-ink)}
+/* séparateur : filet en --forest (lime), recolorable via masque */
+.page-accueil .divider::before, .page-accueil .divider::after{
+  background:var(--forest);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") left center/130px 6px repeat-x;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='6'%3E%3Cpath d='M0 3 C 22 1.5 43 4.5 65 3 S 110 1.6 130 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") left center/130px 6px repeat-x;
+}
 
 /* ---- Pastille « donjon résolu » AU-DESSUS de l'image ---- */
 .page-accueil .today-banner{
   align-self:center; display:inline-flex; align-items:center; gap:7px;
-  background:var(--forest); color:#F1E7CE; font-family:var(--serif); font-size:15px; line-height:1;
+  background:var(--forest-ink); color:#F1E7CE; font-family:var(--serif); font-size:15px; line-height:1;
   padding:8px 16px; border-radius:999px; box-shadow:0 3px 10px rgba(45,50,25,.28);
 }
 .page-accueil .today-banner:empty{display:none}
@@ -531,31 +542,38 @@ body.page-accueil::before{display:none}
   content:""; position:absolute; inset:3px; z-index:3; pointer-events:none;
   border:2.5px solid var(--accent); border-radius:9px; filter:url(#ddRough);
 }
-.page-accueil .hero-canvas{background:var(--panel)}
-.page-accueil .hero-overlay{background:linear-gradient(180deg, rgba(242,236,219,0), rgba(242,236,219,.55) 50%, rgba(242,236,219,.97))}
+.page-accueil .hero-stage{margin-top:10px}
+.page-accueil .hero-canvas{background:#fffefc}
+.page-accueil .hero-overlay{background:none}
 
 /* ---- Bouton d'entrée : vert olive (visible mais raccord palette), sans halo néon ---- */
 .page-accueil .play-pill{
-  background:linear-gradient(180deg,#6E7F3C,#495B27); color:#F3EAD3; border-color:rgba(241,231,206,.35);
-  box-shadow:0 6px 18px rgba(58,72,28,.45), inset 0 1px 0 rgba(255,255,255,.22); animation:none;
+  background:linear-gradient(180deg,#a7412a,#673023); color:#fffefc; border-color:rgba(255,254,252,.32);
+  box-shadow:0 6px 18px rgba(103,48,35,.42), inset 0 1px 0 rgba(255,255,255,.18); animation:none;
 }
-.page-accueil .hero-preview:hover .play-pill{background:linear-gradient(180deg,#7C8E46,#54682E)}
+.page-accueil .hero-preview:hover .play-pill{background:linear-gradient(180deg,#bd4c33,#7a3a28)}
+/* flèche : chevron plein (BLACK RIGHTWARDS ARROWHEAD) à la place du trait */
+.page-accueil .play-pill::after{
+  content:"\27A4"; -webkit-mask:none; mask:none; background:none; width:auto; height:auto;
+  color:#fffefc; font-size:.82em; line-height:1;
+}
 
 /* ---- Compte à rebours : typographie raccord (serif, plus de mono) ---- */
 .page-accueil .hero-count{line-height:1.5}
 .page-accueil .count-label, .page-accueil .count-sub{
   display:inline; font-family:var(--serif); font-variant:small-caps; text-transform:none; letter-spacing:.03em; font-size:16px; color:var(--muted);
 }
-.page-accueil .count-val{display:inline; font-family:var(--serif); font-size:24px; font-weight:400; color:var(--accent-ink); margin:0 .28em}
+.page-accueil .count-val{display:inline; font-family:var(--serif); font-size:32px; font-weight:400; color:var(--accent-ink); margin:0 .28em}
 
 /* ---- Cartes « Donjons précédents » : cadre tracé main + texte thémé + jour capitalisé ---- */
-.page-accueil .gl-item a{position:relative; border-color:transparent; background:var(--panel)}
+.page-accueil .gl-item a{position:relative; border-color:transparent; background:var(--panel); transition:transform .15s ease, box-shadow .15s ease}
 .page-accueil .gl-item a::after{
   content:""; position:absolute; inset:2px; z-index:2; pointer-events:none;
-  border:1.5px solid var(--ink); border-radius:9px; filter:url(#ddRough);
+  border:1.5px solid var(--ink); border-radius:9px; filter:url(#ddRough); transition:border-color .15s ease;
 }
-.page-accueil .gl-item a:hover{background:#F6F0DF}
-.page-accueil .gl-preview{background:var(--paper); border-color:var(--line)}
+.page-accueil .gl-item a:hover{background:#F6F0DF; transform:translateY(-3px); box-shadow:0 9px 20px rgba(33,32,28,.17)}
+.page-accueil .gl-item a:hover::after{border-color:var(--accent)}
+.page-accueil .gl-preview{background:#fffefc; border-color:var(--line)}
 .page-accueil .gl-title{font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--ink)}
 .page-accueil .gl-date{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); text-transform:capitalize}
 .page-accueil .gl-tag{font-family:var(--serif); font-variant:small-caps; letter-spacing:.03em; font-size:13.5px; color:var(--muted)}
