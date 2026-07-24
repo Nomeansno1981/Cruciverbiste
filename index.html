@@ -49,6 +49,7 @@
   .mark{height:40px; width:auto; align-self:center; flex:0 0 auto}
   .amp{color:var(--ink); font-size:.7em; font-weight:400}   /* & du logo : noir, plus petit */
   .brand{display:flex; align-items:center; gap:16px}
+  a.brand{text-decoration:none; color:inherit}   /* logo + titre cliquables : retour à l'accueil */
   h1{font-family:var(--display); font-size:34px; letter-spacing:0; font-weight:400; margin:0; color:var(--brand-red)}
   .hstatus{margin-left:auto; font-size:12.5px; color:var(--muted); min-height:1em; transition:color .2s}
   .hstatus.warn{color:var(--accent)}
@@ -269,10 +270,10 @@
 </div>
 <div class="wrap">
   <header>
-    <div class="brand">
+    <a class="brand" href="accueil.html" title="Retour à l'accueil">
       <img class="mark" src="icones/heaume.svg" alt="">
       <h1>Donjons <span class="amp">&amp;</span> Définitions</h1>
-    </div>
+    </a>
     <span class="hstatus" id="hstatus"></span>
     <span class="account" id="accountBar" hidden><a class="hdr-nav" href="accueil.html" title="Aller au jeu" aria-label="Jeu"><span class="nav-ic ic-dice" aria-hidden="true"></span></a><a class="hdr-nav" href="membres.html" title="Modérer les membres" aria-label="Modération"><span class="nav-ic ic-crown" aria-hidden="true"></span></a><span id="accountMail"></span><button class="btn-ghost" id="signOutBtn" title="Se déconnecter de ce navigateur">Déconnexion</button></span>
   </header>
