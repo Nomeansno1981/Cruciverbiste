@@ -445,7 +445,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
    costume n'est pas validé.
    ========================================================================== */
 .page-accueil{
-  --paper:#EBE3CE;          /* parchemin (fond) */
+  --paper:#ece7db;          /* parchemin (fond) */
   --panel:#F2ECDB;          /* carte, un ton plus clair que le parchemin */
   --ink:#21201C;            /* encre (texte, bandeau) */
   --muted:#6E685B;          /* brun-gris estompé */
@@ -457,7 +457,7 @@ button.tool.tool-admin{color:var(--accent-ink); border-color:#e6cfd0}
   --sun:#C79A3E; --sun-weak:#EBDCB4;                               /* or */
   --prune:#5B5470;
   /* teintes de trame (points) — faible contraste sur la base, fort en accent */
-  --tr-parch:#DCD3BB;       /* points sur parchemin : à peine plus sombre */
+  --tr-parch:#dfdacd;       /* points sur parchemin : à peine plus sombre */
   --encre:#21201C; --encre2:#2E2C27; --brique:#A7412A;
 }
 /* Plus de trame sur tout le fond : parchemin nu. La texture n'apparaît que par
@@ -468,20 +468,20 @@ body.page-accueil::before{display:none}
 .page-accueil .wrap.home{position:relative}
 .page-accueil header{
   position:relative; overflow:visible; z-index:2;
-  margin:-16px calc(50% - 50vw) 30px; padding:16px max(16px, calc(50vw - 520px)) 20px;
+  margin:-16px calc(50% - 50vw) 18px; padding:16px max(16px, calc(50vw - 520px)) 20px;
   background:var(--encre); border-bottom:none; gap:14px;
 }
 /* accent marqué : trame brique clairsemée sur l'encre du bandeau */
 .page-accueil header::before{
   content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
   background-color:var(--brique);
-  -webkit-mask:url(icones/trame.svg) 0 0/460px 460px repeat; mask:url(icones/trame.svg) 0 0/460px 460px repeat;
+  -webkit-mask:url(icones/trame.svg) 0 0/580px 580px repeat; mask:url(icones/trame.svg) 0 0/580px 580px repeat;
 }
 /* bord inférieur : ondulation douce (déchirure discrète) */
 .page-accueil header::after{
-  content:""; position:absolute; left:0; right:0; top:100%; height:20px; z-index:0; pointer-events:none;
+  content:""; position:absolute; left:0; right:0; top:100%; height:11px; z-index:0; pointer-events:none;
   background:var(--encre);
-  -webkit-mask:url(icones/deckle.svg) 0 0/1200px 20px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 20px repeat-x;
+  -webkit-mask:url(icones/deckle.svg) 0 0/1200px 11px repeat-x; mask:url(icones/deckle.svg) 0 0/1200px 11px repeat-x;
 }
 .page-accueil header .brand, .page-accueil header .meta, .page-accueil header .spacer{position:relative; z-index:1}
 .page-accueil header h1{color:#F1E7CE}          /* titre crème sur encre (blanc sur noir) */
@@ -495,23 +495,24 @@ body.page-accueil::before{display:none}
   -webkit-mask:linear-gradient(#000 0, #000 30%, transparent 100%); mask:linear-gradient(#000 0, #000 30%, transparent 100%);
 }
 .page-accueil .banner-trame i{
-  content:""; position:absolute; inset:-30%; display:block; background-color:var(--tr-parch);
+  position:absolute; inset:0; display:block; background-color:var(--tr-parch);
   -webkit-mask:url(icones/trame.svg) 0 0/470px 470px repeat; mask:url(icones/trame.svg) 0 0/470px 470px repeat;
-  transform:rotate(30deg);
 }
 .page-accueil .home-tabs, .page-accueil .tabpanel{position:relative; z-index:1}
 
 /* ---- Menu d'onglets : Pirata encré, actif en brique ---- */
-.page-accueil .home-tabs{border-bottom:2px solid var(--ink); gap:6px; margin-top:2px}
+.page-accueil .home-tabs{border-bottom:2px solid var(--ink); gap:8px; margin-top:0}
+.page-accueil .tabpanel{padding-top:18px}
 .page-accueil .home-tab{
-  font-family:var(--display); font-weight:400; font-size:23px; letter-spacing:.01em;
-  color:var(--muted); padding:6px 18px 7px; border-bottom:3px solid transparent; margin-bottom:-2px;
+  font-family:var(--serif); font-variant:small-caps; font-weight:600; font-size:20px; letter-spacing:.05em;
+  color:var(--muted); padding:5px 16px 8px; border-bottom:3px solid transparent; margin-bottom:-2px;
 }
 .page-accueil .home-tab:hover{color:var(--ink)}
 .page-accueil .home-tab.on{color:var(--accent); border-bottom-color:var(--accent)}
 
 /* ---- Titres : « Le donjon du jour » en rouge (brique) ; sections en olive ---- */
 .page-accueil .hero-title{color:var(--accent)}
+.page-accueil .hero-date{font-size:18px; margin-top:10px}
 .page-accueil .archive h2, .page-accueil .board-home h2{color:var(--forest-ink)}
 
 /* ---- Pastille « donjon résolu » AU-DESSUS de l'image ---- */
@@ -541,10 +542,11 @@ body.page-accueil::before{display:none}
 .page-accueil .hero-preview:hover .play-pill{background:linear-gradient(180deg,#7C8E46,#54682E)}
 
 /* ---- Compte à rebours : typographie raccord (serif, plus de mono) ---- */
+.page-accueil .hero-count{line-height:1.5}
 .page-accueil .count-label, .page-accueil .count-sub{
-  font-family:var(--serif); font-variant:small-caps; text-transform:none; letter-spacing:.03em; font-size:14px; color:var(--muted);
+  display:inline; font-family:var(--serif); font-variant:small-caps; text-transform:none; letter-spacing:.03em; font-size:16px; color:var(--muted);
 }
-.page-accueil .count-val{font-family:var(--serif); font-size:32px; font-weight:400; color:var(--accent-ink)}
+.page-accueil .count-val{display:inline; font-family:var(--serif); font-size:24px; font-weight:400; color:var(--accent-ink); margin:0 .28em}
 
 /* ---- Cartes « Donjons précédents » : cadre tracé main + texte thémé + jour capitalisé ---- */
 .page-accueil .gl-item a{position:relative; border-color:transparent; background:var(--panel)}
